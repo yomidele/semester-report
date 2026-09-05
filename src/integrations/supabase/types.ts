@@ -35,6 +35,7 @@ export type Database = {
       academic_settings: {
         Row: {
           current_session_id: string | null
+          current_term: string
           id: string
           max_units: number
           min_units: number
@@ -42,6 +43,7 @@ export type Database = {
         }
         Insert: {
           current_session_id?: string | null
+          current_term?: string
           id?: string
           max_units?: number
           min_units?: number
@@ -49,6 +51,7 @@ export type Database = {
         }
         Update: {
           current_session_id?: string | null
+          current_term?: string
           id?: string
           max_units?: number
           min_units?: number
@@ -170,6 +173,70 @@ export type Database = {
           },
         ]
       }
+      attendance: {
+        Row: {
+          attendance_date: string
+          class_arm_id: string | null
+          created_at: string
+          id: string
+          marked_by: string | null
+          notes: string | null
+          session_id: string
+          status: string
+          student_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_date: string
+          class_arm_id?: string | null
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_id: string
+          status?: string
+          student_id: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_date?: string
+          class_arm_id?: string | null
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_id?: string
+          status?: string
+          student_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_class_arm_id_fkey"
+            columns: ["class_arm_id"]
+            isOneToOne: false
+            referencedRelation: "class_arms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "academic_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -286,6 +353,44 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_arms: {
+        Row: {
+          code: string
+          created_at: string
+          department_id: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          department_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          department_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_arms_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
         ]
@@ -963,6 +1068,63 @@ export type Database = {
         }
         Relationships: []
       }
+      report_card_comments: {
+        Row: {
+          attendance_summary: string | null
+          class_teacher_comment: string | null
+          conduct_rating: string | null
+          created_at: string
+          created_by: string | null
+          head_teacher_comment: string | null
+          id: string
+          session_id: string
+          student_id: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_summary?: string | null
+          class_teacher_comment?: string | null
+          conduct_rating?: string | null
+          created_at?: string
+          created_by?: string | null
+          head_teacher_comment?: string | null
+          id?: string
+          session_id: string
+          student_id: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_summary?: string | null
+          class_teacher_comment?: string | null
+          conduct_rating?: string | null
+          created_at?: string
+          created_by?: string | null
+          head_teacher_comment?: string | null
+          id?: string
+          session_id?: string
+          student_id?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_card_comments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "academic_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_card_comments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_verifications: {
         Row: {
           generated_at: string
@@ -1323,6 +1485,7 @@ export type Database = {
       students: {
         Row: {
           address: string | null
+          arm: string | null
           created_at: string
           date_of_birth: string | null
           department: string | null
@@ -1344,6 +1507,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          arm?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
@@ -1365,6 +1529,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          arm?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
