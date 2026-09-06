@@ -15,11 +15,11 @@ import { toast } from "sonner";
 import { Lock } from "lucide-react";
 
 export const Route = createFileRoute("/student/courses")({
-  head: () => ({ meta: [{ title: "Course Registration — Kazaure College" }] }),
-  component: () => <ProtectedStudent><CourseRegPage /></ProtectedStudent>,
+  head: () => ({ meta: [{ title: "Subject Registration — School Portal" }] }),
+  component: () => <ProtectedStudent><SubjectRegPage /></ProtectedStudent>,
 });
 
-function CourseRegPage() {
+function SubjectRegPage() {
   const { session } = useAuthSession();
   const qc = useQueryClient();
   const [sessionId, setSessionId] = useState<string>("");
@@ -42,7 +42,7 @@ function CourseRegPage() {
     queryFn: async () => (await supabase.from("academic_sessions").select("*").order("name", { ascending: false })).data ?? [],
   });
 
-  const { data: levelCourses = [] } = useQuery({
+  const { data: levelSubjects = [] } = useQuery({
     queryKey: ["level-courses", student?.level, semester, student?.faculty_id],
     enabled: !!student,
     queryFn: async () => {
@@ -70,16 +70,16 @@ function CourseRegPage() {
     },
   });
 
-  const lockedCourseIds = useMemo(() => new Set(carryovers.map((c) => c.course_id)), [carryovers]);
+  const lockedSubjectIds = useMemo(() => new Set(carryovers.map((c) => c.course_id)), [carryovers]);
   const carryoverUnits = carryovers.reduce((s, c) => s + ((c.courses as { unit?: number } | null)?.unit ?? 0), 0);
-  const selectedUnits = levelCourses.filter((c) => selected.has(c.id)).reduce((s, c) => s + c.unit, 0);
+  const selectedUnits = levelSubjects.filter((c) => selected.has(c.id)).reduce((s, c) => s + c.unit, 0);
   const totalUnits = carryoverUnits + selectedUnits;
 
   const minUnits = settings?.min_units ?? 15;
   const maxUnits = settings?.max_units ?? 24;
 
   const toggle = (id: string) => {
-    if (lockedCourseIds.has(id)) return;
+    if (lockedSubjectIds.has(id)) return;
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -128,7 +128,7 @@ function CourseRegPage() {
       if (itemsErr) throw new Error(itemsErr.message);
     },
     onSuccess: () => {
-      toast.success("Course registration submitted");
+      toast.success("Subject registration submitted");
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["my-regs"] });
     },
@@ -140,8 +140,8 @@ function CourseRegPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Course Registration</h2>
-        <p className="text-sm text-muted-foreground">Carryovers are locked and must be retaken. Total units must be {minUnits}–{maxUnits}.</p>
+        <h2 className="font-serif text-2xl font-bold">Subject Registration</h2>
+        <p className="text-sm text-muted-foreground">Repeats are locked and must be retaken. Total units must be {minUnits}–{maxUnits}.</p>
       </div>
 
       <Card className="tsu-shadow">
@@ -170,7 +170,7 @@ function CourseRegPage() {
       {carryovers.length > 0 && (
         <Card className="tsu-shadow border-destructive/40">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><Lock className="h-4 w-4" /> Carryovers (locked, must retake)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><Lock className="h-4 w-4" /> Repeats (locked, must retake)</CardTitle>
             <CardDescription>{carryoverUnits} unit{carryoverUnits === 1 ? "" : "s"}</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -210,7 +210,7 @@ function CourseRegPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {levelCourses.filter((c) => !lockedCourseIds.has(c.id)).map((c) => (
+              {levelSubjects.filter((c) => !lockedSubjectIds.has(c.id)).map((c) => (
                 <TableRow key={c.id} className="cursor-pointer" onClick={() => toggle(c.id)}>
                   <TableCell><Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} /></TableCell>
                   <TableCell className="font-mono font-medium">{c.code}</TableCell>
@@ -219,7 +219,7 @@ function CourseRegPage() {
                   <TableCell><Badge variant="outline">{c.course_type}</Badge></TableCell>
                 </TableRow>
               ))}
-              {levelCourses.length === 0 && (
+              {levelSubjects.length === 0 && (
                 <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No courses available for this semester yet.</TableCell></TableRow>
               )}
             </TableBody>
@@ -231,7 +231,7 @@ function CourseRegPage() {
         <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
           <div className="text-sm">
             <p>Total units: <span className="font-bold text-lg">{totalUnits}</span> <span className="text-muted-foreground">/ {minUnits}–{maxUnits}</span></p>
-            <p className="text-xs text-muted-foreground">Carryovers: {carryoverUnits} • Selected: {selectedUnits}</p>
+            <p className="text-xs text-muted-foreground">Repeats: {carryoverUnits} • Selected: {selectedUnits}</p>
           </div>
           <Button onClick={() => submitMut.mutate()} disabled={isInvalid || submitMut.isPending}>
             {submitMut.isPending ? "Submitting…" : "Submit Registration"}

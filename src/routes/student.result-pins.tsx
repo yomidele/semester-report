@@ -10,7 +10,7 @@ import { getMyResultPins, getMyVoucherDownloadUrl } from "@/lib/result-pin.funct
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/student/result-pins")({
-  head: () => ({ meta: [{ title: "My Result PINs — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "My Result PINs — School Portal" }] }),
   component: () => (
     <ProtectedStudent>
       <MyResultPinsPage />

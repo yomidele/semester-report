@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedFaculty } from "@/components/ProtectedFaculty";
-import { CoursesPage } from "./courses";
+import { ProtectedSection } from "@/components/ProtectedSection";
+import { SubjectsPage } from "./courses";
 
 export const Route = createFileRoute("/faculty/courses")({
-  head: () => ({ meta: [{ title: "Faculty Courses — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Section Subjects — School Portal" }] }),
   component: () => (
-    <ProtectedFaculty>
-      <CoursesPage />
-    </ProtectedFaculty>
+    <ProtectedSection>
+      <SubjectsPage />
+    </ProtectedSection>
   ),
 });

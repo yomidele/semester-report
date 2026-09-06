@@ -10,7 +10,7 @@ import { AlertTriangle, CheckCircle2, RefreshCw, Download } from "lucide-react";
 import { auditAllResults, printAuditReport, exportAuditReport } from "@/lib/audit";
 
 export const Route = createFileRoute("/validation-audit")({
-  head: () => ({ meta: [{ title: "Validation Audit — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Validation Audit — School Portal" }] }),
   component: () => <ProtectedAdmin><ValidationAuditPage /></ProtectedAdmin>,
 });
 

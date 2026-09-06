@@ -10,19 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
-import { createLecturer, deleteLecturer } from "@/lib/admin-users.functions";
+import { createTeacher, deleteTeacher } from "@/lib/admin-users.functions";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/dept-admin/lecturers")({
-  head: () => ({ meta: [{ title: "Lecturers — Department Admin" }] }),
+  head: () => ({ meta: [{ title: "Teachers — Class Admin" }] }),
   component: () => <ProtectedDeptAdmin><Page /></ProtectedDeptAdmin>,
 });
 
 function Page() {
   const qc = useQueryClient();
   const { session } = useAuthSession();
-  const create = useServerFn(createLecturer);
-  const remove = useServerFn(deleteLecturer);
+  const create = useServerFn(createTeacher);
+  const remove = useServerFn(deleteTeacher);
   const [form, setForm] = useState({ email: "", password: "", full_name: "", phone: "" });
 
   const selfQ = useQuery({
@@ -46,7 +46,7 @@ function Page() {
       return create({ data: { ...form, department_id: selfQ.data.department_id } });
     },
     onSuccess: () => {
-      toast.success("Lecturer created");
+      toast.success("Teacher created");
       setForm({ email: "", password: "", full_name: "", phone: "" });
       qc.invalidateQueries({ queryKey: ["dept-lecturers"] });
     },
@@ -55,14 +55,14 @@ function Page() {
 
   const removeMut = useMutation({
     mutationFn: (user_id: string) => remove({ data: { user_id } }),
-    onSuccess: () => { toast.success("Lecturer removed"); qc.invalidateQueries({ queryKey: ["dept-lecturers"] }); },
+    onSuccess: () => { toast.success("Teacher removed"); qc.invalidateQueries({ queryKey: ["dept-lecturers"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Lecturers</h2>
+        <h2 className="font-serif text-2xl font-bold">Teachers</h2>
         <p className="text-sm text-muted-foreground">Create login accounts for lecturers in your department.</p>
       </div>
       <Card>
@@ -73,7 +73,7 @@ function Page() {
             <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
             <div><Label>Phone (optional)</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             <div><Label>Temporary password</Label><Input minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-            <div className="flex items-end"><Button type="submit" disabled={createMut.isPending}>{createMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Lecturer</Button></div>
+            <div className="flex items-end"><Button type="submit" disabled={createMut.isPending}>{createMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Teacher</Button></div>
           </form>
         </CardContent>
       </Card>

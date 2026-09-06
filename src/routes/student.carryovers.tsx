@@ -8,11 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/student/carryovers")({
-  head: () => ({ meta: [{ title: "Carryovers — Kazaure College" }] }),
-  component: () => <ProtectedStudent><CarryoversPage /></ProtectedStudent>,
+  head: () => ({ meta: [{ title: "Repeats — School Portal" }] }),
+  component: () => <ProtectedStudent><RepeatsPage /></ProtectedStudent>,
 });
 
-function CarryoversPage() {
+function RepeatsPage() {
   const { session } = useAuthSession();
   const { data: student } = useQuery({
     queryKey: ["sid-co", session?.user.id],
@@ -39,7 +39,7 @@ function CarryoversPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">My Carryovers</h2>
+        <h2 className="font-serif text-2xl font-bold">My Repeats</h2>
         <p className="text-sm text-muted-foreground">Failed courses are tracked automatically. Re-register and pass them to clear.</p>
       </div>
 
@@ -52,7 +52,7 @@ function CarryoversPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Course</TableHead>
+                  <TableHead>Subject</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead className="text-center">Unit</TableHead>
                   <TableHead>Failed In</TableHead>
@@ -86,7 +86,7 @@ function CarryoversPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Course</TableHead>
+                  <TableHead>Subject</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>

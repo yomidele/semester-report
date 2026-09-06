@@ -11,7 +11,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/dept-admin/assignments")({
-  head: () => ({ meta: [{ title: "Course Assignments — Department Admin" }] }),
+  head: () => ({ meta: [{ title: "Subject Assignments — Class Admin" }] }),
   component: () => <ProtectedDeptAdmin><Page /></ProtectedDeptAdmin>,
 });
 
@@ -61,19 +61,19 @@ function Page() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Course Assignments</h2>
+        <h2 className="font-serif text-2xl font-bold">Subject Assignments</h2>
         <p className="text-sm text-muted-foreground">Assign lecturers to courses for a session and semester.</p>
       </div>
       <Card>
         <CardHeader><CardTitle className="text-base">New assignment</CardTitle></CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); createMut.mutate(); }}>
-            <div><Label>Lecturer</Label>
+            <div><Label>Teacher</Label>
               <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.lecturer_id} onChange={(e) => setForm({ ...form, lecturer_id: e.target.value })} required>
                 <option value="">Select</option>{lecturers.data?.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
               </select>
             </div>
-            <div><Label>Course</Label>
+            <div><Label>Subject</Label>
               <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.course_id} onChange={(e) => setForm({ ...form, course_id: e.target.value })} required>
                 <option value="">Select</option>{courses.data?.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.title} (L{c.level})</option>)}
               </select>
@@ -96,7 +96,7 @@ function Page() {
         <CardHeader><CardTitle className="text-base">Existing assignments</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Lecturer</th><th className="py-2 pr-3">Course</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Semester</th><th></th></tr></thead>
+            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Teacher</th><th className="py-2 pr-3">Subject</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Semester</th><th></th></tr></thead>
             <tbody>
               {assignmentsQ.data?.map((a: any) => (
                 <tr key={a.id} className="border-b">

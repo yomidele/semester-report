@@ -11,7 +11,7 @@ import { deptAdminApproveResults, deptAdminPublishResults, deptAdminReturnResult
 import { useState } from "react";
 
 export const Route = createFileRoute("/dept-admin/approvals")({
-  head: () => ({ meta: [{ title: "Result Approvals — Department Admin" }] }),
+  head: () => ({ meta: [{ title: "Result Approvals — Class Admin" }] }),
   component: () => <ProtectedDeptAdmin><Page /></ProtectedDeptAdmin>,
 });
 
@@ -80,7 +80,7 @@ function Page() {
         <CardContent>
           {q.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Matric</th><th className="py-2 pr-3">Student</th><th className="py-2 pr-3">Course</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Sem</th><th className="py-2 pr-3">CA</th><th className="py-2 pr-3">Exam</th><th className="py-2 pr-3">Total</th></tr></thead>
+              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Matric</th><th className="py-2 pr-3">Student</th><th className="py-2 pr-3">Subject</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Sem</th><th className="py-2 pr-3">CA</th><th className="py-2 pr-3">Exam</th><th className="py-2 pr-3">Total</th></tr></thead>
               <tbody>
                 {rows.map((r: any) => (
                   <tr key={r.id} className="border-b">

@@ -2,32 +2,32 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useSchools, useDepartments, useProgrammes, durationLabel } from "@/lib/public-catalog";
+import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/public-catalog";
 
 export const Route = createFileRoute("/departments")({
   head: () => ({
     meta: [
-      { title: "Departments — Health Training Departments" },
+      { title: "Classs — Health Training Classs" },
       { name: "description", content: "Explore the departments of the college and the health programmes each one runs, from community health to medical laboratory technology." },
-      { property: "og:title", content: "Departments — Health Training Departments" },
-      { property: "og:description", content: "Departments of the college and the programmes they offer." },
+      { property: "og:title", content: "Classs — Health Training Classs" },
+      { property: "og:description", content: "Classs of the college and the programmes they offer." },
     ],
   }),
-  component: Departments,
+  component: Classs,
 });
 
-function Departments() {
+function Classs() {
   const { data: schools = [] } = useSchools();
-  const { data: departments = [], isLoading } = useDepartments();
+  const { data: departments = [], isLoading } = useClasss();
   const { data: programmes = [] } = useProgrammes();
 
   return (
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-primary-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Departments</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">Classs</h1>
           <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">
-            Departments deliver teaching, clinical supervision and student support within each school.
+            Classs deliver teaching, clinical supervision and student support within each school.
           </p>
         </div>
       </div>
@@ -43,7 +43,7 @@ function Departments() {
                 <CardContent className="p-5">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">{school?.name ?? "College"}</p>
                   <h2 className="mt-1 font-serif text-lg font-bold text-primary">{d.name}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">{d.description ?? "Department of the college."}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{d.description ?? "Class of the college."}</p>
                   {progs.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {progs.map((p) => (

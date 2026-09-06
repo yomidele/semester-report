@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 import { resolveMatricToEmail } from "@/lib/student-registration.functions";
 
 export const Route = createFileRoute("/student/login")({
-  head: () => ({ meta: [{ title: "Student Sign In — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Student Sign In — School Portal" }] }),
   component: StudentLoginPage,
 });
 
@@ -74,11 +74,11 @@ function StudentLoginPage() {
                 {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}
               </Button>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <Link to="/faculty/login" className="hover:underline">Faculty Admin →</Link>
+                <Link to="/faculty/login" className="hover:underline">Section Admin →</Link>
                 <Link to="/login" className="hover:underline">Super Admin →</Link>
               </div>
               <p className="text-center text-xs text-muted-foreground">
-                Need an account? Use the registration link from your Faculty Admin.
+                Need an account? Use the registration link from your Section Admin.
               </p>
             </form>
           </CardContent>

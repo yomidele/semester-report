@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Super Admin Sign in — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Super Admin Sign in — School Portal" }] }),
   component: LoginPage,
 });
 
@@ -91,7 +91,7 @@ function LoginPage() {
                 <strong>Demo account:</strong> {DEMO_EMAIL} / {DEMO_PASSWORD}
               </p>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <Link to="/faculty/login" className="hover:underline">Faculty Admin →</Link>
+                <Link to="/faculty/login" className="hover:underline">Section Admin →</Link>
                 <Link to="/student/login" className="hover:underline">Student →</Link>
               </div>
             </form>

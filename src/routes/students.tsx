@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/students")({
-  head: () => ({ meta: [{ title: "Students — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Students — School Portal" }] }),
   component: () => <ProtectedAdmin><StudentsPage /></ProtectedAdmin>,
 });
 

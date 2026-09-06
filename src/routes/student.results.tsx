@@ -9,7 +9,7 @@ import { computeGrade, effectiveTotal, classOfDegree } from "@/lib/grading";
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/student/results")({
-  head: () => ({ meta: [{ title: "My Results — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "My Results — School Portal" }] }),
   component: () => <ProtectedStudent><ResultsPage /></ProtectedStudent>,
 });
 

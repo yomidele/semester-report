@@ -12,7 +12,7 @@ import { verifyStudentForPin, getPinPurchaseOptions, initializePinPurchase } fro
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/result-pin/buy")({
-  head: () => ({ meta: [{ title: "Buy Result PIN — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Buy Result PIN — School Portal" }] }),
   component: BuyPinPage,
 });
 
@@ -126,9 +126,9 @@ function BuyPinPage() {
                   <dd className="font-medium text-foreground">{student.matric_number}</dd>
                   <dt className="text-muted-foreground">Programme</dt>
                   <dd className="font-medium text-foreground">{student.programme_name ?? "\u2014"}</dd>
-                  <dt className="text-muted-foreground">Department</dt>
+                  <dt className="text-muted-foreground">Class</dt>
                   <dd className="font-medium text-foreground">{student.department_name ?? "\u2014"}</dd>
-                  <dt className="text-muted-foreground">School/Faculty</dt>
+                  <dt className="text-muted-foreground">School/Section</dt>
                   <dd className="font-medium text-foreground">{student.faculty_name ?? "\u2014"}</dd>
                 </dl>
               </div>

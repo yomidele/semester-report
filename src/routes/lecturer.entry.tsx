@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ProtectedLecturer } from "@/components/ProtectedLecturer";
+import { ProtectedTeacher } from "@/components/ProtectedTeacher";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,9 @@ import { lecturerSubmitResults } from "@/lib/result-workflow.functions";
 const Search = z.object({ assignment_id: z.string().uuid().optional() });
 
 export const Route = createFileRoute("/lecturer/entry")({
-  head: () => ({ meta: [{ title: "Score Entry — Lecturer" }] }),
+  head: () => ({ meta: [{ title: "Grade Entry — Teacher" }] }),
   validateSearch: (s) => Search.parse(s),
-  component: () => <ProtectedLecturer><Page /></ProtectedLecturer>,
+  component: () => <ProtectedTeacher><Page /></ProtectedTeacher>,
 });
 
 function Page() {
@@ -94,7 +94,7 @@ function Page() {
       if (!ids.length) throw new Error("No draft results to submit. Save first.");
       return submit({ data: { result_ids: ids } });
     },
-    onSuccess: () => { toast.success("Submitted to Department Admin"); qc.invalidateQueries({ queryKey: ["assignment-results"] }); },
+    onSuccess: () => { toast.success("Submitted to Class Admin"); qc.invalidateQueries({ queryKey: ["assignment-results"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 const NAV = [
   { to: "/lecturer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/lecturer/entry", label: "Score Entry", icon: ClipboardEdit },
+  { to: "/lecturer/entry", label: "Grade Entry", icon: ClipboardEdit },
 ] as const;
 
 export function LecturerShell({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export function LecturerShell({ children }: { children: React.ReactNode }) {
   };
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <TSUHeader subtitle="Lecturer Console" />
+      <TSUHeader subtitle="Teacher Console" />
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-2 py-4 md:flex-row md:px-6">
         <aside className="md:w-60 md:shrink-0">
           <nav className="tsu-shadow flex flex-row gap-1 overflow-x-auto rounded-md border border-border bg-card p-2 md:flex-col md:overflow-visible">

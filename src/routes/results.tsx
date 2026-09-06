@@ -25,7 +25,7 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/results")({
-  head: () => ({ meta: [{ title: "View / Export Results — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "View / Export Results — School Portal" }] }),
   component: () => <ProtectedAdmin><ResultsViewPage /></ProtectedAdmin>,
 });
 
@@ -130,8 +130,8 @@ export function ResultsViewPage() {
       return {
         "Matric No": r.students?.matric_number ?? "",
         "Name": r.students?.full_name ?? "",
-        "Course Code": r.courses?.code ?? "",
-        "Course Title": r.courses?.title ?? "",
+        "Subject Code": r.courses?.code ?? "",
+        "Subject Title": r.courses?.title ?? "",
         "Unit": r.courses?.unit ?? 0,
         "CA (40)": Number(r.ca_score),
         "Exam (70)": Number(r.exam_score),
@@ -139,14 +139,14 @@ export function ResultsViewPage() {
         "Grade": grade,
         "Point": point,
       };
-    }).sort((a, b) => a["Matric No"].localeCompare(b["Matric No"]) || a["Course Code"].localeCompare(b["Course Code"]));
+    }).sort((a, b) => a["Matric No"].localeCompare(b["Matric No"]) || a["Subject Code"].localeCompare(b["Subject Code"]));
 
     const summary = grouped.map(([sid, info]) => {
       const { gpa, cgpa } = cgpaFor(sid);
       return {
         "Matric No": info.matric,
         "Name": info.name,
-        "Courses": info.rows.length,
+        "Subjects": info.rows.length,
         "GPA": Number(gpa.toFixed(2)),
         "CGPA": Number(cgpa.toFixed(2)),
         "Class of Degree": classOfDegree(cgpa),
@@ -184,7 +184,7 @@ export function ResultsViewPage() {
       .map(([, c]) => c)
       .sort((a, b) => a.code.localeCompare(b.code));
 
-    // Demo: Social and Management Sciences - Department placeholder
+    // Demo: Social and Management Sciences - Class placeholder
     // In production, this would come from a department selector/database
     const headerConfig = {
       department: "SOCIAL STUDIES EDUCATION", // Demo department
@@ -203,7 +203,7 @@ export function ResultsViewPage() {
 
     // Build student data
     const studentsData = grouped.map(([sid, info]) => {
-      const currentCourses = info.rows.map((r) => {
+      const currentSubjects = info.rows.map((r) => {
         const total = effectiveTotal(r);
         const { grade, point } = computeGrade(total);
         return {
@@ -216,7 +216,7 @@ export function ResultsViewPage() {
       });
 
       const currentIds = new Set(info.rows.map((r) => r.id));
-      const previousCourses = allHistory
+      const previousSubjects = allHistory
         .filter((r) => r.student_id === sid && !currentIds.has(r.id))
         .map((r) => {
           const total = effectiveTotal(r);
@@ -230,8 +230,8 @@ export function ResultsViewPage() {
           };
         });
 
-      const currentSemester = calculateCurrentSemester(currentCourses);
-      const previousResults = calculatePreviousResults(previousCourses);
+      const currentSemester = calculateCurrentSemester(currentSubjects);
+      const previousResults = calculatePreviousResults(previousSubjects);
       const cumulative = calculateCumulative(currentSemester, previousResults);
 
       // Build course grades map: courseCode -> { score, grade }
@@ -269,7 +269,7 @@ export function ResultsViewPage() {
     }
   };
 
-  // Structured export: Student Info | Course grades | Current | Previous | Cumulative
+  // Structured export: Student Info | Subject grades | Current | Previous | Cumulative
   const handleExportStructured = () => {
     if (grouped.length === 0) { toast.error("Nothing to export"); return; }
     const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? "session";
@@ -290,7 +290,7 @@ export function ResultsViewPage() {
 
     const bannerRow = [
       ...studentInfoCols.map(() => ""),
-      ...courseHeaders.map((_, i) => (i === 0 ? "Course Grades" : "")),
+      ...courseHeaders.map((_, i) => (i === 0 ? "Subject Grades" : "")),
       ...currentHeaders.map((_, i) => (i === 0 ? "Current Semester" : "")),
       ...previousHeaders.map((_, i) => (i === 0 ? "Previous Results" : "")),
       ...cumulativeHeaders.map((_, i) => (i === 0 ? "Cumulative Results" : "")),
@@ -304,13 +304,13 @@ export function ResultsViewPage() {
     ];
 
     const dataRows = grouped.map(([sid, info]) => {
-      const currentByCourse = new Map<string, string>();
+      const currentBySubject = new Map<string, string>();
       let rcu = 0, ecu = 0, gp = 0;
       for (const r of info.rows) {
         const u = r.courses?.unit ?? 0;
         const total = effectiveTotal(r);
         const { grade, point } = computeGrade(total);
-        currentByCourse.set(r.course_id, grade);
+        currentBySubject.set(r.course_id, grade);
         rcu += u;
         if (grade !== "F") ecu += u;
         gp += point * u;
@@ -335,7 +335,7 @@ export function ResultsViewPage() {
       const tgpC = tgpP + gp;
       const cgpaC = safeDivide(tgpC, trcuC);
 
-      const courseCells = courseList.map(([cid]) => currentByCourse.get(cid) ?? "");
+      const courseCells = courseList.map(([cid]) => currentBySubject.get(cid) ?? "");
 
       return [
         info.matric,

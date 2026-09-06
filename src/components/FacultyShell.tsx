@@ -8,14 +8,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthSession } from "@/hooks/use-auth";
 
 const NAV = [
-  { to: "/faculty/dashboard", label: "Faculty Dashboard", icon: LayoutDashboard },
-  { to: "/faculty/courses", label: "Courses", icon: BookOpen },
+  { to: "/faculty/dashboard", label: "Section Dashboard", icon: LayoutDashboard },
+  { to: "/faculty/courses", label: "Subjects", icon: BookOpen },
   { to: "/faculty/students", label: "Students", icon: Users },
   { to: "/faculty/dept-admins", label: "Department Admins", icon: UserCog },
   { to: "/faculty/result-entry", label: "Result Entry", icon: ClipboardEdit },
   { to: "/faculty/results", label: "View / Export Results", icon: FileSpreadsheet },
-  { to: "/faculty/transcripts", label: "Transcripts", icon: FileText },
-  { to: "/faculty/carryovers", label: "Carryovers", icon: AlertTriangle },
+  { to: "/faculty/transcripts", label: "Report Cards", icon: FileText },
+  { to: "/faculty/carryovers", label: "Repeats", icon: AlertTriangle },
   { to: "/faculty/registration-links", label: "Registration Links", icon: LinkIcon },
 ] as const;
 
@@ -47,7 +47,7 @@ export function FacultyShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <TSUHeader subtitle={facultyName ? `Faculty Admin Console — ${facultyName}` : "Faculty Admin Console"} />
+      <TSUHeader subtitle={facultyName ? `Section Admin Console — ${facultyName}` : "Section Admin Console"} />
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-2 py-4 md:flex-row md:px-6">
         <aside className="md:w-60 md:shrink-0">
           <nav className="tsu-shadow flex flex-row gap-1 overflow-x-auto rounded-md border border-border bg-card p-2 md:flex-col md:overflow-visible">
@@ -76,7 +76,7 @@ export function FacultyShell({ children }: { children: React.ReactNode }) {
         <main className="min-w-0 flex-1">{children}</main>
       </div>
       <footer className="border-t border-border py-3 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Kazaure College of Health Technology — Faculty Portal
+        © {new Date().getFullYear()} Kazaure College of Health Technology — School Portal
       </footer>
     </div>
   );

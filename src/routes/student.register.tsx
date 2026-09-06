@@ -14,36 +14,36 @@ import { toast } from "sonner";
 import {
   validateRegistrationToken,
   registerStudentWithToken,
-  listFacultiesAndDepartments,
+  listFacultiesAndClasss,
 } from "@/lib/student-registration.functions";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
 export const Route = createFileRoute("/student/register")({
-  head: () => ({ meta: [{ title: "Student Registration — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Student Registration — School Portal" }] }),
   validateSearch: searchSchema,
   component: StudentRegisterPage,
 });
 
-type Faculty = { id: string; name: string; code: string | null };
-type Department = { id: string; name: string; code: string | null; faculty_id: string };
+type Section = { id: string; name: string; code: string | null };
+type Class = { id: string; name: string; code: string | null; faculty_id: string };
 
 function StudentRegisterPage() {
   const { token } = useSearch({ from: "/student/register" });
   const navigate = useNavigate();
   const validate = useServerFn(validateRegistrationToken);
   const register = useServerFn(registerStudentWithToken);
-  const listOpts = useServerFn(listFacultiesAndDepartments);
+  const listOpts = useServerFn(listFacultiesAndClasss);
 
   const [loadingToken, setLoadingToken] = useState(true);
   const [linkLabel, setLinkLabel] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);
 
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [faculties, setFaculties] = useState<Section[]>([]);
+  const [departments, setClasss] = useState<Class[]>([]);
 
-  const [facultyId, setFacultyId] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
+  const [facultyId, setSectionId] = useState("");
+  const [departmentId, setClassId] = useState("");
   const [level, setLevel] = useState("100");
 
   const [fullName, setFullName] = useState("");
@@ -60,7 +60,7 @@ function StudentRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ matric: string; email: string } | null>(null);
 
-  const filteredDepartments = useMemo(
+  const filteredClasss = useMemo(
     () => departments.filter((d) => d.faculty_id === facultyId),
     [departments, facultyId],
   );
@@ -76,7 +76,7 @@ function StudentRegisterPage() {
         if (res.valid) {
           setLinkLabel(res.link.label ?? null);
           setFaculties(opts.faculties);
-          setDepartments(opts.departments);
+          setClasss(opts.departments);
         } else {
           setTokenError(res.reason);
         }
@@ -219,17 +219,17 @@ function StudentRegisterPage() {
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label>Faculty *</Label>
-                  <Select value={facultyId} onValueChange={(v) => { setFacultyId(v); setDepartmentId(""); }}>
+                  <Label>Section *</Label>
+                  <Select value={facultyId} onValueChange={(v) => { setSectionId(v); setClassId(""); }}>
                     <SelectTrigger><SelectValue placeholder="Select faculty" /></SelectTrigger>
                     <SelectContent>{faculties.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Department *</Label>
-                  <Select value={departmentId} onValueChange={setDepartmentId} disabled={!facultyId}>
+                  <Label>Class *</Label>
+                  <Select value={departmentId} onValueChange={setClassId} disabled={!facultyId}>
                     <SelectTrigger><SelectValue placeholder={facultyId ? "Select department" : "Pick faculty first"} /></SelectTrigger>
-                    <SelectContent>{filteredDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{filteredClasss.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">

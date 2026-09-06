@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedFaculty } from "@/components/ProtectedFaculty";
+import { ProtectedSection } from "@/components/ProtectedSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/faculty/carryovers")({
-  head: () => ({ meta: [{ title: "Faculty Carryovers — Kazaure College" }] }),
-  component: () => <ProtectedFaculty><FacultyCarryoversPage /></ProtectedFaculty>,
+  head: () => ({ meta: [{ title: "Section Repeats — School Portal" }] }),
+  component: () => <ProtectedSection><SectionRepeatsPage /></ProtectedSection>,
 });
 
-function FacultyCarryoversPage() {
+function SectionRepeatsPage() {
   const { data: rows = [] } = useQuery({
     queryKey: ["faculty-carryovers"],
     queryFn: async () => {
@@ -29,7 +29,7 @@ function FacultyCarryoversPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Carryovers</h2>
+        <h2 className="font-serif text-2xl font-bold">Repeats</h2>
         <p className="text-sm text-muted-foreground">Auto-tracked when results are entered.</p>
       </div>
 
@@ -46,7 +46,7 @@ function FacultyCarryoversPage() {
               <TableRow>
                 <TableHead>Matric</TableHead>
                 <TableHead>Student</TableHead>
-                <TableHead>Course</TableHead>
+                <TableHead>Subject</TableHead>
                 <TableHead>Failed Level/Sem</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>

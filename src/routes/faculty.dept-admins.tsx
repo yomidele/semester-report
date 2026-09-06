@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ProtectedFaculty } from "@/components/ProtectedFaculty";
+import { ProtectedSection } from "@/components/ProtectedSection";
 import { useRole } from "@/hooks/use-role";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,26 +11,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
-import { createDepartmentAdmin, deleteDepartmentAdmin } from "@/lib/admin-users.functions";
+import { createClassAdmin, deleteClassAdmin } from "@/lib/admin-users.functions";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/faculty/dept-admins")({
-  head: () => ({ meta: [{ title: "Department Admins — Faculty" }] }),
-  component: () => <ProtectedFaculty><Gate /></ProtectedFaculty>,
+  head: () => ({ meta: [{ title: "Class Admins — Section" }] }),
+  component: () => <ProtectedSection><Gate /></ProtectedSection>,
 });
 
 function Gate() {
-  const { loading, isFacultyAdmin, isSuperAdmin } = useRole();
+  const { loading, isSectionAdmin, isSuperAdmin } = useRole();
   if (loading) return <Loader2 className="m-8 h-6 w-6 animate-spin text-primary" />;
-  if (!isFacultyAdmin && !isSuperAdmin) return <Navigate to="/faculty/dashboard" />;
+  if (!isSectionAdmin && !isSuperAdmin) return <Navigate to="/faculty/dashboard" />;
   return <Page />;
 }
 
 function Page() {
   const qc = useQueryClient();
   const { session } = useAuthSession();
-  const create = useServerFn(createDepartmentAdmin);
-  const remove = useServerFn(deleteDepartmentAdmin);
+  const create = useServerFn(createClassAdmin);
+  const remove = useServerFn(deleteClassAdmin);
   const [form, setForm] = useState({ email: "", password: "", full_name: "", phone: "", department_id: "" });
 
   const me = useQuery({
@@ -56,7 +56,7 @@ function Page() {
       if (!me.data) throw new Error("Loading…");
       return create({ data: { ...form, faculty_id: me.data.faculty_id } });
     },
-    onSuccess: () => { toast.success("Department admin created"); setForm({ email: "", password: "", full_name: "", phone: "", department_id: "" }); qc.invalidateQueries({ queryKey: ["dept-admins"] }); },
+    onSuccess: () => { toast.success("Class admin created"); setForm({ email: "", password: "", full_name: "", phone: "", department_id: "" }); qc.invalidateQueries({ queryKey: ["dept-admins"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -69,7 +69,7 @@ function Page() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Department Admins</h2>
+        <h2 className="font-serif text-2xl font-bold">Class Admins</h2>
         <p className="text-sm text-muted-foreground">Create login accounts for department administrators in your faculty.</p>
       </div>
       <Card>
@@ -77,7 +77,7 @@ function Page() {
         <CardContent>
           <form className="grid gap-3 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); createMut.mutate(); }}>
             <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div>
-            <div><Label>Department</Label>
+            <div><Label>Class</Label>
               <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })} required>
                 <option value="">Select</option>{(departments.data ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
@@ -94,7 +94,7 @@ function Page() {
         <CardContent>
           {adminsQ.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Name</th><th className="py-2 pr-3">Email</th><th className="py-2 pr-3">Department</th><th className="py-2 pr-3">Phone</th><th></th></tr></thead>
+              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Name</th><th className="py-2 pr-3">Email</th><th className="py-2 pr-3">Class</th><th className="py-2 pr-3">Phone</th><th></th></tr></thead>
               <tbody>
                 {(adminsQ.data ?? []).map((a: any) => (
                   <tr key={a.id} className="border-b">

@@ -19,7 +19,7 @@ import QRCode from "qrcode";
 export const Route = createFileRoute("/check-result")({
   head: () => ({
     meta: [
-      { title: "Check Result — Kazaure College" },
+      { title: "Check Result — School Portal" },
       { name: "description", content: "Enter your matriculation number and Result PIN to view and download your official result." },
     ],
   }),
@@ -92,9 +92,9 @@ function CheckResultPage() {
     line("Matric Number", result.student.matric_number, col2);
     y += 32;
     line("Programme", result.student.programme_name ?? "\u2014", margin);
-    line("Department", result.student.department_name ?? "\u2014", col2);
+    line("Class", result.student.department_name ?? "\u2014", col2);
     y += 32;
-    line("School/Faculty", result.student.faculty_name ?? "\u2014", margin);
+    line("School/Section", result.student.faculty_name ?? "\u2014", margin);
     line("Session / Semester", `${result.session_name} \u2014 ${result.semester} Semester`, col2);
     y += 40;
 
@@ -106,7 +106,7 @@ function CheckResultPage() {
 
     autoTable(doc, {
       startY: y,
-      head: [["Code", "Course Title", "Unit", "CA", "Exam", "Total", "Grade", "Remark"]],
+      head: [["Code", "Subject Title", "Unit", "CA", "Exam", "Total", "Grade", "Remark"]],
       body: rows,
       theme: "grid",
       headStyles: { fillColor: [5, 87, 56], textColor: 255, fontStyle: "bold" },
@@ -219,7 +219,7 @@ function CheckResultPage() {
                   <thead>
                     <tr className="border-b border-border text-xs uppercase text-muted-foreground">
                       <th className="py-2 pr-3">Code</th>
-                      <th className="py-2 pr-3">Course Title</th>
+                      <th className="py-2 pr-3">Subject Title</th>
                       <th className="py-2 pr-3">Unit</th>
                       <th className="py-2 pr-3">CA</th>
                       <th className="py-2 pr-3">Exam</th>

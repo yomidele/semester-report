@@ -21,7 +21,7 @@ export function CollegeHeader({ subtitle, caption }: { subtitle?: string; captio
           <h1 className="font-serif text-base font-bold uppercase leading-tight md:text-xl">
             {settings.college_name}
           </h1>
-          <p className="text-xs text-accent md:text-sm">{caption ?? "Office of the Registrar — Academic Management Portal"}</p>
+          <p className="text-xs text-accent md:text-sm">{caption ?? "School Administration Office — Academic Management Portal"}</p>
           {subtitle && <p className="mt-0.5 truncate text-xs text-primary-foreground/80">{subtitle}</p>}
         </div>
       </div>

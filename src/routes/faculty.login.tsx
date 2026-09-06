@@ -12,21 +12,21 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/faculty/login")({
-  head: () => ({ meta: [{ title: "Faculty Admin Sign In — Kazaure College" }] }),
-  component: FacultyLoginPage,
+  head: () => ({ meta: [{ title: "Section Admin Sign In — School Portal" }] }),
+  component: SectionLoginPage,
 });
 
-function FacultyLoginPage() {
+function SectionLoginPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuthSession();
-  const { isFacultyAdmin, isSuperAdmin, loading: roleLoading } = useRole();
+  const { isSectionAdmin, isSuperAdmin, loading: roleLoading } = useRole();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !roleLoading && session && (isFacultyAdmin || isSuperAdmin)) navigate({ to: "/faculty/dashboard" });
-  }, [authLoading, roleLoading, session, isFacultyAdmin, isSuperAdmin, navigate]);
+    if (!authLoading && !roleLoading && session && (isSectionAdmin || isSuperAdmin)) navigate({ to: "/faculty/dashboard" });
+  }, [authLoading, roleLoading, session, isSectionAdmin, isSuperAdmin, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +37,7 @@ function FacultyLoginPage() {
         toast.error(error.message);
         return;
       }
-      toast.success("Welcome, Faculty Admin");
+      toast.success("Welcome, Section Admin");
       navigate({ to: "/faculty/dashboard" });
     } finally {
       setSubmitting(false);
@@ -50,7 +50,7 @@ function FacultyLoginPage() {
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <Card className="w-full max-w-md tsu-shadow">
           <CardHeader>
-            <CardTitle className="font-serif text-2xl">Faculty Admin Sign In</CardTitle>
+            <CardTitle className="font-serif text-2xl">Section Admin Sign In</CardTitle>
             <CardDescription>Access your faculty dashboard. Accounts are created by the Super Admin.</CardDescription>
           </CardHeader>
           <CardContent>

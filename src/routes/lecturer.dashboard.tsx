@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ProtectedLecturer } from "@/components/ProtectedLecturer";
+import { ProtectedTeacher } from "@/components/ProtectedTeacher";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/lecturer/dashboard")({
-  head: () => ({ meta: [{ title: "Lecturer Dashboard — Kazaure College" }] }),
-  component: () => <ProtectedLecturer><Page /></ProtectedLecturer>,
+  head: () => ({ meta: [{ title: "Teacher Dashboard — School Portal" }] }),
+  component: () => <ProtectedTeacher><Page /></ProtectedTeacher>,
 });
 
 function Page() {
@@ -30,7 +30,7 @@ function Page() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Welcome{lecturer.data ? `, ${lecturer.data.full_name}` : ""}</h2>
-        <p className="text-sm text-muted-foreground">Courses assigned to you. Click one to enter scores.</p>
+        <p className="text-sm text-muted-foreground">Subjects assigned to you. Click one to enter scores.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {(assignments.data ?? []).map((a: any) => (
@@ -43,7 +43,7 @@ function Page() {
             </Card>
           </Link>
         ))}
-        {(assignments.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No courses assigned yet. Contact your Department Admin.</p>}
+        {(assignments.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No courses assigned yet. Contact your Class Admin.</p>}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LogsIcon as LogIcon, Filter } from "lucide-react";
 
 export const Route = createFileRoute("/audit-logs")({
-  head: () => ({ meta: [{ title: "Audit Logs — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Audit Logs — School Portal" }] }),
   component: () => <ProtectedAdmin><AuditLogsPage /></ProtectedAdmin>,
 });
 
@@ -68,9 +68,9 @@ function AuditLogsPage() {
             <div>
               <p className="font-medium mb-2">What is tracked:</p>
               <ul className="space-y-1 text-muted-foreground">
-                <li>✓ Course code changes (e.g., CSC201 → CSC202)</li>
-                <li>✓ Course title updates</li>
-                <li>✓ Course unit modifications (triggers GPA recalculation)</li>
+                <li>✓ Subject code changes (e.g., CSC201 → CSC202)</li>
+                <li>✓ Subject title updates</li>
+                <li>✓ Subject unit modifications (triggers GPA recalculation)</li>
                 <li>✓ Admin who made the change</li>
                 <li>✓ Exact timestamp of change</li>
                 <li>✓ Before/after values</li>
@@ -101,7 +101,7 @@ function AuditLogsPage() {
                     <TableHead>Timestamp</TableHead>
                     <TableHead>Admin</TableHead>
                     <TableHead>Action</TableHead>
-                    <TableHead>Course ID</TableHead>
+                    <TableHead>Subject ID</TableHead>
                     <TableHead>Changes</TableHead>
                   </TableRow>
                 </TableHeader>

@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ProtectedFaculty } from "@/components/ProtectedFaculty";
+import { ProtectedSection } from "@/components/ProtectedSection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BookOpen, Users, ClipboardList, FileSpreadsheet } from "lucide-react";
 
 export const Route = createFileRoute("/faculty/dashboard")({
-  head: () => ({ meta: [{ title: "Faculty Dashboard — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Section Dashboard — School Portal" }] }),
   component: () => (
-    <ProtectedFaculty>
-      <FacultyDashboard />
-    </ProtectedFaculty>
+    <ProtectedSection>
+      <SectionDashboard />
+    </ProtectedSection>
   ),
 });
 
@@ -26,13 +26,13 @@ function useScopedCount(table: "courses" | "students" | "results") {
   });
 }
 
-function FacultyDashboard() {
+function SectionDashboard() {
   const courses = useScopedCount("courses");
   const students = useScopedCount("students");
   const results = useScopedCount("results");
 
   const stats = [
-    { label: "Courses", value: courses.data, icon: BookOpen, to: "/faculty/courses" as const },
+    { label: "Subjects", value: courses.data, icon: BookOpen, to: "/faculty/courses" as const },
     { label: "Students", value: students.data, icon: Users, to: "/faculty/students" as const },
     { label: "Results Recorded", value: results.data, icon: ClipboardList, to: "/faculty/results" as const },
     { label: "Result Entry", value: "→", icon: FileSpreadsheet, to: "/faculty/result-entry" as const },
@@ -41,7 +41,7 @@ function FacultyDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-foreground">Faculty Overview</h2>
+        <h2 className="font-serif text-2xl font-bold text-foreground">Section Overview</h2>
         <p className="text-sm text-muted-foreground">All figures are scoped to your faculty.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -67,11 +67,11 @@ function FacultyDashboard() {
         </CardHeader>
         <CardContent>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
-            <li>Add <Link to="/faculty/courses" className="font-medium text-primary underline">Courses</Link> for your faculty's programmes.</li>
+            <li>Add <Link to="/faculty/courses" className="font-medium text-primary underline">Subjects</Link> for your faculty's programmes.</li>
             <li>Register <Link to="/faculty/students" className="font-medium text-primary underline">Students</Link> by matric number.</li>
             <li>Enter scores in <Link to="/faculty/result-entry" className="font-medium text-primary underline">Result Entry</Link>.</li>
             <li>Export from <Link to="/faculty/results" className="font-medium text-primary underline">View / Export Results</Link>.</li>
-            <li>Print <Link to="/faculty/transcripts" className="font-medium text-primary underline">Transcripts</Link> for graduating students.</li>
+            <li>Print <Link to="/faculty/transcripts" className="font-medium text-primary underline">Report Cards</Link> for graduating students.</li>
           </ol>
         </CardContent>
       </Card>

@@ -7,7 +7,7 @@ import { useAuthSession } from "@/hooks/use-auth";
 import { Users, ClipboardCheck, LinkIcon, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/dept-admin/dashboard")({
-  head: () => ({ meta: [{ title: "Department Dashboard — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Class Dashboard — School Portal" }] }),
   component: () => <ProtectedDeptAdmin><Page /></ProtectedDeptAdmin>,
 });
 
@@ -38,8 +38,8 @@ function Page() {
 
   const dept = (selfQ.data?.departments as { name?: string } | null)?.name;
   const stats = [
-    { label: "Lecturers", value: lecturersCount.data, icon: Users, to: "/dept-admin/lecturers" as const },
-    { label: "Courses", value: courses.data, icon: BookOpen, to: "/dept-admin/assignments" as const },
+    { label: "Teachers", value: lecturersCount.data, icon: Users, to: "/dept-admin/lecturers" as const },
+    { label: "Subjects", value: courses.data, icon: BookOpen, to: "/dept-admin/assignments" as const },
     { label: "Pending Approvals", value: pending.data, icon: ClipboardCheck, to: "/dept-admin/approvals" as const },
     { label: "Assignments", value: "→", icon: LinkIcon, to: "/dept-admin/assignments" as const },
   ] as const;
@@ -47,7 +47,7 @@ function Page() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">{dept ? `${dept} Department` : "Department"}</h2>
+        <h2 className="font-serif text-2xl font-bold">{dept ? `${dept} Class` : "Class"}</h2>
         <p className="text-sm text-muted-foreground">Manage lecturers, assign courses, approve and publish results.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

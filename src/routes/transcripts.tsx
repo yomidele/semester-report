@@ -15,8 +15,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/transcripts")({
-  head: () => ({ meta: [{ title: "Transcripts — Kazaure College" }] }),
-  component: () => <ProtectedAdmin><TranscriptsPage /></ProtectedAdmin>,
+  head: () => ({ meta: [{ title: "Report Cards — School Portal" }] }),
+  component: () => <ProtectedAdmin><Report CardsPage /></ProtectedAdmin>,
 });
 
 const LEVELS = [100, 200, 300, 400] as const;
@@ -35,7 +35,7 @@ interface ResultRow {
   academic_sessions: { name: string } | null;
 }
 
-export function TranscriptsPage() {
+export function Report CardsPage() {
   const [search, setSearch] = useState("");
   const [studentId, setStudentId] = useState<string | undefined>();
   const [startSession, setStartSession] = useState<string | undefined>();
@@ -144,12 +144,12 @@ export function TranscriptsPage() {
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
     doc.text("KAZAURE COLLEGE OF HEALTH TECHNOLOGY", pageW / 2, y, { align: "center" }); y += 18;
     doc.setFontSize(11); doc.setFont("helvetica", "normal");
-    doc.text("Academic Transcript", pageW / 2, y, { align: "center" }); y += 22;
+    doc.text("Academic Report Card", pageW / 2, y, { align: "center" }); y += 22;
 
     doc.setFontSize(10);
     doc.text(`Student: ${student.full_name}`, 40, y);
     doc.text(`Matric No: ${student.matric_number}`, pageW - 40, y, { align: "right" }); y += 14;
-    doc.text(`Department: ${student.department ?? "—"}`, 40, y);
+    doc.text(`Class: ${student.department ?? "—"}`, 40, y);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, pageW - 40, y, { align: "right" }); y += 18;
 
     for (const g of groups) {
@@ -194,13 +194,13 @@ export function TranscriptsPage() {
     doc.text(`Class: ${classOfDegree(overall.gpa)}`, pageW - 40, y, { align: "right" });
 
     doc.save(`transcript_${student.matric_number.replace(/[\/\\]/g, "_")}.pdf`);
-    toast.success("Transcript downloaded");
+    toast.success("Report Card downloaded");
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Transcripts</h2>
+        <h2 className="font-serif text-2xl font-bold">Report Cards</h2>
         <p className="text-sm text-muted-foreground">Generate a PDF transcript for any student across a chosen academic range.</p>
       </div>
 
