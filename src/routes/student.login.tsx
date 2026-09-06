@@ -11,7 +11,7 @@ import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { resolveMatricToEmail } from "@/lib/student-registration.functions";
+import { resolveAdmission NoToEmail } from "@/lib/student-registration.functions";
 
 export const Route = createFileRoute("/student/login")({
   head: () => ({ meta: [{ title: "Student Sign In — School Portal" }] }),
@@ -22,10 +22,10 @@ function StudentLoginPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuthSession();
   const { isStudent, loading: roleLoading } = useRole();
-  const [matric, setMatric] = useState("");
+  const [matric, setAdmission No] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const resolve = useServerFn(resolveMatricToEmail);
+  const resolve = useServerFn(resolveAdmission NoToEmail);
 
   useEffect(() => {
     if (authLoading || roleLoading || !session) return;
@@ -36,7 +36,7 @@ function StudentLoginPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { email } = await resolve({ data: { matric_number: matric.trim() } });
+      const { email } = await resolve({ data: { admission_number: matric.trim() } });
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         toast.error(error.message);
@@ -63,8 +63,8 @@ function StudentLoginPage() {
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="matric">Matric Number</Label>
-                <Input id="matric" value={matric} onChange={(e) => setMatric(e.target.value)} placeholder="SOC/26/0001" required />
+                <Label htmlFor="matric">Admission Number</Label>
+                <Input id="matric" value={matric} onChange={(e) => setAdmission No(e.target.value)} placeholder="SOC/26/0001" required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password">Password</Label>

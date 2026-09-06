@@ -9,7 +9,7 @@ import { useRole } from "@/hooks/use-role";
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/sessions", label: "Academic Sessions", icon: CalendarDays },
-  { to: "/courses", label: "Courses", icon: BookOpen },
+  { to: "/subjects", label: "Subjects", icon: BookOpen },
   { to: "/students", label: "Students", icon: Users },
   { to: "/result-entry", label: "Result Entry", icon: ClipboardEdit },
   { to: "/results", label: "View / Export Results", icon: FileSpreadsheet },

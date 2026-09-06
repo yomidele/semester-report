@@ -22,7 +22,7 @@ function ProfilePage() {
   if (!s) return <p className="p-6 text-muted-foreground">Loading…</p>;
 
   const rows: Array<[string, string | number | null | undefined]> = [
-    ["Matric Number", s.matric_number],
+    ["Admission Number", s.admission_number],
     ["Full Name", s.full_name],
     ["Email", s.email],
     ["Phone", s.phone],
@@ -51,7 +51,7 @@ function ProfilePage() {
           </Avatar>
           <div>
             <CardTitle className="font-serif text-xl">{s.full_name}</CardTitle>
-            <p className="font-mono text-sm text-muted-foreground">{s.matric_number}</p>
+            <p className="font-mono text-sm text-muted-foreground">{s.admission_number}</p>
           </div>
         </CardHeader>
         <CardContent>

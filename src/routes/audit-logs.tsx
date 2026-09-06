@@ -16,7 +16,7 @@ export const Route = createFileRoute("/audit-logs")({
 interface AuditRecord {
   id: string;
   admin_id: string;
-  course_id: string;
+  subject_id: string;
   action_type: string;
   old_values: Record<string, unknown>;
   new_values: Record<string, unknown>;
@@ -48,7 +48,7 @@ function AuditLogsPage() {
       <div>
         <h2 className="font-serif text-2xl font-bold">Audit Logs</h2>
         <p className="text-sm text-muted-foreground">
-          Track all administrative actions on courses and academic records for compliance and data integrity.
+          Track all administrative actions on subjects and academic records for compliance and data integrity.
         </p>
       </div>
 
@@ -59,7 +59,7 @@ function AuditLogsPage() {
             System Audit Trail
           </CardTitle>
           <CardDescription>
-            All course edits are logged with timestamps and specific changes. System-controlled fields (GPA, CGPA) automatically
+            All subject edits are logged with timestamps and specific changes. System-controlled fields (Term Average, Academic Average) automatically
             recalculate when needed.
           </CardDescription>
         </CardHeader>
@@ -70,7 +70,7 @@ function AuditLogsPage() {
               <ul className="space-y-1 text-muted-foreground">
                 <li>✓ Subject code changes (e.g., CSC201 → CSC202)</li>
                 <li>✓ Subject title updates</li>
-                <li>✓ Subject unit modifications (triggers GPA recalculation)</li>
+                <li>✓ Subject unit modifications (triggers Term Average recalculation)</li>
                 <li>✓ Admin who made the change</li>
                 <li>✓ Exact timestamp of change</li>
                 <li>✓ Before/after values</li>
@@ -84,7 +84,7 @@ function AuditLogsPage() {
         <Card className="tsu-shadow">
           <CardContent className="py-10 text-center text-muted-foreground">
             <LogIcon className="h-12 w-12 mx-auto mb-2 opacity-30" />
-            <p>No audit logs yet. Changes to courses will appear here.</p>
+            <p>No audit logs yet. Changes to subjects will appear here.</p>
             <p className="text-xs mt-2">Note: Audit logs are currently logged to the console.</p>
           </CardContent>
         </Card>
@@ -115,7 +115,7 @@ function AuditLogsPage() {
                       <TableCell>
                         <Badge variant="outline">{log.action_type}</Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{log.course_id.slice(0, 8)}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.subject_id.slice(0, 8)}</TableCell>
                       <TableCell className="text-sm">{log.changes_description}</TableCell>
                     </TableRow>
                   ))}
@@ -141,7 +141,7 @@ function AuditLogsPage() {
           <div>
             <p className="font-medium mb-1">📊 Automatic Recalculation</p>
             <p className="text-muted-foreground">
-              When a course unit is changed, GPA and CGPA are automatically recalculated for all affected students.
+              When a subject unit is changed, Term Average and Academic Average are automatically recalculated for all affected students.
               This ensures mathematical consistency across the system.
             </p>
           </div>
@@ -154,8 +154,8 @@ function AuditLogsPage() {
           <div>
             <p className="font-medium mb-1">⚙️ System-Controlled Fields</p>
             <p className="text-muted-foreground">
-              GPA, CGPA, grade points, and other calculated fields are never manually edited. They are always
-              system-generated and recalculated based on raw course data.
+              Term Average, Academic Average, grade points, and other calculated fields are never manually edited. They are always
+              system-generated and recalculated based on raw subject data.
             </p>
           </div>
         </CardContent>

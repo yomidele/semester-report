@@ -25,8 +25,8 @@ function TeacherLogin() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const allowed = roles.includes("lecturer") || roles.includes("super_admin");
-    if (!authLoading && !roleLoading && session && allowed) navigate({ to: "/lecturer/dashboard" });
+    const allowed = roles.includes("teacher") || roles.includes("super_admin");
+    if (!authLoading && !roleLoading && session && allowed) navigate({ to: "/teacher/dashboard" });
   }, [authLoading, roleLoading, session, roles, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ function TeacherLogin() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { toast.error(error.message); return; }
       toast.success("Welcome");
-      navigate({ to: "/lecturer/dashboard" });
+      navigate({ to: "/teacher/dashboard" });
     } finally { setSubmitting(false); }
   };
 

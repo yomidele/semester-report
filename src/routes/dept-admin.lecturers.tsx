@@ -31,10 +31,10 @@ function Page() {
     queryFn: async () => (await supabase.from("department_admins").select("department_id, faculty_id").eq("user_id", session!.user.id).maybeSingle()).data,
   });
 
-  const lecturersQ = useQuery({
-    queryKey: ["dept-lecturers"],
+  const teachersQ = useQuery({
+    queryKey: ["dept-teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("lecturers").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("teachers").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -48,14 +48,14 @@ function Page() {
     onSuccess: () => {
       toast.success("Teacher created");
       setForm({ email: "", password: "", full_name: "", phone: "" });
-      qc.invalidateQueries({ queryKey: ["dept-lecturers"] });
+      qc.invalidateQueries({ queryKey: ["dept-teachers"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const removeMut = useMutation({
     mutationFn: (user_id: string) => remove({ data: { user_id } }),
-    onSuccess: () => { toast.success("Teacher removed"); qc.invalidateQueries({ queryKey: ["dept-lecturers"] }); },
+    onSuccess: () => { toast.success("Teacher removed"); qc.invalidateQueries({ queryKey: ["dept-teachers"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -63,10 +63,10 @@ function Page() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Teachers</h2>
-        <p className="text-sm text-muted-foreground">Create login accounts for lecturers in your department.</p>
+        <p className="text-sm text-muted-foreground">Create login accounts for teachers in your department.</p>
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-base">Add lecturer</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Add teacher</CardTitle></CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); createMut.mutate(); }}>
             <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div>
@@ -78,13 +78,13 @@ function Page() {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle className="text-base">All lecturers</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">All teachers</CardTitle></CardHeader>
         <CardContent>
-          {lecturersQ.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (
+          {teachersQ.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (
             <table className="w-full text-sm">
               <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Name</th><th className="py-2 pr-3">Email</th><th className="py-2 pr-3">Phone</th><th></th></tr></thead>
               <tbody>
-                {(lecturersQ.data ?? []).map((l) => (
+                {(teachersQ.data ?? []).map((l) => (
                   <tr key={l.id} className="border-b">
                     <td className="py-2 pr-3 font-medium">{l.full_name}</td>
                     <td className="py-2 pr-3">{l.email}</td>
@@ -92,7 +92,7 @@ function Page() {
                     <td className="py-2 text-right"><Button size="sm" variant="ghost" onClick={() => { if (confirm(`Remove ${l.full_name}?`)) removeMut.mutate(l.user_id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
                   </tr>
                 ))}
-                {(lecturersQ.data ?? []).length === 0 && <tr><td colSpan={4} className="py-4 text-center text-muted-foreground">No lecturers yet.</td></tr>}
+                {(teachersQ.data ?? []).length === 0 && <tr><td colSpan={4} className="py-4 text-center text-muted-foreground">No teachers yet.</td></tr>}
               </tbody>
             </table>
           )}

@@ -27,7 +27,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
-        .select("id, status, ca_score, exam_score, total_score, level, semester, students(full_name, matric_number), courses(code, title), academic_sessions(name)")
+        .select("id, status, ca_score, exam_score, total_score, level, term, students(full_name, admission_number), subjects(code, title), academic_sessions(name)")
         .eq("status", tab)
         .order("updated_at", { ascending: false })
         .limit(500);
@@ -58,7 +58,7 @@ function Page() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Result Approvals</h2>
-        <p className="text-sm text-muted-foreground">Approve, publish, or return submitted lecturer scores.</p>
+        <p className="text-sm text-muted-foreground">Approve, publish, or return submitted teacher scores.</p>
       </div>
       <div className="flex gap-2">
         {(["submitted","approved","draft","published"] as const).map((t) => (
@@ -80,15 +80,15 @@ function Page() {
         <CardContent>
           {q.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Matric</th><th className="py-2 pr-3">Student</th><th className="py-2 pr-3">Subject</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Sem</th><th className="py-2 pr-3">CA</th><th className="py-2 pr-3">Exam</th><th className="py-2 pr-3">Total</th></tr></thead>
+              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Admission No</th><th className="py-2 pr-3">Student</th><th className="py-2 pr-3">Subject</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Sem</th><th className="py-2 pr-3">CA</th><th className="py-2 pr-3">Exam</th><th className="py-2 pr-3">Total</th></tr></thead>
               <tbody>
                 {rows.map((r: any) => (
                   <tr key={r.id} className="border-b">
-                    <td className="py-2 pr-3">{r.students?.matric_number}</td>
+                    <td className="py-2 pr-3">{r.students?.admission_number}</td>
                     <td className="py-2 pr-3">{r.students?.full_name}</td>
-                    <td className="py-2 pr-3">{r.courses?.code}</td>
+                    <td className="py-2 pr-3">{r.subjects?.code}</td>
                     <td className="py-2 pr-3">{r.academic_sessions?.name}</td>
-                    <td className="py-2 pr-3">{r.semester}</td>
+                    <td className="py-2 pr-3">{r.term}</td>
                     <td className="py-2 pr-3">{r.ca_score}</td>
                     <td className="py-2 pr-3">{r.exam_score}</td>
                     <td className="py-2 pr-3 font-medium">{r.total_score ?? Number(r.ca_score)+Number(r.exam_score)}</td>

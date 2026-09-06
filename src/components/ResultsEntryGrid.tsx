@@ -17,18 +17,18 @@ const SEMESTERS = ["First", "Second"] as const;
 
 interface Student {
   id: string;
-  matric_number: string;
+  admission_number: string;
   full_name: string;
   level: number;
 }
 
-interface Course {
+interface Subject {
   id: string;
   code: string;
   title: string;
   unit: number;
   level: number;
-  semester: string;
+  term: string;
 }
 
 interface AcademicSession {
@@ -38,7 +38,7 @@ interface AcademicSession {
 
 interface GridEntry {
   student_id: string;
-  matric_number: string;
+  admission_number: string;
   full_name: string;
   ca_score: string;
   exam_score: string;
@@ -47,9 +47,9 @@ interface GridEntry {
 
 interface BulkSavePayload {
   student_id: string;
-  course_id: string;
+  subject_id: string;
   session_id: string;
-  semester: string;
+  term: string;
   level: number;
   ca_score: number;
   exam_score: number;
@@ -59,9 +59,9 @@ export function ResultsEntryGrid() {
   const qc = useQueryClient();
   const [filters, setFilters] = useState({
     sessionId: "",
-    semester: "First",
+    term: "First",
     level: "100",
-    courseId: "",
+    subjectId: "",
   });
 
   const [gridEntries, setGridEntries] = useState<GridEntry[]>([]);
@@ -80,19 +80,19 @@ export function ResultsEntryGrid() {
     },
   });
 
-  // Fetch courses for the selected level
-  const { data: courses = [] } = useQuery({
-    queryKey: ["courses-by-level", filters.level, filters.semester],
-    enabled: !!filters.level && !!filters.semester,
+  // Fetch subjects for the selected level
+  const { data: subjects = [] } = useQuery({
+    queryKey: ["subjects-by-level", filters.level, filters.term],
+    enabled: !!filters.level && !!filters.term,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("courses")
+        .from("subjects")
         .select("*")
         .eq("level", Number(filters.level))
-        .eq("semester", filters.semester)
+        .eq("term", filters.term)
         .order("code");
       if (error) throw error;
-      return (data ?? []) as Course[];
+      return (data ?? []) as Subject[];
     },
   });
 
@@ -105,43 +105,43 @@ export function ResultsEntryGrid() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("student_academic_records")
-        .select("students(id, matric_number, full_name)")
+        .select("students(id, admission_number, full_name)")
         .eq("academic_session_id", filters.sessionId)
         .eq("level", Number(filters.level))
-        .order("students(matric_number)");
+        .order("students(admission_number)");
       if (error) throw error;
       
       // Flatten the nested structure
       return (data ?? []).map((record: any) => ({
         id: record.students.id,
-        matric_number: record.students.matric_number,
+        admission_number: record.students.admission_number,
         full_name: record.students.full_name,
         level: Number(filters.level),
       })) as Student[];
     },
   });
 
-  // Fetch existing results for the selected course/session/semester/level
+  // Fetch existing results for the selected subject/session/term/level
   const { data: existingResults = [] } = useQuery({
-    queryKey: ["results-for-bulk", filters.sessionId, filters.courseId, filters.semester, filters.level],
-    enabled: !!filters.sessionId && !!filters.courseId && !!filters.level,
+    queryKey: ["results-for-bulk", filters.sessionId, filters.subjectId, filters.term, filters.level],
+    enabled: !!filters.sessionId && !!filters.subjectId && !!filters.level,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
         .select("id, student_id, ca_score, exam_score")
         .eq("session_id", filters.sessionId)
-        .eq("course_id", filters.courseId)
-        .eq("semester", filters.semester)
+        .eq("subject_id", filters.subjectId)
+        .eq("term", filters.term)
         .eq("level", Number(filters.level));
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  // Get the selected course
-  const selectedCourse = useMemo(
-    () => courses.find((c) => c.id === filters.courseId),
-    [courses, filters.courseId]
+  // Get the selected subject
+  const selectedSubject = useMemo(
+    () => subjects.find((c) => c.id === filters.subjectId),
+    [subjects, filters.subjectId]
   );
 
   // Handle filter changes
@@ -156,8 +156,8 @@ export function ResultsEntryGrid() {
 
   // Load students into the grid
   const handleLoadStudents = useCallback(() => {
-    if (!filters.sessionId || !filters.courseId || !filters.level) {
-      toast.error("Please select Session, Course, and Level");
+    if (!filters.sessionId || !filters.subjectId || !filters.level) {
+      toast.error("Please select Session, Subject, and Level");
       return;
     }
 
@@ -166,7 +166,7 @@ export function ResultsEntryGrid() {
       const existingResult = existingResults.find((r) => r.student_id === student.id);
       return {
         student_id: student.id,
-        matric_number: student.matric_number,
+        admission_number: student.admission_number,
         full_name: student.full_name,
         ca_score: existingResult?.ca_score ? String(existingResult.ca_score) : "",
         exam_score: existingResult?.exam_score ? String(existingResult.exam_score) : "",
@@ -177,7 +177,7 @@ export function ResultsEntryGrid() {
     setGridEntries(entries);
     setHasLoadedStudents(true);
     toast.success(`Loaded ${entries.length} students`);
-  }, [filters.sessionId, filters.courseId, filters.level, levelStudents, existingResults]);
+  }, [filters.sessionId, filters.subjectId, filters.level, levelStudents, existingResults]);
 
   // Handle score input changes
   const handleScoreChange = useCallback(
@@ -241,9 +241,9 @@ export function ResultsEntryGrid() {
         })
         .map((entry) => ({
           student_id: entry.student_id,
-          course_id: filters.courseId,
+          subject_id: filters.subjectId,
           session_id: filters.sessionId,
-          semester: filters.semester,
+          term: filters.term,
           level: Number(filters.level),
           ca_score: Number(entry.ca_score),
           exam_score: Number(entry.exam_score),
@@ -259,9 +259,9 @@ export function ResultsEntryGrid() {
           supabase.from("results").upsert(
             {
               student_id: item.student_id,
-              course_id: item.course_id,
+              subject_id: item.subject_id,
               session_id: item.session_id,
-              semester: item.semester,
+              term: item.term,
               level: item.level,
               ca_score: item.ca_score,
               exam_score: item.exam_score,
@@ -269,7 +269,7 @@ export function ResultsEntryGrid() {
               published_at: new Date().toISOString(),
             },
             {
-              onConflict: "student_id,course_id,session_id,semester",
+              onConflict: "student_id,subject_id,session_id,term",
             }
           )
         )
@@ -336,10 +336,10 @@ export function ResultsEntryGrid() {
             </Select>
           </div>
 
-          {/* Semester Filter */}
+          {/* Term Filter */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Semester</Label>
-            <Select value={filters.semester} onValueChange={(value) => handleFilterChange("semester", value)}>
+            <Label className="text-xs font-medium">Term</Label>
+            <Select value={filters.term} onValueChange={(value) => handleFilterChange("term", value)}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
@@ -370,18 +370,18 @@ export function ResultsEntryGrid() {
             </Select>
           </div>
 
-          {/* Course Filter */}
+          {/* Subject Filter */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Course</Label>
-            <Select value={filters.courseId} onValueChange={(value) => handleFilterChange("courseId", value)}>
+            <Label className="text-xs font-medium">Subject</Label>
+            <Select value={filters.subjectId} onValueChange={(value) => handleFilterChange("subjectId", value)}>
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="Course" />
+                <SelectValue placeholder="Subject" />
               </SelectTrigger>
               <SelectContent>
-                {courses.length === 0 ? (
-                  <div className="px-2 py-2 text-xs text-muted-foreground">No courses found</div>
+                {subjects.length === 0 ? (
+                  <div className="px-2 py-2 text-xs text-muted-foreground">No subjects found</div>
                 ) : (
-                  courses.map((c) => (
+                  subjects.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.code}
                     </SelectItem>
@@ -395,7 +395,7 @@ export function ResultsEntryGrid() {
           <div className="space-y-1.5 flex items-end">
             <Button
               onClick={handleLoadStudents}
-              disabled={!filters.sessionId || !filters.courseId || bulkSaveMut.isPending}
+              disabled={!filters.sessionId || !filters.subjectId || bulkSaveMut.isPending}
               className="w-full h-9"
               size="sm"
             >
@@ -412,18 +412,18 @@ export function ResultsEntryGrid() {
         </CardContent>
       </Card>
 
-      {/* Course Details Card (shown when course is selected) */}
-      {selectedCourse && hasLoadedStudents && (
+      {/* Subject Details Card (shown when subject is selected) */}
+      {selectedSubject && hasLoadedStudents && (
         <Card className="tsu-shadow bg-blue-50 border-blue-200">
           <CardContent className="pt-4 text-sm">
             <div className="flex gap-6">
               <div>
-                <span className="font-medium">Course:</span>
-                <span className="ml-2">{selectedCourse.code} — {selectedCourse.title}</span>
+                <span className="font-medium">Subject:</span>
+                <span className="ml-2">{selectedSubject.code} — {selectedSubject.title}</span>
               </div>
               <div>
                 <span className="font-medium">Credit Units:</span>
-                <span className="ml-2 font-mono">{selectedCourse.unit}</span>
+                <span className="ml-2 font-mono">{selectedSubject.unit}</span>
               </div>
               <div>
                 <span className="font-medium">Students Loaded:</span>
@@ -448,7 +448,7 @@ export function ResultsEntryGrid() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Matric</TableHead>
+                    <TableHead className="text-xs">Admission No</TableHead>
                     <TableHead className="text-xs">Name</TableHead>
                     <TableHead className="text-center text-xs">CA (0-40)</TableHead>
                     <TableHead className="text-center text-xs">Exam (0-70)</TableHead>
@@ -470,7 +470,7 @@ export function ResultsEntryGrid() {
                         key={entry.student_id}
                         className={entryErrors ? "bg-destructive/10" : ""}
                       >
-                        <TableCell className="font-mono text-xs py-3">{entry.matric_number}</TableCell>
+                        <TableCell className="font-mono text-xs py-3">{entry.admission_number}</TableCell>
                         <TableCell className="text-sm py-3">{entry.full_name}</TableCell>
                         <TableCell className="text-center py-3">
                           <Input
@@ -554,7 +554,7 @@ export function ResultsEntryGrid() {
                             const entry = gridEntries.find((e) => e.student_id === studentId);
                             return (
                               <li key={studentId}>
-                                <span className="font-mono">{entry?.matric_number}</span>: {errors[0]}
+                                <span className="font-mono">{entry?.admission_number}</span>: {errors[0]}
                               </li>
                             );
                           })}
@@ -608,7 +608,7 @@ export function ResultsEntryGrid() {
       {!hasLoadedStudents && (
         <Card className="tsu-shadow">
           <CardContent className="py-10 text-center text-muted-foreground">
-            Select session, course, and level, then click "Load Students" to begin.
+            Select session, subject, and level, then click "Load Students" to begin.
           </CardContent>
         </Card>
       )}

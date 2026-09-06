@@ -97,10 +97,10 @@ function SettingsPage() {
           <Field label="Website" value={form.website ?? ""} onChange={(value) => set("website", value)} />
         </CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Academic configuration</CardTitle></CardHeader><CardContent className="space-y-4">
-          <Field label="Matric format" value={form.matric_format} onChange={(value) => set("matric_format", value)} />
+          <Field label="Admission No format" value={form.matric_format} onChange={(value) => set("matric_format", value)} />
           <p className="text-xs text-muted-foreground">Use tokens such as {'{DEPT}'}, {'{YY}'} and {'{SEQ}'}.</p>
           <div className="grid gap-4 md:grid-cols-2"><Field label="Sequence padding" type="number" value={String(form.matric_seq_padding)} onChange={(value) => set("matric_seq_padding", Number(value))} /><Field label="Pass mark" type="number" value={String(form.pass_mark)} onChange={(value) => set("pass_mark", Number(value))} /></div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.use_gpa} onChange={(event) => set("use_gpa", event.target.checked)} /> Use GPA calculations</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.use_gpa} onChange={(event) => set("use_gpa", event.target.checked)} /> Use Term Average calculations</label>
           <div><Label>Socials JSON</Label><Textarea rows={4} value={socials} onChange={(event) => setSocials(event.target.value)} /></div>
           <div><Label>Grading scale JSON</Label><Textarea rows={10} value={gradingScale} onChange={(event) => setGradingScale(event.target.value)} /></div>
         </CardContent></Card>

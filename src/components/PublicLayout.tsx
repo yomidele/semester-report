@@ -54,7 +54,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         ? "/faculty/dashboard"
         : roles.includes("department_admin")
           ? "/dept-admin/dashboard"
-          : "/lecturer/dashboard";
+          : "/teacher/dashboard";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -186,7 +186,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Portals</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-primary-foreground/80">
               <li><Link to="/student/login" className="hover:text-accent">Student Portal</Link></li>
-              <li><Link to="/lecturer/login" className="hover:text-accent">Lecturer Portal</Link></li>
+              <li><Link to="/teacher/login" className="hover:text-accent">Teacher Portal</Link></li>
               <li><Link to="/dept-admin/login" className="hover:text-accent">Department Admin</Link></li>
               <li><Link to="/faculty/login" className="hover:text-accent">School Admin</Link></li>
               <li><Link to="/login" className="hover:text-accent">Administration</Link></li>

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/faculty/dashboard")({
   ),
 });
 
-function useScopedCount(table: "courses" | "students" | "results") {
+function useScopedCount(table: "subjects" | "students" | "results") {
   return useQuery({
     queryKey: ["faculty-count", table],
     queryFn: async () => {
@@ -27,12 +27,12 @@ function useScopedCount(table: "courses" | "students" | "results") {
 }
 
 function SectionDashboard() {
-  const courses = useScopedCount("courses");
+  const subjects = useScopedCount("subjects");
   const students = useScopedCount("students");
   const results = useScopedCount("results");
 
   const stats = [
-    { label: "Subjects", value: courses.data, icon: BookOpen, to: "/faculty/courses" as const },
+    { label: "Subjects", value: subjects.data, icon: BookOpen, to: "/faculty/subjects" as const },
     { label: "Students", value: students.data, icon: Users, to: "/faculty/students" as const },
     { label: "Results Recorded", value: results.data, icon: ClipboardList, to: "/faculty/results" as const },
     { label: "Result Entry", value: "→", icon: FileSpreadsheet, to: "/faculty/result-entry" as const },
@@ -67,7 +67,7 @@ function SectionDashboard() {
         </CardHeader>
         <CardContent>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
-            <li>Add <Link to="/faculty/courses" className="font-medium text-primary underline">Subjects</Link> for your faculty's programmes.</li>
+            <li>Add <Link to="/faculty/subjects" className="font-medium text-primary underline">Subjects</Link> for your faculty's programmes.</li>
             <li>Register <Link to="/faculty/students" className="font-medium text-primary underline">Students</Link> by matric number.</li>
             <li>Enter scores in <Link to="/faculty/result-entry" className="font-medium text-primary underline">Result Entry</Link>.</li>
             <li>Export from <Link to="/faculty/results" className="font-medium text-primary underline">View / Export Results</Link>.</li>

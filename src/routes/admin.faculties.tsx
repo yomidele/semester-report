@@ -141,7 +141,7 @@ function SectionsPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              if (confirm(`Delete ${f.name}? This will fail if students/courses are still attached.`)) {
+                              if (confirm(`Delete ${f.name}? This will fail if students/subjects are still attached.`)) {
                                 deleteSection.mutate(f.id);
                               }
                             }}

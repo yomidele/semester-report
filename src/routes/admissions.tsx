@@ -31,7 +31,7 @@ const REQUIREMENTS = [
 const FAQS = [
   {
     question: "How long do the programmes take?",
-    answer: "Programme duration depends on the award and course. Check the programme list below for the current duration of each active programme.",
+    answer: "Programme duration depends on the award and subject. Check the programme list below for the current duration of each active programme.",
   },
   {
     question: "Can I apply before the next session opens?",
@@ -66,7 +66,7 @@ function Admissions() {
             <p className="text-sm font-semibold uppercase tracking-wider text-accent-foreground">Entry requirements</p>
             <h2 className="mt-2 font-serif text-2xl font-bold text-foreground md:text-3xl">What you need to apply</h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Requirements may vary by programme. Review the course details and contact the college before submitting your application.
+              Requirements may vary by programme. Review the subject details and contact the college before submitting your application.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
               {REQUIREMENTS.map((requirement) => (

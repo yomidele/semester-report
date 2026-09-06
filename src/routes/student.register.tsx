@@ -123,7 +123,7 @@ function StudentRegisterPage() {
           passport_base64: passportBase64,
         },
       });
-      setSuccess({ matric: res.matric_number, email: res.email });
+      setSuccess({ matric: res.admission_number, email: res.email });
       toast.success("Registration complete!");
     } catch (e) {
       toast.error((e as Error).message);

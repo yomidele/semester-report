@@ -82,7 +82,7 @@ function Programmes() {
                   <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
                     <div>School: <span className="text-foreground">{school?.name ?? "—"}</span></div>
                     <div>Class: <span className="text-foreground">{dept?.name ?? "—"}</span></div>
-                    <div>Units per semester: <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
+                    <div>Units per term: <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
                   </dl>
                   {p.requirements && <p className="mt-3 text-xs text-muted-foreground"><strong className="text-foreground">Entry:</strong> {p.requirements}</p>}
                   <Button asChild size="sm" className="mt-4 w-full">

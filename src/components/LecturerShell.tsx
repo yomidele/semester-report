@@ -6,17 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const NAV = [
-  { to: "/lecturer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/lecturer/entry", label: "Grade Entry", icon: ClipboardEdit },
+  { to: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/teacher/entry", label: "Grade Entry", icon: ClipboardEdit },
 ] as const;
 
-export function LecturerShell({ children }: { children: React.ReactNode }) {
+export function TeacherShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out");
-    navigate({ to: "/lecturer/login" });
+    navigate({ to: "/teacher/login" });
   };
   return (
     <div className="flex min-h-screen flex-col bg-background">
