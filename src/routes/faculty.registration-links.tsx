@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedFaculty } from "@/components/ProtectedFaculty";
+import { ProtectedSection } from "@/components/ProtectedSection";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,8 @@ import { Copy, Trash2 } from "lucide-react";
 import { createRegistrationLink, listRegistrationLinks, deleteRegistrationLink } from "@/lib/registration-links.functions";
 
 export const Route = createFileRoute("/faculty/registration-links")({
-  head: () => ({ meta: [{ title: "Registration Links — Kazaure College" }] }),
-  component: () => <ProtectedFaculty><LinksPage /></ProtectedFaculty>,
+  head: () => ({ meta: [{ title: "Registration Links — School Portal" }] }),
+  component: () => <ProtectedSection><LinksPage /></ProtectedSection>,
 });
 
 function LinksPage() {

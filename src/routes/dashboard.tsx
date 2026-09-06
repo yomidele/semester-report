@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, BookOpen, Users, ClipboardList } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Kazaure College Result Portal" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — School Portal Result Portal" }] }),
   component: () => <ProtectedAdmin><DashboardPage /></ProtectedAdmin>,
 });
 
-function useCount(table: "academic_sessions" | "courses" | "students" | "results") {
+function useCount(table: "academic_sessions" | "subjects" | "students" | "results") {
   return useQuery({
     queryKey: ["count", table],
     queryFn: async () => {
@@ -23,13 +23,13 @@ function useCount(table: "academic_sessions" | "courses" | "students" | "results
 
 function DashboardPage() {
   const sessions = useCount("academic_sessions");
-  const courses = useCount("courses");
+  const subjects = useCount("subjects");
   const students = useCount("students");
   const results = useCount("results");
 
   const stats = [
     { label: "Academic Sessions", value: sessions.data, icon: CalendarDays, to: "/sessions" },
-    { label: "Courses", value: courses.data, icon: BookOpen, to: "/courses" },
+    { label: "Subjects", value: subjects.data, icon: BookOpen, to: "/subjects" },
     { label: "Students", value: students.data, icon: Users, to: "/students" },
     { label: "Results Recorded", value: results.data, icon: ClipboardList, to: "/results" },
   ] as const;
@@ -64,7 +64,7 @@ function DashboardPage() {
         <CardContent>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
             <li>Create an <Link to="/sessions" className="font-medium text-primary underline">Academic Session</Link> (e.g. 2024/2025).</li>
-            <li>Add <Link to="/courses" className="font-medium text-primary underline">Courses</Link> for each level and semester.</li>
+            <li>Add <Link to="/subjects" className="font-medium text-primary underline">Subjects</Link> for each level and term.</li>
             <li>Register <Link to="/students" className="font-medium text-primary underline">Students</Link> with matric numbers.</li>
             <li>Use <Link to="/result-entry" className="font-medium text-primary underline">Result Entry</Link> to record CA &amp; Exam scores.</li>
             <li>View, print, or export the result sheet from <Link to="/results" className="font-medium text-primary underline">View / Export Results</Link>.</li>

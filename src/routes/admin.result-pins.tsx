@@ -124,7 +124,7 @@ function ResultPinManagement() {
                   <tr className="border-b border-border text-xs uppercase text-muted-foreground">
                     <th className="py-2 pr-3">Student</th>
                     <th className="py-2 pr-3">Session</th>
-                    <th className="py-2 pr-3">Semester</th>
+                    <th className="py-2 pr-3">Term</th>
                     <th className="py-2 pr-3">Source</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Views</th>
@@ -138,10 +138,10 @@ function ResultPinManagement() {
                     <tr key={p.id} className="border-b border-border/60">
                       <td className="py-2 pr-3">
                         <div className="font-medium">{p.student_name}</div>
-                        <div className="text-xs text-muted-foreground">{p.matric_number}</div>
+                        <div className="text-xs text-muted-foreground">{p.admission_number}</div>
                       </td>
                       <td className="py-2 pr-3">{p.session_name}</td>
-                      <td className="py-2 pr-3">{p.semester}</td>
+                      <td className="py-2 pr-3">{p.term}</td>
                       <td className="py-2 pr-3 capitalize">{p.source}</td>
                       <td className="py-2 pr-3">
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLE[p.status] ?? ""}`}>
@@ -191,7 +191,7 @@ function ResultPinManagement() {
                     <th className="py-2 pr-3">Amount</th>
                     <th className="py-2 pr-3">Reference</th>
                     <th className="py-2 pr-3">Session</th>
-                    <th className="py-2 pr-3">Semester</th>
+                    <th className="py-2 pr-3">Term</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Date</th>
                   </tr>
@@ -201,12 +201,12 @@ function ResultPinManagement() {
                     <tr key={p.id} className="border-b border-border/60">
                       <td className="py-2 pr-3">
                         <div className="font-medium">{p.student_name}</div>
-                        <div className="text-xs text-muted-foreground">{p.matric_number}</div>
+                        <div className="text-xs text-muted-foreground">{p.admission_number}</div>
                       </td>
                       <td className="py-2 pr-3">₦{Number(p.amount).toLocaleString()}</td>
                       <td className="py-2 pr-3 font-mono text-xs">{p.reference}</td>
                       <td className="py-2 pr-3">{p.session_name}</td>
-                      <td className="py-2 pr-3">{p.semester}</td>
+                      <td className="py-2 pr-3">{p.term}</td>
                       <td className="py-2 pr-3">
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLE[p.status] ?? ""}`}>
                           {p.status}
@@ -251,25 +251,25 @@ function ManualIssuanceCard({
   onIssued: () => void;
 }) {
   const generate = useServerFn(adminGenerateManualPin);
-  const [matric, setMatric] = useState("");
+  const [matric, setAdmission No] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [semester, setSemester] = useState<"First" | "Second" | "">("");
+  const [term, setTerm] = useState<"First" | "Second" | "">("");
   const [issuing, setIssuing] = useState(false);
   const [result, setResult] = useState<{ pin: string; voucherUrl: string | null; studentName: string } | null>(null);
 
   async function handleGenerate(event: React.FormEvent) {
     event.preventDefault();
-    if (!sessionId || !semester) {
-      toast.error("Select a session and semester.");
+    if (!sessionId || !term) {
+      toast.error("Select a session and term.");
       return;
     }
     setIssuing(true);
     setResult(null);
     try {
-      const res = await generate({ data: { matric_number: matric, session_id: sessionId, semester } });
+      const res = await generate({ data: { admission_number: matric, session_id: sessionId, term } });
       setResult({ pin: res.pin, voucherUrl: res.voucherUrl, studentName: res.studentName });
       onIssued();
-      setMatric("");
+      setAdmission No("");
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -288,8 +288,8 @@ function ManualIssuanceCard({
       <CardContent>
         <form onSubmit={handleGenerate} className="grid gap-4 sm:grid-cols-4">
           <label className="space-y-1.5 text-sm font-medium sm:col-span-2">
-            <Label>Student / Matric Number</Label>
-            <Input value={matric} onChange={(e) => setMatric(e.target.value)} required />
+            <Label>Student / Admission Number</Label>
+            <Input value={matric} onChange={(e) => setAdmission No(e.target.value)} required />
           </label>
           <label className="space-y-1.5 text-sm font-medium">
             <Label>Session</Label>
@@ -305,15 +305,15 @@ function ManualIssuanceCard({
             </select>
           </label>
           <label className="space-y-1.5 text-sm font-medium">
-            <Label>Semester</Label>
+            <Label>Term</Label>
             <select
-              value={semester}
-              onChange={(e) => setSemester(e.target.value as "First" | "Second")}
+              value={term}
+              onChange={(e) => setTerm(e.target.value as "First" | "Second")}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="">Select semester</option>
-              <option value="First">First Semester</option>
-              <option value="Second">Second Semester</option>
+              <option value="">Select term</option>
+              <option value="First">First Term</option>
+              <option value="Second">Second Term</option>
             </select>
           </label>
           <div className="sm:col-span-4">

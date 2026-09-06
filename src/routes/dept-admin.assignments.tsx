@@ -11,14 +11,14 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/dept-admin/assignments")({
-  head: () => ({ meta: [{ title: "Course Assignments — Department Admin" }] }),
+  head: () => ({ meta: [{ title: "Subject Assignments — Class Admin" }] }),
   component: () => <ProtectedDeptAdmin><Page /></ProtectedDeptAdmin>,
 });
 
 function Page() {
   const qc = useQueryClient();
   const { session } = useAuthSession();
-  const [form, setForm] = useState({ lecturer_id: "", course_id: "", session_id: "", semester: "First" });
+  const [form, setForm] = useState({ teacher_id: "", subject_id: "", session_id: "", term: "First" });
 
   const scopeQ = useQuery({
     queryKey: ["dept-admin-scope", session?.user.id],
@@ -26,15 +26,15 @@ function Page() {
     queryFn: async () => (await supabase.from("department_admins").select("department_id, faculty_id").eq("user_id", session!.user.id).maybeSingle()).data,
   });
 
-  const lecturers = useQuery({ queryKey: ["dept-lecturers"], queryFn: async () => (await supabase.from("lecturers").select("id, full_name").order("full_name")).data ?? [] });
-  const courses = useQuery({ queryKey: ["dept-courses"], queryFn: async () => (await supabase.from("courses").select("id, code, title, level, semester").order("level").order("code")).data ?? [] });
+  const teachers = useQuery({ queryKey: ["dept-teachers"], queryFn: async () => (await supabase.from("teachers").select("id, full_name").order("full_name")).data ?? [] });
+  const subjects = useQuery({ queryKey: ["dept-subjects"], queryFn: async () => (await supabase.from("subjects").select("id, code, title, level, term").order("level").order("code")).data ?? [] });
   const sessions = useQuery({ queryKey: ["sessions"], queryFn: async () => (await supabase.from("academic_sessions").select("id, name").order("created_at", { ascending: false })).data ?? [] });
 
   const assignmentsQ = useQuery({
     queryKey: ["dept-assignments"],
     queryFn: async () => {
-      const { data } = await supabase.from("course_assignments")
-        .select("id, semester, lecturer_id, course_id, session_id, lecturers(full_name), courses(code, title), academic_sessions(name)")
+      const { data } = await supabase.from("subject_assignments")
+        .select("id, term, teacher_id, subject_id, session_id, teachers(full_name), subjects(code, title), academic_sessions(name)")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
@@ -43,39 +43,39 @@ function Page() {
   const createMut = useMutation({
     mutationFn: async () => {
       if (!scopeQ.data) throw new Error("Loading scope…");
-      const { error } = await supabase.from("course_assignments").insert({
-        lecturer_id: form.lecturer_id, course_id: form.course_id, session_id: form.session_id, semester: form.semester,
+      const { error } = await supabase.from("subject_assignments").insert({
+        teacher_id: form.teacher_id, subject_id: form.subject_id, session_id: form.session_id, term: form.term,
         department_id: scopeQ.data.department_id, faculty_id: scopeQ.data.faculty_id,
       });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Assignment created"); setForm({ lecturer_id: "", course_id: "", session_id: "", semester: "First" }); qc.invalidateQueries({ queryKey: ["dept-assignments"] }); },
+    onSuccess: () => { toast.success("Assignment created"); setForm({ teacher_id: "", subject_id: "", session_id: "", term: "First" }); qc.invalidateQueries({ queryKey: ["dept-assignments"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const removeMut = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("course_assignments").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("subject_assignments").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["dept-assignments"] }); },
   });
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Course Assignments</h2>
-        <p className="text-sm text-muted-foreground">Assign lecturers to courses for a session and semester.</p>
+        <h2 className="font-serif text-2xl font-bold">Subject Assignments</h2>
+        <p className="text-sm text-muted-foreground">Assign teachers to subjects for a session and term.</p>
       </div>
       <Card>
         <CardHeader><CardTitle className="text-base">New assignment</CardTitle></CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); createMut.mutate(); }}>
-            <div><Label>Lecturer</Label>
-              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.lecturer_id} onChange={(e) => setForm({ ...form, lecturer_id: e.target.value })} required>
-                <option value="">Select</option>{lecturers.data?.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
+            <div><Label>Teacher</Label>
+              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.teacher_id} onChange={(e) => setForm({ ...form, teacher_id: e.target.value })} required>
+                <option value="">Select</option>{teachers.data?.map((l) => <option key={l.id} value={l.id}>{l.full_name}</option>)}
               </select>
             </div>
-            <div><Label>Course</Label>
-              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.course_id} onChange={(e) => setForm({ ...form, course_id: e.target.value })} required>
-                <option value="">Select</option>{courses.data?.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.title} (L{c.level})</option>)}
+            <div><Label>Subject</Label>
+              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.subject_id} onChange={(e) => setForm({ ...form, subject_id: e.target.value })} required>
+                <option value="">Select</option>{subjects.data?.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.title} (L{c.level})</option>)}
               </select>
             </div>
             <div><Label>Session</Label>
@@ -83,8 +83,8 @@ function Page() {
                 <option value="">Select</option>{sessions.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div><Label>Semester</Label>
-              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}>
+            <div><Label>Term</Label>
+              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.term} onChange={(e) => setForm({ ...form, term: e.target.value })}>
                 <option value="First">First</option><option value="Second">Second</option>
               </select>
             </div>
@@ -96,14 +96,14 @@ function Page() {
         <CardHeader><CardTitle className="text-base">Existing assignments</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Lecturer</th><th className="py-2 pr-3">Course</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Semester</th><th></th></tr></thead>
+            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Teacher</th><th className="py-2 pr-3">Subject</th><th className="py-2 pr-3">Session</th><th className="py-2 pr-3">Term</th><th></th></tr></thead>
             <tbody>
               {assignmentsQ.data?.map((a: any) => (
                 <tr key={a.id} className="border-b">
-                  <td className="py-2 pr-3">{a.lecturers?.full_name}</td>
-                  <td className="py-2 pr-3">{a.courses?.code} — {a.courses?.title}</td>
+                  <td className="py-2 pr-3">{a.teachers?.full_name}</td>
+                  <td className="py-2 pr-3">{a.subjects?.code} — {a.subjects?.title}</td>
                   <td className="py-2 pr-3">{a.academic_sessions?.name}</td>
-                  <td className="py-2 pr-3">{a.semester}</td>
+                  <td className="py-2 pr-3">{a.term}</td>
                   <td className="py-2 text-right"><Button size="sm" variant="ghost" onClick={() => { if (confirm("Remove assignment?")) removeMut.mutate(a.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
                 </tr>
               ))}

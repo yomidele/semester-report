@@ -11,7 +11,7 @@ import { verifyPinPurchase } from "@/lib/result-pin.functions";
 const Search = z.object({ reference: z.string().optional(), trxref: z.string().optional() });
 
 export const Route = createFileRoute("/result-pin/callback")({
-  head: () => ({ meta: [{ title: "Payment Confirmation — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Payment Confirmation — School Portal" }] }),
   validateSearch: (s) => Search.parse(s),
   component: CallbackPage,
 });

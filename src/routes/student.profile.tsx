@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/student/profile")({
-  head: () => ({ meta: [{ title: "Profile — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Profile — School Portal" }] }),
   component: () => <ProtectedStudent><ProfilePage /></ProtectedStudent>,
 });
 
@@ -22,12 +22,12 @@ function ProfilePage() {
   if (!s) return <p className="p-6 text-muted-foreground">Loading…</p>;
 
   const rows: Array<[string, string | number | null | undefined]> = [
-    ["Matric Number", s.matric_number],
+    ["Admission Number", s.admission_number],
     ["Full Name", s.full_name],
     ["Email", s.email],
     ["Phone", s.phone],
-    ["Faculty", (s.faculties as { name?: string } | null)?.name],
-    ["Department", (s.departments as { name?: string } | null)?.name],
+    ["Section", (s.faculties as { name?: string } | null)?.name],
+    ["Class", (s.departments as { name?: string } | null)?.name],
     ["Level", s.level],
     ["Gender", s.gender],
     ["Date of Birth", s.date_of_birth],
@@ -41,7 +41,7 @@ function ProfilePage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">My Profile</h2>
-        <p className="text-sm text-muted-foreground">Contact your Faculty Admin to update profile details.</p>
+        <p className="text-sm text-muted-foreground">Contact your Section Admin to update profile details.</p>
       </div>
       <Card className="tsu-shadow">
         <CardHeader className="flex flex-row items-center gap-4">
@@ -51,7 +51,7 @@ function ProfilePage() {
           </Avatar>
           <div>
             <CardTitle className="font-serif text-xl">{s.full_name}</CardTitle>
-            <p className="font-mono text-sm text-muted-foreground">{s.matric_number}</p>
+            <p className="font-mono text-sm text-muted-foreground">{s.admission_number}</p>
           </div>
         </CardHeader>
         <CardContent>

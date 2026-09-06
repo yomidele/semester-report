@@ -18,8 +18,8 @@ const Search = z.object({ programme: z.string().uuid().optional() });
 export const Route = createFileRoute("/apply")({
   head: () => ({
     meta: [
-      { title: "Apply for Admission — Kazaure College" },
-      { name: "description", content: "Choose a programme and submit your application to Kazaure College of Health Technology." },
+      { title: "Apply for Admission — School Portal" },
+      { name: "description", content: "Choose a programme and submit your application to School Portal of Health Technology." },
     ],
   }),
   validateSearch: (s) => Search.parse(s),

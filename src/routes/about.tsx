@@ -10,10 +10,10 @@ export const Route = createFileRoute("/about")({
       { title: "About the College — History, Mission & Accreditation" },
       {
         name: "description",
-        content: "Learn about our Nigerian college of health technology: mission, vision, governance and accreditation for health training programmes.",
+        content: "Learn about our Nigerian primary school: mission, vision, governance and accreditation for primary education.",
       },
       { property: "og:title", content: "About the College — History, Mission & Accreditation" },
-      { property: "og:description", content: "Mission, vision, governance and accreditation of our college of health technology." },
+      { property: "og:description", content: "Mission, vision, governance and accreditation of our primary school." },
     ],
   }),
   component: About,
@@ -34,7 +34,7 @@ function About() {
         <div className="prose-sm max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
           <p>
             {settings.college_name} is a health training institution dedicated to producing competent, ethical and
-            community-minded health workers for Nigeria's health system. Our programmes admit secondary school leavers
+            community-minded health workers for Nigeria's health system. Our programmes admit young learners
             and run for two, three or four years depending on the award.
           </p>
           <p>
@@ -47,8 +47,8 @@ function About() {
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {[
             { icon: Target, title: "Our Mission", body: "To train skilled, compassionate health practitioners through practice-based education and community service." },
-            { icon: Eye, title: "Our Vision", body: "To be a leading college of health technology recognised for quality training and measurable community health impact." },
-            { icon: ShieldCheck, title: "Accreditation", body: "Programmes are run in line with the standards of the relevant national health regulatory boards." },
+            { icon: Eye, title: "Our Vision", body: "To be a leading primary school recognised for quality training and measurable community health impact." },
+            { icon: ShieldCheck, title: "Accreditation", body: "Programmes are run in line with the standards of the relevant national educational standards." },
           ].map(({ icon: Icon, title, body }) => (
             <Card key={title} className="tsu-shadow border-border">
               <CardContent className="p-5">

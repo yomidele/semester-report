@@ -12,11 +12,11 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/lecturer/login")({
-  head: () => ({ meta: [{ title: "Lecturer Sign In — Kazaure College" }] }),
-  component: LecturerLogin,
+  head: () => ({ meta: [{ title: "Teacher Sign In — School Portal" }] }),
+  component: TeacherLogin,
 });
 
-function LecturerLogin() {
+function TeacherLogin() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuthSession();
   const { roles, loading: roleLoading } = useRole();
@@ -25,8 +25,8 @@ function LecturerLogin() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const allowed = roles.includes("lecturer") || roles.includes("super_admin");
-    if (!authLoading && !roleLoading && session && allowed) navigate({ to: "/lecturer/dashboard" });
+    const allowed = roles.includes("teacher") || roles.includes("super_admin");
+    if (!authLoading && !roleLoading && session && allowed) navigate({ to: "/teacher/dashboard" });
   }, [authLoading, roleLoading, session, roles, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ function LecturerLogin() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { toast.error(error.message); return; }
       toast.success("Welcome");
-      navigate({ to: "/lecturer/dashboard" });
+      navigate({ to: "/teacher/dashboard" });
     } finally { setSubmitting(false); }
   };
 
@@ -46,8 +46,8 @@ function LecturerLogin() {
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <Card className="w-full max-w-md tsu-shadow">
           <CardHeader>
-            <CardTitle className="font-serif text-2xl">Lecturer Sign In</CardTitle>
-            <CardDescription>Accounts are created by your Department Admin.</CardDescription>
+            <CardTitle className="font-serif text-2xl">Teacher Sign In</CardTitle>
+            <CardDescription>Accounts are created by your Class Admin.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
@@ -55,7 +55,7 @@ function LecturerLogin() {
               <div className="space-y-1.5"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
               <Button type="submit" className="w-full" disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}</Button>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <Link to="/dept-admin/login" className="hover:underline">Department Admin →</Link>
+                <Link to="/dept-admin/login" className="hover:underline">Class Admin →</Link>
                 <Link to="/student/login" className="hover:underline">Student →</Link>
               </div>
             </form>

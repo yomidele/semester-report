@@ -8,7 +8,7 @@ import { computeGrade, effectiveTotal, classOfDegree } from "@/lib/grading";
 import { GraduationCap, AlertTriangle, BookOpen, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/student/dashboard")({
-  head: () => ({ meta: [{ title: "Student Dashboard — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Student Dashboard — School Portal" }] }),
   component: () => <ProtectedStudent><Dashboard /></ProtectedStudent>,
 });
 
@@ -31,7 +31,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from("results")
-        .select("id, ca_score, exam_score, total_score, courses(unit)")
+        .select("id, ca_score, exam_score, total_score, subjects(unit)")
         .eq("student_id", student!.id);
       return data ?? [];
     },
@@ -48,17 +48,17 @@ function Dashboard() {
 
   let pts = 0, units = 0;
   for (const r of results) {
-    const u = (r.courses as { unit?: number } | null)?.unit ?? 0;
+    const u = (r.subjects as { unit?: number } | null)?.unit ?? 0;
     const { point } = computeGrade(effectiveTotal(r));
     pts += point * u; units += u;
   }
   const cgpa = units ? pts / units : 0;
 
   const stats = [
-    { label: "Current Level", value: student?.level ?? "—", icon: GraduationCap },
-    { label: "CGPA", value: units ? cgpa.toFixed(2) : "—", icon: FileText },
-    { label: "Carryovers", value: carryovers.length, icon: AlertTriangle },
-    { label: "Courses Taken", value: results.length, icon: BookOpen },
+    { label: "Current Grade", value: student?.level ?? "—", icon: GraduationCap },
+    { label: "Average Score", value: units ? cgpa.toFixed(2) : "—", icon: FileText },
+    { label: "Deficiencies", value: carryovers.length, icon: AlertTriangle },
+    { label: "Subjects Taken", value: results.length, icon: BookOpen },
   ] as const;
 
   return (
@@ -91,7 +91,7 @@ function Dashboard() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p><Link to="/student/results" className="font-medium text-primary underline">View detailed results →</Link></p>
-          <p><Link to="/student/courses" className="font-medium text-primary underline">Register courses for the new semester →</Link></p>
+          <p><Link to="/student/subjects" className="font-medium text-primary underline">Register subjects for the new term →</Link></p>
           {carryovers.length > 0 && (
             <p className="text-destructive"><Link to="/student/carryovers" className="font-medium underline">Resolve {carryovers.length} pending carryover{carryovers.length > 1 ? "s" : ""} →</Link></p>
           )}

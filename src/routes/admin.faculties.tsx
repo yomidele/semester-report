@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/faculties")({
-  head: () => ({ meta: [{ title: "Faculties — Super Admin" }] }),
+  head: () => ({ meta: [{ title: "Sections — Super Admin" }] }),
   component: () => (
     <ProtectedAdmin>
       <Page />
@@ -24,10 +24,10 @@ function Page() {
   const { isSuperAdmin, loading } = useRole();
   if (loading) return <Loader2 className="m-8 h-6 w-6 animate-spin text-primary" />;
   if (!isSuperAdmin) return <Navigate to="/dashboard" />;
-  return <FacultiesPage />;
+  return <SectionsPage />;
 }
 
-function FacultiesPage() {
+function SectionsPage() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -50,13 +50,13 @@ function FacultiesPage() {
     },
   });
 
-  const createFaculty = useMutation({
+  const createSection = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("faculties").insert({ name: name.trim(), code: code.trim().toUpperCase() });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Faculty created");
+      toast.success("Section created");
       setName("");
       setCode("");
       qc.invalidateQueries({ queryKey: ["faculties"] });
@@ -64,13 +64,13 @@ function FacultiesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const deleteFaculty = useMutation({
+  const deleteSection = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("faculties").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Faculty removed");
+      toast.success("Section removed");
       qc.invalidateQueries({ queryKey: ["faculties"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -79,33 +79,33 @@ function FacultiesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Faculties</h2>
+        <h2 className="font-serif text-2xl font-bold">Sections</h2>
         <p className="text-sm text-muted-foreground">Super Admin — manage university faculties.</p>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Add new faculty</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Add new section</CardTitle></CardHeader>
         <CardContent>
           <form
             className="grid gap-3 md:grid-cols-[2fr_1fr_auto]"
             onSubmit={(e) => {
               e.preventDefault();
               if (!name.trim() || !code.trim()) return;
-              createFaculty.mutate();
+              createSection.mutate();
             }}
           >
             <div>
               <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Faculty of Education" required />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Section of Education" required />
             </div>
             <div>
               <Label>Code</Label>
               <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="EDU" required />
             </div>
             <div className="flex items-end">
-              <Button type="submit" disabled={createFaculty.isPending} className="w-full md:w-auto">
-                {createFaculty.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Faculty
+              <Button type="submit" disabled={createSection.isPending} className="w-full md:w-auto">
+                {createSection.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Section
               </Button>
             </div>
           </form>
@@ -113,7 +113,7 @@ function FacultiesPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">All faculties</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">All sections</CardTitle></CardHeader>
         <CardContent>
           {facultiesQ.isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -124,7 +124,7 @@ function FacultiesPage() {
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="py-2 pr-3">Name</th>
                     <th className="py-2 pr-3">Code</th>
-                    <th className="py-2 pr-3">Departments</th>
+                    <th className="py-2 pr-3">Classes</th>
                     <th className="py-2"></th>
                   </tr>
                 </thead>
@@ -141,8 +141,8 @@ function FacultiesPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              if (confirm(`Delete ${f.name}? This will fail if students/courses are still attached.`)) {
-                                deleteFaculty.mutate(f.id);
+                              if (confirm(`Delete ${f.name}? This will fail if students/subjects are still attached.`)) {
+                                deleteSection.mutate(f.id);
                               }
                             }}
                           >
@@ -162,12 +162,12 @@ function FacultiesPage() {
         </CardContent>
       </Card>
 
-      <DepartmentsCard faculties={facultiesQ.data ?? []} departments={deptsQ.data ?? []} />
+      <ClassesCard faculties={facultiesQ.data ?? []} departments={deptsQ.data ?? []} />
     </div>
   );
 }
 
-function DepartmentsCard({
+function ClassesCard({
   faculties,
   departments,
 }: {
@@ -175,7 +175,7 @@ function DepartmentsCard({
   departments: Array<{ id: string; faculty_id: string; name: string; code: string }>;
 }) {
   const qc = useQueryClient();
-  const [facultyId, setFacultyId] = useState("");
+  const [facultyId, setSectionId] = useState("");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
 
@@ -191,7 +191,7 @@ function DepartmentsCard({
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Department created");
+      toast.success("Class created");
       setName("");
       setCode("");
       qc.invalidateQueries({ queryKey: ["departments-all"] });
@@ -205,7 +205,7 @@ function DepartmentsCard({
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Department removed");
+      toast.success("Class removed");
       qc.invalidateQueries({ queryKey: ["departments-all"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -213,7 +213,7 @@ function DepartmentsCard({
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Departments</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Classes</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <form
           className="grid gap-3 md:grid-cols-[1fr_2fr_1fr_auto]"
@@ -224,21 +224,21 @@ function DepartmentsCard({
           }}
         >
           <div>
-            <Label>Faculty</Label>
+            <Label>Section</Label>
             <select
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={facultyId}
-              onChange={(e) => setFacultyId(e.target.value)}
+              onChange={(e) => setSectionId(e.target.value)}
               required
             >
-              <option value="">Select faculty</option>
+              <option value="">Select section</option>
               {faculties.map((f) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <Label>Department name</Label>
+            <Label>Class name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Computer Science" required />
           </div>
           <div>
@@ -264,8 +264,8 @@ function DepartmentsCard({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 pr-3">Faculty</th>
-                <th className="py-2 pr-3">Department</th>
+                <th className="py-2 pr-3">Section</th>
+                <th className="py-2 pr-3">Class</th>
                 <th className="py-2 pr-3">Code</th>
                 <th className="py-2"></th>
               </tr>

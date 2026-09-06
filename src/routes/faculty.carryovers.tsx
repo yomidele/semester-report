@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedFaculty } from "@/components/ProtectedFaculty";
+import { ProtectedSection } from "@/components/ProtectedSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,17 +7,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/faculty/carryovers")({
-  head: () => ({ meta: [{ title: "Faculty Carryovers — Kazaure College" }] }),
-  component: () => <ProtectedFaculty><FacultyCarryoversPage /></ProtectedFaculty>,
+  head: () => ({ meta: [{ title: "Section Repeats — School Portal" }] }),
+  component: () => <ProtectedSection><SectionRepeatsPage /></ProtectedSection>,
 });
 
-function FacultyCarryoversPage() {
+function SectionRepeatsPage() {
   const { data: rows = [] } = useQuery({
     queryKey: ["faculty-carryovers"],
     queryFn: async () => {
       const { data } = await supabase
         .from("carryovers")
-        .select("*, students(matric_number, full_name), courses(code, title, unit)")
+        .select("*, students(admission_number, full_name), subjects(code, title, unit)")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
@@ -29,7 +29,7 @@ function FacultyCarryoversPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Carryovers</h2>
+        <h2 className="font-serif text-2xl font-bold">Repeats</h2>
         <p className="text-sm text-muted-foreground">Auto-tracked when results are entered.</p>
       </div>
 
@@ -44,9 +44,9 @@ function FacultyCarryoversPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Matric</TableHead>
+                <TableHead>Admission No</TableHead>
                 <TableHead>Student</TableHead>
-                <TableHead>Course</TableHead>
+                <TableHead>Subject</TableHead>
                 <TableHead>Failed Level/Sem</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -54,14 +54,14 @@ function FacultyCarryoversPage() {
             <TableBody>
               {rows.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No carryovers yet.</TableCell></TableRow>}
               {rows.map((r) => {
-                const s = r.students as { matric_number?: string; full_name?: string } | null;
-                const c = r.courses as { code?: string; title?: string } | null;
+                const s = r.students as { admission_number?: string; full_name?: string } | null;
+                const c = r.subjects as { code?: string; title?: string } | null;
                 return (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono">{s?.matric_number}</TableCell>
+                    <TableCell className="font-mono">{s?.admission_number}</TableCell>
                     <TableCell>{s?.full_name}</TableCell>
                     <TableCell><span className="font-mono">{c?.code}</span> {c?.title}</TableCell>
-                    <TableCell>{r.failed_level}L • {r.failed_semester}</TableCell>
+                    <TableCell>{r.failed_level}L • {r.failed_term}</TableCell>
                     <TableCell><Badge variant={r.status === "pending" ? "destructive" : "default"}>{r.status}</Badge></TableCell>
                   </TableRow>
                 );

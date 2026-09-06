@@ -12,7 +12,7 @@ import { verifyStudentForPin, getPinPurchaseOptions, initializePinPurchase } fro
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/result-pin/buy")({
-  head: () => ({ meta: [{ title: "Buy Result PIN — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Buy Result PIN — School Portal" }] }),
   component: BuyPinPage,
 });
 
@@ -20,11 +20,11 @@ type VerifiedStudent = Awaited<ReturnType<typeof verifyStudentForPin>>;
 
 function BuyPinPage() {
   const [step, setStep] = useState<1 | 2>(1);
-  const [matric, setMatric] = useState("");
+  const [matric, setAdmission No] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [student, setStudent] = useState<VerifiedStudent | null>(null);
   const [sessionId, setSessionId] = useState("");
-  const [semester, setSemester] = useState<"First" | "Second" | "">("");
+  const [term, setTerm] = useState<"First" | "Second" | "">("");
   const [paying, setPaying] = useState(false);
 
   const verifyStudent = useServerFn(verifyStudentForPin);
@@ -39,7 +39,7 @@ function BuyPinPage() {
     event.preventDefault();
     setVerifying(true);
     try {
-      const result = await verifyStudent({ data: { matric_number: matric } });
+      const result = await verifyStudent({ data: { admission_number: matric } });
       setStudent(result);
       setStep(2);
     } catch (error) {
@@ -50,15 +50,15 @@ function BuyPinPage() {
   }
 
   async function handlePay() {
-    if (!sessionId || !semester) {
-      toast.error("Select the academic session and semester.");
+    if (!sessionId || !term) {
+      toast.error("Select the academic session and term.");
       return;
     }
     setPaying(true);
     try {
       const callbackUrl = `${window.location.origin}/result-pin/callback`;
       const result = await initPurchase({
-        data: { matric_number: matric, session_id: sessionId, semester, callback_url: callbackUrl },
+        data: { admission_number: matric, session_id: sessionId, term, callback_url: callbackUrl },
       });
       window.location.href = result.authorization_url;
     } catch (error) {
@@ -94,8 +94,8 @@ function BuyPinPage() {
             <CardContent>
               <form onSubmit={handleVerify} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label>Student / Matriculation Number</Label>
-                  <Input value={matric} onChange={(e) => setMatric(e.target.value)} placeholder="e.g. KCOHT/CH/26/0045" required />
+                  <Label>Student / Admission Noulation Number</Label>
+                  <Input value={matric} onChange={(e) => setAdmission No(e.target.value)} placeholder="e.g. KCOHT/CH/26/0045" required />
                 </div>
                 <Button type="submit" disabled={verifying} className="w-full">
                   {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -123,12 +123,12 @@ function BuyPinPage() {
                   <dt className="text-muted-foreground">Name</dt>
                   <dd className="font-medium text-foreground">{student.full_name}</dd>
                   <dt className="text-muted-foreground">Student ID</dt>
-                  <dd className="font-medium text-foreground">{student.matric_number}</dd>
+                  <dd className="font-medium text-foreground">{student.admission_number}</dd>
                   <dt className="text-muted-foreground">Programme</dt>
                   <dd className="font-medium text-foreground">{student.programme_name ?? "\u2014"}</dd>
-                  <dt className="text-muted-foreground">Department</dt>
+                  <dt className="text-muted-foreground">Class</dt>
                   <dd className="font-medium text-foreground">{student.department_name ?? "\u2014"}</dd>
-                  <dt className="text-muted-foreground">School/Faculty</dt>
+                  <dt className="text-muted-foreground">School/Section</dt>
                   <dd className="font-medium text-foreground">{student.faculty_name ?? "\u2014"}</dd>
                 </dl>
               </div>
@@ -145,11 +145,11 @@ function BuyPinPage() {
                     </select>
                   </label>
                   <label className="space-y-1.5 text-sm font-medium">
-                    <Label>Semester</Label>
-                    <select value={semester} onChange={(e) => setSemester(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                      <option value="">Select semester</option>
-                      <option value="First">First Semester</option>
-                      <option value="Second">Second Semester</option>
+                    <Label>Term</Label>
+                    <select value={term} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                      <option value="">Select term</option>
+                      <option value="First">First Term</option>
+                      <option value="Second">Second Term</option>
                     </select>
                   </label>
                 </div>

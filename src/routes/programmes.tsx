@@ -5,17 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSchools, useDepartments, useProgrammes, durationLabel } from "@/lib/public-catalog";
+import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/public-catalog";
 
 export const Route = createFileRoute("/programmes")({
   head: () => ({
     meta: [
-      { title: "Programmes — 2, 3 and 4 Year Health Courses" },
+      { title: "Programmes — 2, 3 and 4 Year Health Subjects" },
       {
         name: "description",
         content: "Certificate, diploma and higher diploma health programmes with durations from two to four years, open to secondary school leavers.",
       },
-      { property: "og:title", content: "Programmes — 2, 3 and 4 Year Health Courses" },
+      { property: "og:title", content: "Programmes — 2, 3 and 4 Year Health Subjects" },
       { property: "og:description", content: "Browse accredited health programmes, awards, durations and entry requirements." },
     ],
   }),
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/programmes")({
 
 function Programmes() {
   const { data: schools = [] } = useSchools();
-  const { data: departments = [] } = useDepartments();
+  const { data: departments = [] } = useClasss();
   const { data: programmes = [], isLoading } = useProgrammes();
   const [q, setQ] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
@@ -81,8 +81,8 @@ function Programmes() {
                   <p className="mt-2 flex-1 text-sm text-muted-foreground">{p.description ?? "Programme details available on request."}</p>
                   <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
                     <div>School: <span className="text-foreground">{school?.name ?? "—"}</span></div>
-                    <div>Department: <span className="text-foreground">{dept?.name ?? "—"}</span></div>
-                    <div>Units per semester: <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
+                    <div>Class: <span className="text-foreground">{dept?.name ?? "—"}</span></div>
+                    <div>Units per term: <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
                   </dl>
                   {p.requirements && <p className="mt-3 text-xs text-muted-foreground"><strong className="text-foreground">Entry:</strong> {p.requirements}</p>}
                   <Button asChild size="sm" className="mt-4 w-full">

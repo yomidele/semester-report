@@ -7,7 +7,7 @@ import { useAuthSession } from "@/hooks/use-auth";
 import { Users, ClipboardCheck, LinkIcon, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/dept-admin/dashboard")({
-  head: () => ({ meta: [{ title: "Department Dashboard — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Class Dashboard — School Portal" }] }),
   component: () => <ProtectedDeptAdmin><Page /></ProtectedDeptAdmin>,
 });
 
@@ -23,23 +23,23 @@ function Page() {
       return data;
     },
   });
-  const lecturersCount = useQuery({
-    queryKey: ["dept-lecturers-count"],
-    queryFn: async () => (await supabase.from("lecturers").select("*", { count: "exact", head: true })).count ?? 0,
+  const teachersCount = useQuery({
+    queryKey: ["dept-teachers-count"],
+    queryFn: async () => (await supabase.from("teachers").select("*", { count: "exact", head: true })).count ?? 0,
   });
   const pending = useQuery({
     queryKey: ["dept-pending-count"],
     queryFn: async () => (await supabase.from("results").select("*", { count: "exact", head: true }).eq("status", "submitted")).count ?? 0,
   });
-  const courses = useQuery({
-    queryKey: ["dept-courses-count"],
-    queryFn: async () => (await supabase.from("courses").select("*", { count: "exact", head: true })).count ?? 0,
+  const subjects = useQuery({
+    queryKey: ["dept-subjects-count"],
+    queryFn: async () => (await supabase.from("subjects").select("*", { count: "exact", head: true })).count ?? 0,
   });
 
   const dept = (selfQ.data?.departments as { name?: string } | null)?.name;
   const stats = [
-    { label: "Lecturers", value: lecturersCount.data, icon: Users, to: "/dept-admin/lecturers" as const },
-    { label: "Courses", value: courses.data, icon: BookOpen, to: "/dept-admin/assignments" as const },
+    { label: "Teachers", value: teachersCount.data, icon: Users, to: "/dept-admin/teachers" as const },
+    { label: "Subjects", value: subjects.data, icon: BookOpen, to: "/dept-admin/assignments" as const },
     { label: "Pending Approvals", value: pending.data, icon: ClipboardCheck, to: "/dept-admin/approvals" as const },
     { label: "Assignments", value: "→", icon: LinkIcon, to: "/dept-admin/assignments" as const },
   ] as const;
@@ -47,8 +47,8 @@ function Page() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">{dept ? `${dept} Department` : "Department"}</h2>
-        <p className="text-sm text-muted-foreground">Manage lecturers, assign courses, approve and publish results.</p>
+        <h2 className="font-serif text-2xl font-bold">{dept ? `${dept} Class` : "Class"}</h2>
+        <p className="text-sm text-muted-foreground">Manage teachers, assign subjects, approve and publish results.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, to }) => (

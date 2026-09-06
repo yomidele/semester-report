@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/dept-admin/login")({
-  head: () => ({ meta: [{ title: "Department Admin Sign In — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Class Admin Sign In — School Portal" }] }),
   component: DeptAdminLogin,
 });
 
@@ -35,7 +35,7 @@ function DeptAdminLogin() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { toast.error(error.message); return; }
-      toast.success("Welcome, Department Admin");
+      toast.success("Welcome, Class Admin");
       navigate({ to: "/dept-admin/dashboard" });
     } finally { setSubmitting(false); }
   };
@@ -46,8 +46,8 @@ function DeptAdminLogin() {
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <Card className="w-full max-w-md tsu-shadow">
           <CardHeader>
-            <CardTitle className="font-serif text-2xl">Department Admin Sign In</CardTitle>
-            <CardDescription>Accounts are created by your Faculty Admin.</CardDescription>
+            <CardTitle className="font-serif text-2xl">Class Admin Sign In</CardTitle>
+            <CardDescription>Accounts are created by your Section Admin.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
@@ -55,8 +55,8 @@ function DeptAdminLogin() {
               <div className="space-y-1.5"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
               <Button type="submit" className="w-full" disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}</Button>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <Link to="/faculty/login" className="hover:underline">Faculty Admin →</Link>
-                <Link to="/lecturer/login" className="hover:underline">Lecturer →</Link>
+                <Link to="/faculty/login" className="hover:underline">Section Admin →</Link>
+                <Link to="/teacher/login" className="hover:underline">Teacher →</Link>
               </div>
             </form>
           </CardContent>

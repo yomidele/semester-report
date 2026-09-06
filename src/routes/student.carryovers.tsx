@@ -8,11 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/student/carryovers")({
-  head: () => ({ meta: [{ title: "Carryovers — Kazaure College" }] }),
-  component: () => <ProtectedStudent><CarryoversPage /></ProtectedStudent>,
+  head: () => ({ meta: [{ title: "Repeats — School Portal" }] }),
+  component: () => <ProtectedStudent><RepeatsPage /></ProtectedStudent>,
 });
 
-function CarryoversPage() {
+function RepeatsPage() {
   const { session } = useAuthSession();
   const { data: student } = useQuery({
     queryKey: ["sid-co", session?.user.id],
@@ -26,7 +26,7 @@ function CarryoversPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("carryovers")
-        .select("*, courses(code, title, unit), failed_session:academic_sessions!failed_session_id(name)")
+        .select("*, subjects(code, title, unit), failed_session:academic_sessions!failed_session_id(name)")
         .eq("student_id", student!.id)
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -39,8 +39,8 @@ function CarryoversPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">My Carryovers</h2>
-        <p className="text-sm text-muted-foreground">Failed courses are tracked automatically. Re-register and pass them to clear.</p>
+        <h2 className="font-serif text-2xl font-bold">My Repeats</h2>
+        <p className="text-sm text-muted-foreground">Failed subjects are tracked automatically. Re-register and pass them to clear.</p>
       </div>
 
       <Card className="tsu-shadow">
@@ -52,7 +52,7 @@ function CarryoversPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Course</TableHead>
+                  <TableHead>Subject</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead className="text-center">Unit</TableHead>
                   <TableHead>Failed In</TableHead>
@@ -61,14 +61,14 @@ function CarryoversPage() {
               </TableHeader>
               <TableBody>
                 {pending.map((c) => {
-                  const course = c.courses as { code?: string; title?: string; unit?: number } | null;
+                  const subject = c.subjects as { code?: string; title?: string; unit?: number } | null;
                   const sess = (c.failed_session as { name?: string } | null)?.name;
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="font-mono font-medium">{course?.code}</TableCell>
-                      <TableCell>{course?.title}</TableCell>
-                      <TableCell className="text-center">{course?.unit}</TableCell>
-                      <TableCell>{sess} • {c.failed_level}L • {c.failed_semester}</TableCell>
+                      <TableCell className="font-mono font-medium">{subject?.code}</TableCell>
+                      <TableCell>{subject?.title}</TableCell>
+                      <TableCell className="text-center">{subject?.unit}</TableCell>
+                      <TableCell>{sess} • {c.failed_level}L • {c.failed_term}</TableCell>
                       <TableCell><Badge variant="destructive">Pending</Badge></TableCell>
                     </TableRow>
                   );
@@ -86,18 +86,18 @@ function CarryoversPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Course</TableHead>
+                  <TableHead>Subject</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {cleared.map((c) => {
-                  const course = c.courses as { code?: string; title?: string } | null;
+                  const subject = c.subjects as { code?: string; title?: string } | null;
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="font-mono font-medium">{course?.code}</TableCell>
-                      <TableCell>{course?.title}</TableCell>
+                      <TableCell className="font-mono font-medium">{subject?.code}</TableCell>
+                      <TableCell>{subject?.title}</TableCell>
                       <TableCell><Badge>Cleared</Badge></TableCell>
                     </TableRow>
                   );

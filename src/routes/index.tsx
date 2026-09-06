@@ -10,16 +10,16 @@ import heroImg from "@/assets/campus-hero.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "College of Health Technology — Train for Healthcare in Nigeria" },
+      { title: "Primary College of Health Technology Nursery School — Train for Healthcare in Nigeria" },
       {
         name: "description",
         content:
-          "Accredited Nigerian College of Health Technology offering 2-, 3- and 4-year health programmes in nursing, medical laboratory science, community health and more.",
+          "Accredited Nigerian Primary College of Health Technology Nursery School offering comprehensive early childhood and primary education in nursing, medical laboratory science, community health and more.",
       },
-      { property: "og:title", content: "College of Health Technology — Train for Healthcare in Nigeria" },
+      { property: "og:title", content: "Primary College of Health Technology Nursery School — Train for Healthcare in Nigeria" },
       {
         property: "og:description",
-        content: "Health programmes for secondary school leavers: nursing, medical lab science, community health and public health.",
+        content: "Health programmes for children aged 3-11: nursing, medical lab science, community health and public health.",
       },
     ],
   }),
@@ -27,10 +27,10 @@ export const Route = createFileRoute("/")({
 });
 
 const FEATURES = [
-  { icon: Stethoscope, title: "Clinical Training", body: "Supervised postings in teaching hospitals, PHC centres and diagnostic laboratories." },
-  { icon: Microscope, title: "Modern Laboratories", body: "Practical-first learning in well-equipped anatomy, physiology and diagnostic labs." },
-  { icon: GraduationCap, title: "Flexible Durations", body: "Certificate, diploma and higher diploma programmes running from 2 to 4 years." },
-  { icon: HeartPulse, title: "Service to Community", body: "Outreach, immunisation drives and rural health campaigns as part of the curriculum." },
+  { icon: Stethoscope, title: "Creative Learning", body: "Supervised postings in teaching hospitals, PHC centres and diagnostic laboratories." },
+  { icon: Microscope, title: "Modern Classrooms", body: "Practical-first learning in well-equipped anatomy, physiology and diagnostic labs." },
+  { icon: GraduationCap, title: "Individual Attention", body: "Certificate, diploma and higher diploma programmes running from 2 to 4 years." },
+  { icon: HeartPulse, title: "Character Development", body: "Outreach, immunisation drives and rural health campaigns as part of the curriculum." },
 ];
 
 function Home() {
@@ -92,7 +92,7 @@ function Home() {
                 <CardContent className="p-5">
                   <p className="text-xs font-semibold uppercase tracking-wider text-accent-foreground">{s.code}</p>
                   <h3 className="mt-1 font-serif text-lg font-bold text-primary">{s.name}</h3>
-                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{s.description ?? "Accredited health training school."}</p>
+                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{s.description ?? "Accredited school section."}</p>
                 </CardContent>
               </Card>
             ))}
@@ -128,13 +128,13 @@ function Home() {
           <div>
             <h2 className="font-serif text-2xl font-bold md:text-3xl">Admission Requirements</h2>
             <p className="mt-2 text-sm text-primary-foreground/80">
-              Entry is open to secondary school leavers with credits in relevant science subjects.
+              Entry is open to children aged 3-11 with credits in relevant science subjects.
             </p>
           </div>
           <ul className="space-y-3 text-sm">
             {[
-              "Five O'Level credits including English Language and Mathematics",
-              "Credits in Biology, Chemistry and Physics for science-based programmes",
+              "Birth Certificate including English Language and Mathematics",
+              "Immunization Records for science-based programmes",
               "Completed online application and screening",
               "Medical fitness certificate before clinical postings",
             ].map((r) => (

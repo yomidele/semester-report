@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/student/password")({
-  head: () => ({ meta: [{ title: "Change Password — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Change Password — School Portal" }] }),
   component: () => <ProtectedStudent><PasswordPage /></ProtectedStudent>,
 });
 

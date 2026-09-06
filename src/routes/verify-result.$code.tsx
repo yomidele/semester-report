@@ -13,7 +13,7 @@ export const Route = createFileRoute("/verify-result/$code")({
 
 // This is what a scanned QR code on a downloaded report card lands on. It
 // confirms the document is authentic without exposing the student's full
-// academic record — no scores, no course list, just enough to confirm the
+// academic record — no scores, no subject list, just enough to confirm the
 // named student really did receive a published result for that period.
 function VerifyResultPage() {
   const { code } = Route.useParams();
@@ -44,7 +44,7 @@ function VerifyResultPage() {
                   <Row label="Student Name" value={data.student_name} />
                   <Row label="Programme" value={data.programme_name} />
                   <Row label="Session" value={data.session_name} />
-                  <Row label="Semester" value={`${data.semester} Semester`} />
+                  <Row label="Term" value={`${data.term} Term`} />
                   <Row label="Issued" value={new Date(data.generated_at).toLocaleDateString()} />
                 </dl>
                 <p className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">

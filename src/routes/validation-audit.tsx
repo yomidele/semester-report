@@ -10,7 +10,7 @@ import { AlertTriangle, CheckCircle2, RefreshCw, Download } from "lucide-react";
 import { auditAllResults, printAuditReport, exportAuditReport } from "@/lib/audit";
 
 export const Route = createFileRoute("/validation-audit")({
-  head: () => ({ meta: [{ title: "Validation Audit — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "Validation Audit — School Portal" }] }),
   component: () => <ProtectedAdmin><ValidationAuditPage /></ProtectedAdmin>,
 });
 
@@ -31,7 +31,7 @@ function ValidationAuditPage() {
         toast.success("✓ All records validated successfully!");
       } else {
         toast.warning(
-          `⚠ Found ${report.recordsWithErrors} semester(s) with potential issues`
+          `⚠ Found ${report.recordsWithErrors} term(s) with potential issues`
         );
       }
     } catch (error) {
@@ -65,7 +65,7 @@ function ValidationAuditPage() {
       <div>
         <h2 className="font-serif text-2xl font-bold">Results Validation Audit</h2>
         <p className="text-sm text-muted-foreground">
-          Scan entire database for GPA/CGPA calculation errors and data inconsistencies.
+          Scan entire database for Term Average/Academic Average calculation errors and data inconsistencies.
         </p>
       </div>
 
@@ -76,7 +76,7 @@ function ValidationAuditPage() {
             Academic Integrity Check
           </CardTitle>
           <CardDescription>
-            This audit validates all GPA and CGPA calculations against the system-generated values.
+            This audit validates all Term Average and Academic Average calculations against the system-generated values.
             Any discrepancies will be flagged for review.
           </CardDescription>
         </CardHeader>
@@ -85,10 +85,10 @@ function ValidationAuditPage() {
             <div>
               <p className="font-medium mb-2">Validation Checks:</p>
               <ul className="space-y-1 text-muted-foreground">
-                <li>✓ GPA = Grade Points ÷ Earned Credit Units (±0.01 tolerance)</li>
-                <li>✓ CGPA = Total Grade Points ÷ Total Earned Credit Units</li>
-                <li>✓ Grade Points calculated correctly from course scores</li>
-                <li>✓ Credit units match course configuration</li>
+                <li>✓ Term Average = Grade Points ÷ Earned Credit Units (±0.01 tolerance)</li>
+                <li>✓ Academic Average = Total Grade Points ÷ Total Earned Credit Units</li>
+                <li>✓ Grade Points calculated correctly from subject scores</li>
+                <li>✓ Credit units match subject configuration</li>
                 <li>✓ No missing or orphaned records</li>
               </ul>
             </div>
@@ -128,7 +128,7 @@ function ValidationAuditPage() {
               <div className="grid gap-4 md:grid-cols-4">
                 <div>
                   <p className="text-2xl font-bold">{auditReport.totalRecordsAudited}</p>
-                  <p className="text-sm text-muted-foreground">Semester Groups Checked</p>
+                  <p className="text-sm text-muted-foreground">Term Groups Checked</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{auditReport.totalStudents}</p>
@@ -162,7 +162,7 @@ function ValidationAuditPage() {
                   <Alert className="border-yellow-300 bg-yellow-100">
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
                     <AlertDescription className="text-yellow-800">
-                      {auditReport.recordsWithErrors} semester group(s) have validation issues.
+                      {auditReport.recordsWithErrors} term group(s) have validation issues.
                       Review details below.
                     </AlertDescription>
                   </Alert>
@@ -176,8 +176,8 @@ function ValidationAuditPage() {
                               {err.studentName} ({err.studentId.slice(0, 8)})
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {err.session} • {err.level}L • {err.semester} Sem •{" "}
-                              {err.courseCount} course{err.courseCount !== 1 ? "s" : ""}
+                              {err.session} • {err.level}L • {err.term} Sem •{" "}
+                              {err.subjectCount} subject{err.subjectCount !== 1 ? "s" : ""}
                             </p>
                           </div>
                           <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -225,7 +225,7 @@ function ValidationAuditPage() {
               <div>
                 <p className="font-medium mb-1">✓ All Records Valid</p>
                 <p className="text-muted-foreground">
-                  All GPA and CGPA calculations are correct and consistent with the raw course data.
+                  All Term Average and Academic Average calculations are correct and consistent with the raw subject data.
                 </p>
               </div>
               <div>
@@ -235,15 +235,15 @@ function ValidationAuditPage() {
                 </p>
               </div>
               <div>
-                <p className="font-medium mb-1">GPA Mismatch</p>
+                <p className="font-medium mb-1">Term Average Mismatch</p>
                 <p className="text-muted-foreground">
-                  The stored GPA differs from the calculated value. This could happen due to data entry errors or manual adjustments.
+                  The stored Term Average differs from the calculated value. This could happen due to data entry errors or manual adjustments.
                 </p>
               </div>
               <div>
                 <p className="font-medium mb-1">ECU Inconsistency</p>
                 <p className="text-muted-foreground">
-                  The Earned Credit Units (non-F courses) don't match the expected total based on course data.
+                  The Earned Credit Units (non-F subjects) don't match the expected total based on subject data.
                 </p>
               </div>
             </CardContent>

@@ -9,7 +9,7 @@ import { computeGrade, effectiveTotal, classOfDegree } from "@/lib/grading";
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/student/results")({
-  head: () => ({ meta: [{ title: "My Results — Kazaure College" }] }),
+  head: () => ({ meta: [{ title: "My Results — School Portal" }] }),
   component: () => <ProtectedStudent><ResultsPage /></ProtectedStudent>,
 });
 
@@ -18,7 +18,7 @@ function ResultsPage() {
   const { data: student } = useQuery({
     queryKey: ["s-id", session?.user.id],
     enabled: !!session,
-    queryFn: async () => (await supabase.from("students").select("id, full_name, matric_number").eq("user_id", session!.user.id).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("students").select("id, full_name, admission_number").eq("user_id", session!.user.id).maybeSingle()).data,
   });
 
   const { data: results = [] } = useQuery({
@@ -27,7 +27,7 @@ function ResultsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("results")
-        .select("id, ca_score, exam_score, total_score, level, semester, courses(code, title, unit), academic_sessions(name)")
+        .select("id, ca_score, exam_score, total_score, level, term, subjects(code, title, unit), academic_sessions(name)")
         .eq("student_id", student!.id);
       return data ?? [];
     },
@@ -36,7 +36,7 @@ function ResultsPage() {
   const grouped = useMemo(() => {
     const map = new Map<string, typeof results>();
     for (const r of results) {
-      const key = `${(r.academic_sessions as { name?: string } | null)?.name ?? "—"} • ${r.level}L • ${r.semester}`;
+      const key = `${(r.academic_sessions as { name?: string } | null)?.name ?? "—"} • ${r.level}L • ${r.term}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
     }
@@ -45,7 +45,7 @@ function ResultsPage() {
 
   let totalPts = 0, totalUnits = 0;
   for (const r of results) {
-    const u = (r.courses as { unit?: number } | null)?.unit ?? 0;
+    const u = (r.subjects as { unit?: number } | null)?.unit ?? 0;
     const { point } = computeGrade(effectiveTotal(r));
     totalPts += point * u; totalUnits += u;
   }
@@ -56,7 +56,7 @@ function ResultsPage() {
       <div>
         <h2 className="font-serif text-2xl font-bold">My Results</h2>
         <p className="text-sm text-muted-foreground">
-          CGPA: <span className="font-bold text-foreground">{totalUnits ? cgpa.toFixed(2) : "—"}</span>
+          Academic Average: <span className="font-bold text-foreground">{totalUnits ? cgpa.toFixed(2) : "—"}</span>
           {totalUnits > 0 && <> • {classOfDegree(cgpa)}</>}
         </p>
       </div>
@@ -68,14 +68,14 @@ function ResultsPage() {
       {grouped.map(([label, rows]) => {
         let pts = 0, un = 0;
         for (const r of rows) {
-          const u = (r.courses as { unit?: number } | null)?.unit ?? 0;
+          const u = (r.subjects as { unit?: number } | null)?.unit ?? 0;
           const { point } = computeGrade(effectiveTotal(r));
           pts += point * u; un += u;
         }
         const gpa = un ? pts / un : 0;
         return (
           <Card key={label} className="tsu-shadow">
-            <CardHeader><CardTitle className="text-base">{label} — GPA {gpa.toFixed(2)}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{label} — Term Average {gpa.toFixed(2)}</CardTitle></CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -91,7 +91,7 @@ function ResultsPage() {
                   {rows.map((r) => {
                     const total = effectiveTotal(r);
                     const { grade } = computeGrade(total);
-                    const c = r.courses as { code?: string; title?: string; unit?: number } | null;
+                    const c = r.subjects as { code?: string; title?: string; unit?: number } | null;
                     return (
                       <TableRow key={r.id}>
                         <TableCell className="font-mono font-medium">{c?.code}</TableCell>

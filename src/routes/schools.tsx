@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { useSchools, useDepartments } from "@/lib/public-catalog";
+import { useSchools, useClasss } from "@/lib/public-catalog";
 import { Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/schools")({
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/schools")({
 
 function Schools() {
   const { data: schools = [], isLoading } = useSchools();
-  const { data: departments = [] } = useDepartments();
+  const { data: departments = [] } = useClasss();
 
   return (
     <PublicLayout>
@@ -49,7 +49,7 @@ function Schools() {
                   <p className="mt-3 text-sm text-muted-foreground">{s.description ?? "Accredited school of the college."}</p>
                   {depts.length > 0 && (
                     <>
-                      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">Departments</h3>
+                      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">Classs</h3>
                       <ul className="mt-2 space-y-1 text-sm text-foreground">
                         {depts.map((d) => (
                           <li key={d.id}>• {d.name}</li>
