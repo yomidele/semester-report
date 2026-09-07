@@ -19,11 +19,12 @@ export interface VoucherData {
   college: CollegeSettings;
 }
 
-const GREEN = rgb(0.02, 0.34, 0.22);
-const GOLD = rgb(0.7, 0.55, 0.1);
-const INK = rgb(0.13, 0.13, 0.13);
-const MUTED = rgb(0.42, 0.42, 0.42);
-const LINE = rgb(0.85, 0.85, 0.85);
+const PRIMARY = rgb(0.7294, 0.6157, 0.5137);      // #BA9D83
+const PRIMARY_DARK = rgb(0.4863, 0.3569, 0.2627); // #7C5B43
+const DEEP_BROWN = rgb(0.3373, 0.2275, 0.1647);   // #563A2A
+const INK = rgb(0.1843, 0.1255, 0.0941);          // #2F2018
+const MUTED = rgb(0.4588, 0.4039, 0.3569);        // #75675B
+const LINE = rgb(0.8706, 0.8196, 0.7686);         // #DED1C4
 
 function fmtDate(d: Date): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -40,8 +41,8 @@ export async function generateVoucherPdf(data: VoucherData): Promise<Uint8Array>
   let y = page.getHeight() - margin;
 
   // Header band
-  page.drawRectangle({ x: 0, y: page.getHeight() - 150, width, height: 150, color: GREEN });
-  page.drawRectangle({ x: 0, y: page.getHeight() - 154, width, height: 4, color: GOLD });
+  page.drawRectangle({ x: 0, y: page.getHeight() - 150, width, height: 150, color: DEEP_BROWN });
+  page.drawRectangle({ x: 0, y: page.getHeight() - 154, width, height: 4, color: PRIMARY });
 
   page.drawText(data.college.college_name.toUpperCase(), {
     x: margin, y: page.getHeight() - 60, size: 17, font: bold, color: rgb(1, 1, 1), maxWidth: width - margin * 2,
@@ -55,7 +56,7 @@ export async function generateVoucherPdf(data: VoucherData): Promise<Uint8Array>
     page.drawText(contactLine, { x: margin, y: page.getHeight() - 94, size: 9, font: regular, color: rgb(0.9, 0.93, 0.9) });
   }
   page.drawText("RESULT CHECKING PIN VOUCHER", {
-    x: margin, y: page.getHeight() - 130, size: 13, font: bold, color: GOLD,
+    x: margin, y: page.getHeight() - 130, size: 13, font: bold, color: PRIMARY,
   });
 
   y = page.getHeight() - 180;
@@ -88,7 +89,7 @@ export async function generateVoucherPdf(data: VoucherData): Promise<Uint8Array>
   const pinBoxHeight = 76;
   page.drawRectangle({
     x: margin, y: y - pinBoxHeight + 20, width: width - margin * 2, height: pinBoxHeight,
-    color: rgb(0.96, 0.98, 0.96), borderColor: GREEN, borderWidth: 1.2,
+    color: rgb(0.963, 0.949, 0.925), borderColor: PRIMARY_DARK, borderWidth: 1.2,
   });
   page.drawText("RESULT PIN", {
     x: margin, y: y + 20, size: 9, font: bold, color: MUTED,
@@ -96,7 +97,7 @@ export async function generateVoucherPdf(data: VoucherData): Promise<Uint8Array>
   const pinSize = 26;
   const pinWidth = bold.widthOfTextAtSize(data.pin, pinSize);
   page.drawText(data.pin, {
-    x: (width - pinWidth) / 2, y: y - 8, size: pinSize, font: bold, color: GREEN,
+    x: (width - pinWidth) / 2, y: y - 8, size: pinSize, font: bold, color: PRIMARY_DARK,
   });
   y -= pinBoxHeight + 10;
 

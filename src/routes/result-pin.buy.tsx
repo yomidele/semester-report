@@ -80,7 +80,7 @@ function BuyPinPage() {
 
       <div className="mx-auto max-w-xl px-4 py-12 md:px-6">
         {options && !options.paystack_configured && (
-          <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="mb-6 rounded-md border border-accent bg-accent/25 p-4 text-sm text-foreground">
             Online payment isn't configured yet on this server (missing <code>PAYSTACK_SECRET_KEY</code> /{" "}
             <code>PAYSTACK_PUBLIC_KEY</code>). Visit the registry to request a PIN in person.
           </div>

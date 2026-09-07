@@ -37,11 +37,11 @@ function Page() {
 
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-primary/10 text-primary",
-  exhausted: "bg-amber-100 text-amber-800",
+  exhausted: "bg-accent/35 text-foreground",
   expired: "bg-muted text-muted-foreground",
   disabled: "bg-destructive/10 text-destructive",
   successful: "bg-primary/10 text-primary",
-  pending: "bg-amber-100 text-amber-800",
+  pending: "bg-accent/35 text-foreground",
   failed: "bg-destructive/10 text-destructive",
   reversed: "bg-destructive/10 text-destructive",
 };
