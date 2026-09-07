@@ -49,7 +49,7 @@ function Schools() {
                   <p className="mt-3 text-sm text-muted-foreground">{s.description ?? "Accredited school of the college."}</p>
                   {depts.length > 0 && (
                     <>
-                      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">Classs</h3>
+                      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">Classes</h3>
                       <ul className="mt-2 space-y-1 text-sm text-foreground">
                         {depts.map((d) => (
                           <li key={d.id}>• {d.name}</li>

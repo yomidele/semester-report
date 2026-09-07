@@ -12,8 +12,8 @@ const NAV = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/student/profile", label: "Profile", icon: User },
   { to: "/student/results", label: "My Results", icon: GraduationCap },
-  { to: "/student/carryovers", label: "Carryovers", icon: AlertTriangle },
-  { to: "/student/subjects", label: "Subject Registration", icon: BookOpen },
+  { to: "/student/carryovers", label: "Pending Subjects", icon: AlertTriangle },
+  { to: "/student/courses", label: "Subject Registration", icon: BookOpen },
   { to: "/student/services", label: "Student Services", icon: WalletCards },
   { to: "/student/result-pins", label: "My Result PINs", icon: Ticket },
   { to: "/student/password", label: "Change Password", icon: KeyRound },
@@ -30,7 +30,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("students")
-        .select("full_name, admission_number, passport_url, level")
+        .select("full_name, matric_number, passport_url, level")
         .eq("user_id", session!.user.id)
         .maybeSingle();
       return data;
@@ -57,7 +57,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 </Avatar>
                 <div className="min-w-0">
                   <p className="truncate text-xs font-semibold">{student.full_name}</p>
-                  <p className="truncate font-mono text-[10px] text-muted-foreground">{student.admission_number}</p>
+                  <p className="truncate font-mono text-[10px] text-muted-foreground">{student.matric_number}</p>
                 </div>
               </div>
             )}
@@ -88,7 +88,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         <main className="min-w-0 flex-1">{children}</main>
       </div>
       <footer className="border-t border-border py-3 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Kazaure College of Health Technology
+         © {new Date().getFullYear()} Model Day Primary School Kazaure
       </footer>
     </div>
   );

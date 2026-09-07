@@ -27,7 +27,7 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
-        .select("id, status, ca_score, exam_score, total_score, level, term, students(full_name, admission_number), subjects(code, title), academic_sessions(name)")
+        .select("id, status, ca_score, exam_score, total_score, level, semester, students(full_name, matric_number), courses(code, title), academic_sessions(name)")
         .eq("status", tab)
         .order("updated_at", { ascending: false })
         .limit(500);
@@ -84,11 +84,11 @@ function Page() {
               <tbody>
                 {rows.map((r: any) => (
                   <tr key={r.id} className="border-b">
-                    <td className="py-2 pr-3">{r.students?.admission_number}</td>
+                    <td className="py-2 pr-3">{r.students?.matric_number}</td>
                     <td className="py-2 pr-3">{r.students?.full_name}</td>
-                    <td className="py-2 pr-3">{r.subjects?.code}</td>
+                    <td className="py-2 pr-3">{r.courses?.code}</td>
                     <td className="py-2 pr-3">{r.academic_sessions?.name}</td>
-                    <td className="py-2 pr-3">{r.term}</td>
+                    <td className="py-2 pr-3">{r.semester}</td>
                     <td className="py-2 pr-3">{r.ca_score}</td>
                     <td className="py-2 pr-3">{r.exam_score}</td>
                     <td className="py-2 pr-3 font-medium">{r.total_score ?? Number(r.ca_score)+Number(r.exam_score)}</td>

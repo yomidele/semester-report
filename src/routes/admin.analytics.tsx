@@ -22,7 +22,7 @@ function Page() {
   return <Analytics />;
 }
 
-function useCount(table: "faculties" | "departments" | "students" | "subjects" | "results" | "faculty_admins") {
+function useCount(table: "faculties" | "departments" | "students" | "courses" | "results" | "faculty_admins") {
   return useQuery({
     queryKey: ["analytics-count", table],
     queryFn: async () => {
@@ -37,7 +37,7 @@ function Analytics() {
   const faculties = useCount("faculties");
   const departments = useCount("departments");
   const students = useCount("students");
-  const subjects = useCount("subjects");
+  const subjects = useCount("courses");
   const results = useCount("results");
   const admins = useCount("faculty_admins");
 
@@ -47,7 +47,7 @@ function Analytics() {
       const [{ data: facs }, { data: stu }, { data: crs }] = await Promise.all([
         supabase.from("faculties").select("id, name, code"),
         supabase.from("students").select("faculty_id"),
-        supabase.from("subjects").select("faculty_id"),
+        supabase.from("courses").select("faculty_id"),
       ]);
       return (facs ?? []).map((f) => ({
         ...f,
@@ -59,7 +59,7 @@ function Analytics() {
 
   const stats = [
     { label: "Faculties", value: faculties.data, icon: Building2 },
-    { label: "Classs", value: departments.data, icon: Building2 },
+    { label: "Classes", value: departments.data, icon: Building2 },
     { label: "Section Admins", value: admins.data, icon: Users },
     { label: "Students", value: students.data, icon: Users },
     { label: "Subjects", value: subjects.data, icon: BookOpen },

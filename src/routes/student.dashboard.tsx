@@ -31,7 +31,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from("results")
-        .select("id, ca_score, exam_score, total_score, subjects(unit)")
+        .select("id, ca_score, exam_score, total_score, courses(unit)")
         .eq("student_id", student!.id);
       return data ?? [];
     },
@@ -48,7 +48,7 @@ function Dashboard() {
 
   let pts = 0, units = 0;
   for (const r of results) {
-    const u = (r.subjects as { unit?: number } | null)?.unit ?? 0;
+    const u = (r.courses as { unit?: number } | null)?.unit ?? 0;
     const { point } = computeGrade(effectiveTotal(r));
     pts += point * u; units += u;
   }
@@ -91,7 +91,7 @@ function Dashboard() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p><Link to="/student/results" className="font-medium text-primary underline">View detailed results →</Link></p>
-          <p><Link to="/student/subjects" className="font-medium text-primary underline">Register subjects for the new term →</Link></p>
+           <p><Link to="/student/courses" className="font-medium text-primary underline">Register subjects for the new semester →</Link></p>
           {carryovers.length > 0 && (
             <p className="text-destructive"><Link to="/student/carryovers" className="font-medium underline">Resolve {carryovers.length} pending carryover{carryovers.length > 1 ? "s" : ""} →</Link></p>
           )}

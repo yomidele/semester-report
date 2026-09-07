@@ -17,7 +17,7 @@ function SectionRepeatsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("carryovers")
-        .select("*, students(admission_number, full_name), subjects(code, title, unit)")
+        .select("*, students(matric_number, full_name), courses(code, title, unit)")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
@@ -54,14 +54,14 @@ function SectionRepeatsPage() {
             <TableBody>
               {rows.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No carryovers yet.</TableCell></TableRow>}
               {rows.map((r) => {
-                const s = r.students as { admission_number?: string; full_name?: string } | null;
-                const c = r.subjects as { code?: string; title?: string } | null;
+                const s = r.students as { matric_number?: string; full_name?: string } | null;
+                const c = r.courses as { code?: string; title?: string } | null;
                 return (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono">{s?.admission_number}</TableCell>
+                    <TableCell className="font-mono">{s?.matric_number}</TableCell>
                     <TableCell>{s?.full_name}</TableCell>
                     <TableCell><span className="font-mono">{c?.code}</span> {c?.title}</TableCell>
-                    <TableCell>{r.failed_level}L • {r.failed_term}</TableCell>
+                    <TableCell>{r.failed_level}L • {r.failed_semester}</TableCell>
                     <TableCell><Badge variant={r.status === "pending" ? "destructive" : "default"}>{r.status}</Badge></TableCell>
                   </TableRow>
                 );

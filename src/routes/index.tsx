@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { GraduationCap, Stethoscope, Microscope, HeartPulse, ArrowRight, CheckCircle2 } from "lucide-react";
+import { GraduationCap, BookOpen, Users, HeartHandshake, ArrowRight, CheckCircle2 } from "lucide-react";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,16 +10,15 @@ import heroImg from "@/assets/campus-hero.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Primary College of Health Technology Nursery School — Train for Healthcare in Nigeria" },
+      { title: "Model Day Primary School Kazaure" },
       {
         name: "description",
-        content:
-          "Accredited Nigerian Primary College of Health Technology Nursery School offering comprehensive early childhood and primary education in nursing, medical laboratory science, community health and more.",
+        content: "Model Day Primary School Kazaure provides a caring, well-organised learning environment for primary pupils.",
       },
-      { property: "og:title", content: "Primary College of Health Technology Nursery School — Train for Healthcare in Nigeria" },
+      { property: "og:title", content: "Model Day Primary School Kazaure" },
       {
         property: "og:description",
-        content: "Health programmes for children aged 3-11: nursing, medical lab science, community health and public health.",
+        content: "Primary classes, pupil support, school news and results for Model Day Primary School Kazaure.",
       },
     ],
   }),
@@ -27,10 +26,10 @@ export const Route = createFileRoute("/")({
 });
 
 const FEATURES = [
-  { icon: Stethoscope, title: "Creative Learning", body: "Supervised postings in teaching hospitals, PHC centres and diagnostic laboratories." },
-  { icon: Microscope, title: "Modern Classrooms", body: "Practical-first learning in well-equipped anatomy, physiology and diagnostic labs." },
-  { icon: GraduationCap, title: "Individual Attention", body: "Certificate, diploma and higher diploma programmes running from 2 to 4 years." },
-  { icon: HeartPulse, title: "Character Development", body: "Outreach, immunisation drives and rural health campaigns as part of the curriculum." },
+  { icon: BookOpen, title: "Creative Learning", body: "Engaging lessons that help pupils build strong foundations in every subject." },
+  { icon: Users, title: "Caring Teachers", body: "Teachers work closely with pupils and families to support steady progress." },
+  { icon: GraduationCap, title: "Strong Foundations", body: "A clear Primary 1–6 learning journey with age-appropriate assessment." },
+  { icon: HeartHandshake, title: "Character Development", body: "A welcoming school culture that nurtures confidence, respect and responsibility." },
 ];
 
 function Home() {
@@ -42,7 +41,7 @@ function Home() {
   return (
     <PublicLayout>
       <section className="relative isolate overflow-hidden">
-        <img src={heroImg} alt="Muslim and Christian health technology students in clinical training" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={heroImg} alt="Pupils learning together in a primary school classroom" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-primary/85" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Admissions open for the new session</p>
@@ -50,8 +49,7 @@ function Home() {
             {settings.college_name}
           </h1>
           <p className="mt-4 max-w-2xl text-base text-primary-foreground/85 md:text-lg">
-            Training Muslim and Christian students to become the next generation of Nigerian health professionals — nurses, laboratory scientists, community
-            health practitioners and public health officers — from secondary school to certified practice.
+            A safe and encouraging place for children to learn, grow in character and build the skills they need for the future.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
@@ -84,7 +82,7 @@ function Home() {
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Our Schools</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Academic activities are organised into schools, each hosting departments and accredited programmes.
+                Explore our learning sections, primary classes and the subjects that shape each pupil's school journey.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {schools.filter((s) => s.is_active).map((s) => (
@@ -104,7 +102,7 @@ function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
-        <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Featured Programmes</h2>
+          <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Learning Programmes</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {activeProgrammes.map((p) => (
             <Card key={p.id} className="tsu-shadow border-border">
@@ -128,15 +126,15 @@ function Home() {
           <div>
             <h2 className="font-serif text-2xl font-bold md:text-3xl">Admission Requirements</h2>
             <p className="mt-2 text-sm text-primary-foreground/80">
-              Entry is open to children aged 3-11 with credits in relevant science subjects.
+              Enrolment is open for children entering the appropriate primary class, subject to available places.
             </p>
           </div>
           <ul className="space-y-3 text-sm">
             {[
-              "Birth Certificate including English Language and Mathematics",
-              "Immunization Records for science-based programmes",
-              "Completed online application and screening",
-              "Medical fitness certificate before clinical postings",
+              "Birth certificate or other identification document",
+              "Recent passport photograph",
+              "Completed application and admission screening",
+              "Parent or guardian contact information",
             ].map((r) => (
               <li key={r} className="flex gap-2">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {r}

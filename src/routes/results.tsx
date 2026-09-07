@@ -12,7 +12,7 @@ import { computeGrade, classOfDegree, effectiveTotal } from "@/lib/grading";
 import {
   generateSpreadsheet,
   validateHeaderConfig,
-  calculateCurrentTerm,
+  calculateCurrentSemester,
   calculatePreviousResults,
   calculateCumulative,
   generateFilename,
@@ -35,21 +35,21 @@ const SEMESTERS = ["First", "Second"] as const;
 interface ResultJoined {
   id: string;
   student_id: string;
-  subject_id: string;
+  course_id: string;
   ca_score: number;
   exam_score: number;
   total_score: number | null;
-  term: string;
+  semester: string;
   session_id: string;
   level: number;
-  students: { admission_number: string; full_name: string } | null;
-  subjects: { code: string; title: string; unit: number } | null;
+  students: { matric_number: string; full_name: string } | null;
+  courses: { code: string; title: string; unit: number } | null;
   academic_sessions: { name: string } | null;
 }
 
 export function ResultsViewPage() {
   const [sessionId, setSessionId] = useState("");
-  const [term, setTerm] = useState("First");
+  const [semester, setTerm] = useState("First");
   const [level, setLevel] = useState("100");
 
   const { data: sessions = [] } = useQuery({
@@ -58,14 +58,14 @@ export function ResultsViewPage() {
   });
 
   const { data: results = [], isLoading } = useQuery<ResultJoined[]>({
-    queryKey: ["results", sessionId, term, level],
+    queryKey: ["results", sessionId, semester, level],
     enabled: !!sessionId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
-        .select("id, student_id, subject_id, session_id, level, term, ca_score, exam_score, total_score, students(admission_number, full_name), subjects(code, title, unit), academic_sessions(name)")
+        .select("id, student_id, course_id, session_id, level, semester, ca_score, exam_score, total_score, students(matric_number, full_name), courses(code, title, unit), academic_sessions(name)")
         .eq("session_id", sessionId)
-        .eq("term", term)
+        .eq("semester", semester)
         .eq("level", Number(level));
       if (error) throw error;
       return (data ?? []) as unknown as ResultJoined[];
@@ -81,7 +81,7 @@ export function ResultsViewPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
-        .select("id, student_id, subject_id, session_id, level, term, ca_score, exam_score, total_score, subjects(code, title, unit)")
+        .select("id, student_id, course_id, session_id, level, semester, ca_score, exam_score, total_score, courses(code, title, unit)")
         .in("student_id", studentIds);
       if (error) throw error;
       return (data ?? []) as unknown as ResultJoined[];
@@ -93,7 +93,7 @@ export function ResultsViewPage() {
     const m = new Map<string, { matric: string; name: string; rows: ResultJoined[] }>();
     for (const r of results) {
       const key = r.student_id;
-      if (!m.has(key)) m.set(key, { matric: r.students?.admission_number ?? "—", name: r.students?.full_name ?? "—", rows: [] });
+      if (!m.has(key)) m.set(key, { matric: r.students?.matric_number ?? "—", name: r.students?.full_name ?? "—", rows: [] });
       m.get(key)!.rows.push(r);
     }
     return Array.from(m.entries()).sort((a, b) => a[1].matric.localeCompare(b[1].matric));
@@ -103,7 +103,7 @@ export function ResultsViewPage() {
     const cur = results.filter((r) => r.student_id === sid);
     let gpaPts = 0, gpaUnits = 0;
     for (const r of cur) {
-      const u = r.subjects?.unit ?? 0;
+      const u = r.courses?.unit ?? 0;
       const { point } = computeGrade(effectiveTotal(r));
       gpaPts += point * u; gpaUnits += u;
     }
@@ -112,7 +112,7 @@ export function ResultsViewPage() {
     const hist = allHistory.filter((r) => r.student_id === sid);
     let cPts = 0, cUnits = 0;
     for (const r of hist) {
-      const u = r.subjects?.unit ?? 0;
+      const u = r.courses?.unit ?? 0;
       const { point } = computeGrade(effectiveTotal(r));
       cPts += point * u; cUnits += u;
     }
@@ -128,23 +128,23 @@ export function ResultsViewPage() {
       const total = effectiveTotal(r);
       const { grade, point } = computeGrade(total);
       return {
-        "Admission No No": r.students?.admission_number ?? "",
+        "Admission Number": r.students?.matric_number ?? "",
         "Name": r.students?.full_name ?? "",
-        "Subject Code": r.subjects?.code ?? "",
-        "Subject Title": r.subjects?.title ?? "",
-        "Unit": r.subjects?.unit ?? 0,
+        "Subject Code": r.courses?.code ?? "",
+        "Subject Title": r.courses?.title ?? "",
+        "Unit": r.courses?.unit ?? 0,
         "CA (40)": Number(r.ca_score),
         "Exam (70)": Number(r.exam_score),
         "Total (100)": total,
         "Grade": grade,
         "Point": point,
       };
-    }).sort((a, b) => a["Admission No No"].localeCompare(b["Admission No No"]) || a["Subject Code"].localeCompare(b["Subject Code"]));
+    }).sort((a, b) => a["Admission Number"].localeCompare(b["Admission Number"]) || a["Subject Code"].localeCompare(b["Subject Code"]));
 
     const summary = grouped.map(([sid, info]) => {
       const { gpa, cgpa } = cgpaFor(sid);
       return {
-        "Admission No No": info.matric,
+        "Admission Number": info.matric,
         "Name": info.name,
         "Subjects": info.rows.length,
         "Term Average": Number(gpa.toFixed(2)),
@@ -156,7 +156,7 @@ export function ResultsViewPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), "Result Sheet");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Term Average-Academic Average Summary");
-    const fname = `Kazaure_Results_${sessionName.replace("/","-")}_${term}_${level}L.xlsx`;
+    const fname = `Kazaure_Results_${sessionName.replace("/","-")}_${semester}_${level}L.xlsx`;
     XLSX.writeFile(wb, fname);
     toast.success(`Exported ${fname}`);
   };
@@ -174,10 +174,10 @@ export function ResultsViewPage() {
     const subjectList = Array.from(
       new Map(
         results
-          .filter((r) => r.subjects)
+          .filter((r) => r.courses)
           .map((r) => [
-            r.subject_id,
-            { code: r.subjects!.code, title: r.subjects!.title, units: r.subjects!.unit },
+            r.course_id,
+            { code: r.courses!.code, title: r.courses!.title, units: r.courses!.unit },
           ])
       ).entries()
     )
@@ -189,7 +189,7 @@ export function ResultsViewPage() {
     const headerConfig = {
       department: "SOCIAL STUDIES EDUCATION", // Demo department
       program: "B.Sc",
-      term: (term === "First" ? "FIRST" : "SECOND") as "FIRST" | "SECOND",
+      semester: (semester === "First" ? "FIRST" : "SECOND") as "FIRST" | "SECOND",
       level: Number(level) as 100 | 200 | 300 | 400,
       academicSession: sessionName, // e.g., "2025/2026"
     };
@@ -207,9 +207,9 @@ export function ResultsViewPage() {
         const total = effectiveTotal(r);
         const { grade, point } = computeGrade(total);
         return {
-          subjectId: r.subject_id,
-          subjectCode: r.subjects?.code ?? "",
-          units: r.subjects?.unit ?? 0,
+          courseId: r.course_id,
+          courseCode: r.courses?.code ?? "",
+          units: r.courses?.unit ?? 0,
           grade,
           gradePoint: point,
         };
@@ -222,22 +222,22 @@ export function ResultsViewPage() {
           const total = effectiveTotal(r);
           const { grade, point } = computeGrade(total);
           return {
-            subjectId: r.subject_id,
-            subjectCode: r.subjects?.code ?? "",
-            units: r.subjects?.unit ?? 0,
+            courseId: r.course_id,
+            courseCode: r.courses?.code ?? "",
+            units: r.courses?.unit ?? 0,
             grade,
             gradePoint: point,
           };
         });
 
-      const currentTerm = calculateCurrentTerm(currentSubjects);
+      const currentTerm = calculateCurrentSemester(currentSubjects);
       const previousResults = calculatePreviousResults(previousSubjects);
       const cumulative = calculateCumulative(currentTerm, previousResults);
 
       // Build subject grades map: subjectCode -> { score, grade }
       const subjectGrades: Record<string, { score: number | null; grade: string | null }> = {};
       for (const r of info.rows) {
-        const code = r.subjects?.code;
+        const code = r.courses?.code;
         if (!code) continue;
         const total = effectiveTotal(r);
         const { grade } = computeGrade(total);
@@ -247,8 +247,8 @@ export function ResultsViewPage() {
       return {
         matricNumber: info.matric,
         studentName: info.name,
-        subjectGrades,
-        currentTerm,
+        courseGrades: subjectGrades,
+        currentSemester: currentTerm,
         previousResults,
         cumulative,
       };
@@ -258,9 +258,9 @@ export function ResultsViewPage() {
       const workbook = await generateSpreadsheet({
         header: headerConfig,
         students: studentsData,
-        subjectList,
+        courseList: subjectList,
       });
-      const filename = generateFilename(sessionName, term, Number(level));
+      const filename = generateFilename(sessionName, semester, Number(level));
       await exportToExcel(workbook, filename);
       toast.success(`Exported standardized results: ${filename}`);
     } catch (error) {
@@ -277,12 +277,12 @@ export function ResultsViewPage() {
     const subjectList = Array.from(
       new Map(
         results
-          .filter((r) => r.subjects)
-          .map((r) => [r.subject_id, { code: r.subjects!.code, title: r.subjects!.title, unit: r.subjects!.unit }])
+          .filter((r) => r.courses)
+          .map((r) => [r.course_id, { code: r.courses!.code, title: r.courses!.title, unit: r.courses!.unit }])
       ).entries()
     ).sort((a, b) => a[1].code.localeCompare(b[1].code));
 
-    const studentInfoCols = ["Admission No No", "Student Name"];
+    const studentInfoCols = ["Admission Number", "Student Name"];
     const subjectHeaders = subjectList.map(([, c]) => `${c.code} (${c.unit}u)`);
     const currentHeaders = ["RCU", "ECU", "GP", "Term Average"];
     const previousHeaders = ["TRCU (Prev)", "TECU (Prev)", "TGP (Prev)", "Academic Average (Prev)"];
@@ -307,10 +307,10 @@ export function ResultsViewPage() {
       const currentBySubject = new Map<string, string>();
       let rcu = 0, ecu = 0, gp = 0;
       for (const r of info.rows) {
-        const u = r.subjects?.unit ?? 0;
+        const u = r.courses?.unit ?? 0;
         const total = effectiveTotal(r);
         const { grade, point } = computeGrade(total);
-        currentBySubject.set(r.subject_id, grade);
+        currentBySubject.set(r.course_id, grade);
         rcu += u;
         if (grade !== "F") ecu += u;
         gp += point * u;
@@ -321,7 +321,7 @@ export function ResultsViewPage() {
       const prev = allHistory.filter((r) => r.student_id === sid && !currentIds.has(r.id));
       let trcuP = 0, tecuP = 0, tgpP = 0;
       for (const r of prev) {
-        const u = r.subjects?.unit ?? 0;
+        const u = r.courses?.unit ?? 0;
         const total = effectiveTotal(r);
         const { point, grade } = computeGrade(total);
         trcuP += u;
@@ -384,8 +384,8 @@ export function ResultsViewPage() {
     ];
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `${level}L ${term} Sem`);
-    const fname = `Kazaure_Structured_${sessionName.replace("/","-")}_${term}_${level}L.xlsx`;
+    XLSX.utils.book_append_sheet(wb, ws, `${level}L ${semester} Sem`);
+    const fname = `Kazaure_Structured_${sessionName.replace("/","-")}_${semester}_${level}L.xlsx`;
     XLSX.writeFile(wb, fname);
     toast.success(`Exported ${fname}`);
   };
@@ -396,7 +396,7 @@ export function ResultsViewPage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">View &amp; Export Results</h2>
-        <p className="text-sm text-muted-foreground">Pick a session, term, and level to view the result sheet.</p>
+        <p className="text-sm text-muted-foreground">Pick a session, semester, and level to view the result sheet.</p>
       </div>
 
       <Card className="tsu-shadow">
@@ -412,7 +412,7 @@ export function ResultsViewPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Term</Label>
-              <Select value={term} onValueChange={setTerm}>
+              <Select value={semester} onValueChange={setTerm}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{SEMESTERS.map((s) => <SelectItem key={s} value={s}>{s} Term</SelectItem>)}</SelectContent>
               </Select>
@@ -455,7 +455,7 @@ export function ResultsViewPage() {
         <Card className="tsu-shadow">
           <CardHeader>
             <CardTitle className="font-serif text-lg">
-              Result Sheet — {sessionName} · {term} Term · {level} Level
+              Result Sheet — {sessionName} · {semester} Term · {level} Level
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -495,9 +495,9 @@ export function ResultsViewPage() {
                           const g = computeGrade(total);
                           return (
                             <TableRow key={r.id}>
-                              <TableCell className="font-mono">{r.subjects?.code}</TableCell>
-                              <TableCell>{r.subjects?.title}</TableCell>
-                              <TableCell className="text-center">{r.subjects?.unit}</TableCell>
+                              <TableCell className="font-mono">{r.courses?.code}</TableCell>
+                              <TableCell>{r.courses?.title}</TableCell>
+                              <TableCell className="text-center">{r.courses?.unit}</TableCell>
                               <TableCell className="text-center">{Number(r.ca_score)}</TableCell>
                               <TableCell className="text-center">{Number(r.exam_score)}</TableCell>
                               <TableCell className="text-center font-medium">{total}</TableCell>

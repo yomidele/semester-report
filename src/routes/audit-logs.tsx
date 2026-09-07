@@ -16,7 +16,7 @@ export const Route = createFileRoute("/audit-logs")({
 interface AuditRecord {
   id: string;
   admin_id: string;
-  subject_id: string;
+  course_id: string;
   action_type: string;
   old_values: Record<string, unknown>;
   new_values: Record<string, unknown>;
@@ -115,7 +115,7 @@ function AuditLogsPage() {
                       <TableCell>
                         <Badge variant="outline">{log.action_type}</Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{log.subject_id.slice(0, 8)}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.course_id.slice(0, 8)}</TableCell>
                       <TableCell className="text-sm">{log.changes_description}</TableCell>
                     </TableRow>
                   ))}

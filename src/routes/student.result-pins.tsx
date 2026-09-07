@@ -50,7 +50,7 @@ function MyResultPinsPage() {
             <KeyRound className="h-5 w-5 text-primary" /> My Result PINs
           </h2>
           <p className="text-sm text-muted-foreground">
-            PIN vouchers you've purchased. Each PIN only works for the session and term it was issued for.
+            PIN vouchers you've purchased. Each PIN only works for the session and semester it was issued for.
           </p>
         </div>
         <Button asChild size="sm">
@@ -86,7 +86,7 @@ function MyResultPinsPage() {
                   {pinsQuery.data.map((pin) => (
                     <tr key={pin.id} className="border-b border-border/60">
                       <td className="py-3 pr-3 font-medium">{pin.session_name}</td>
-                      <td className="py-3 pr-3">{pin.term}</td>
+                      <td className="py-3 pr-3">{pin.semester}</td>
                       <td className="py-3 pr-3">
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLE[pin.status] ?? ""}`}>
                           {pin.status}

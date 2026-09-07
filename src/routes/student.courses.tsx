@@ -23,7 +23,7 @@ function SubjectRegPage() {
   const { session } = useAuthSession();
   const qc = useQueryClient();
   const [sessionId, setSessionId] = useState<string>("");
-  const [term, setTerm] = useState<"First" | "Second">("First");
+  const [semester, setTerm] = useState<"First" | "Second">("First");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: student } = useQuery({
@@ -43,14 +43,14 @@ function SubjectRegPage() {
   });
 
   const { data: levelSubjects = [] } = useQuery({
-    queryKey: ["level-subjects", student?.level, term, student?.faculty_id],
+    queryKey: ["level-subjects", student?.level, semester, student?.faculty_id],
     enabled: !!student,
     queryFn: async () => {
       const { data } = await supabase
-        .from("subjects")
-        .select("id, code, title, unit, level, term, subject_type")
+        .from("courses")
+        .select("id, code, title, unit, level, semester, course_type")
         .eq("level", student!.level)
-        .eq("term", term)
+        .eq("semester", semester)
         .eq("faculty_id", student!.faculty_id)
         .order("code");
       return data ?? [];
@@ -58,20 +58,20 @@ function SubjectRegPage() {
   });
 
   const { data: carryovers = [] } = useQuery({
-    queryKey: ["co-for-reg", student?.id, term],
+    queryKey: ["co-for-reg", student?.id, semester],
     enabled: !!student?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from("carryovers")
-        .select("id, subject_id, subjects(id, code, title, unit, term)")
+        .select("id, course_id, courses(id, code, title, unit, semester)")
         .eq("student_id", student!.id)
         .eq("status", "pending");
-      return (data ?? []).filter((c) => (c.subjects as { term?: string } | null)?.term === term);
+      return (data ?? []).filter((c) => (c.courses as { semester?: string } | null)?.semester === semester);
     },
   });
 
-  const lockedSubjectIds = useMemo(() => new Set(carryovers.map((c) => c.subject_id)), [carryovers]);
-  const carryoverUnits = carryovers.reduce((s, c) => s + ((c.subjects as { unit?: number } | null)?.unit ?? 0), 0);
+  const lockedSubjectIds = useMemo(() => new Set(carryovers.map((c) => c.course_id)), [carryovers]);
+  const carryoverUnits = carryovers.reduce((s, c) => s + ((c.courses as { unit?: number } | null)?.unit ?? 0), 0);
   const selectedUnits = levelSubjects.filter((c) => selected.has(c.id)).reduce((s, c) => s + c.unit, 0);
   const totalUnits = carryoverUnits + selectedUnits;
 
@@ -92,40 +92,7 @@ function SubjectRegPage() {
       if (!student || !sessionId) throw new Error("Choose a session");
       if (totalUnits < minUnits) throw new Error(`Minimum ${minUnits} units required (you have ${totalUnits})`);
       if (totalUnits > maxUnits) throw new Error(`Maximum ${maxUnits} units allowed (you have ${totalUnits})`);
-
-      const { data: reg, error: regErr } = await supabase
-        .from("subject_registrations")
-        .insert({
-          student_id: student.id,
-          faculty_id: student.faculty_id,
-          session_id: sessionId,
-          level: student.level,
-          term,
-          total_units: totalUnits,
-          status: "submitted",
-          submitted_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-      if (regErr) throw new Error(regErr.message);
-
-      const items = [
-        ...carryovers.map((c) => ({
-          registration_id: reg.id,
-          subject_id: c.subject_id,
-          is_carryover: true,
-          is_locked: true,
-          carryover_id: c.id,
-        })),
-        ...Array.from(selected).map((cid) => ({
-          registration_id: reg.id,
-          subject_id: cid,
-          is_carryover: false,
-          is_locked: false,
-        })),
-      ];
-      const { error: itemsErr } = await supabase.from("subject_registration_items").insert(items);
-      if (itemsErr) throw new Error(itemsErr.message);
+      throw new Error("Subject registration is not available in this school setup yet.");
     },
     onSuccess: () => {
       toast.success("Subject registration submitted");
@@ -156,7 +123,7 @@ function SubjectRegPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Term</Label>
-            <Select value={term} onValueChange={(v) => setTerm(v as "First" | "Second")}>
+            <Select value={semester} onValueChange={(v) => setTerm(v as "First" | "Second")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="First">First Term</SelectItem>
@@ -177,7 +144,7 @@ function SubjectRegPage() {
             <Table>
               <TableBody>
                 {carryovers.map((c) => {
-                  const subject = c.subjects as { code?: string; title?: string; unit?: number } | null;
+                  const subject = c.courses as { code?: string; title?: string; unit?: number } | null;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-mono font-medium">{subject?.code}</TableCell>
@@ -195,7 +162,7 @@ function SubjectRegPage() {
 
       <Card className="tsu-shadow">
         <CardHeader>
-          <CardTitle className="text-base">Available subjects ({student?.level}L, {term} Term)</CardTitle>
+          <CardTitle className="text-base">Available subjects ({student?.level}L, {semester} Term)</CardTitle>
           <CardDescription>Tick the subjects you want to register.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -216,11 +183,11 @@ function SubjectRegPage() {
                   <TableCell className="font-mono font-medium">{c.code}</TableCell>
                   <TableCell>{c.title}</TableCell>
                   <TableCell className="text-center">{c.unit}</TableCell>
-                  <TableCell><Badge variant="outline">{c.subject_type}</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{c.course_type}</Badge></TableCell>
                 </TableRow>
               ))}
               {levelSubjects.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No subjects available for this term yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No subjects available for this semester yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

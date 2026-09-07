@@ -11,10 +11,10 @@ import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { resolveAdmission NoToEmail } from "@/lib/student-registration.functions";
+import { resolveMatricToEmail } from "@/lib/student-registration.functions";
 
 export const Route = createFileRoute("/student/login")({
-  head: () => ({ meta: [{ title: "Student Sign In — School Portal" }] }),
+  head: () => ({ meta: [{ title: "Pupil Sign In — Model Day Primary School" }] }),
   component: StudentLoginPage,
 });
 
@@ -22,10 +22,10 @@ function StudentLoginPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuthSession();
   const { isStudent, loading: roleLoading } = useRole();
-  const [matric, setAdmission No] = useState("");
+  const [matric, setAdmissionNumber] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const resolve = useServerFn(resolveAdmission NoToEmail);
+  const resolve = useServerFn(resolveMatricToEmail);
 
   useEffect(() => {
     if (authLoading || roleLoading || !session) return;
@@ -36,7 +36,7 @@ function StudentLoginPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { email } = await resolve({ data: { admission_number: matric.trim() } });
+      const { email } = await resolve({ data: { matric_number: matric.trim() } });
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         toast.error(error.message);
@@ -57,14 +57,14 @@ function StudentLoginPage() {
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <Card className="w-full max-w-md tsu-shadow">
           <CardHeader>
-            <CardTitle className="font-serif text-2xl">Student Sign In</CardTitle>
-            <CardDescription>Enter your matric number and password.</CardDescription>
+            <CardTitle className="font-serif text-2xl">Pupil Sign In</CardTitle>
+            <CardDescription>Enter your admission number and password.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="matric">Admission Number</Label>
-                <Input id="matric" value={matric} onChange={(e) => setAdmission No(e.target.value)} placeholder="SOC/26/0001" required />
+                <Input id="matric" value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} placeholder="MDPS/26/0001" required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password">Password</Label>

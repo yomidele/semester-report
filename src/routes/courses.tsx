@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, Edit2, AlertTriangle } from "lucide-react";
-import { editSubject, checkEditSafety } from "@/lib/subject-editor";
+import { editCourse as editSubject, checkEditSafety } from "@/lib/course-editor";
 
 export const Route = createFileRoute("/courses")({
   head: () => ({ meta: [{ title: "Subjects — School Portal" }] }),
@@ -27,9 +27,9 @@ export function SubjectsPage() {
   const qc = useQueryClient();
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
-  const [weight, setWeight] = useState("3");
+  const [unit, setWeight] = useState("3");
   const [level, setLevel] = useState<string>("100");
-  const [term, setTerm] = useState<string>("First");
+  const [semester, setTerm] = useState<string>("First");
 
   const [filterLevel, setFilterLevel] = useState<string>("all");
   const [filterSem, setFilterSem] = useState<string>("all");
@@ -44,7 +44,7 @@ export function SubjectsPage() {
   const { data: subjects = [], isLoading } = useQuery({
     queryKey: ["subjects"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("subjects").select("*").order("level").order("term").order("code");
+      const { data, error } = await supabase.from("courses").select("*").order("level").order("semester").order("code");
       if (error) throw error;
       return data;
     },
@@ -52,19 +52,19 @@ export function SubjectsPage() {
 
   const filtered = subjects.filter((c) =>
     (filterLevel === "all" || c.level === Number(filterLevel)) &&
-    (filterSem === "all" || c.term === filterSem)
+    (filterSem === "all" || c.semester === filterSem)
   );
 
   const addMut = useMutation({
     mutationFn: async () => {
-      const u = Number(weight);
+      const u = Number(unit);
       if (!code.trim() || !title.trim() || !u) throw new Error("Fill all fields");
-      const { error } = await supabase.from("subjects").insert({
+      const { error } = await supabase.from("courses").insert({
         code: code.trim().toUpperCase(),
         title: title.trim(),
-        weight: u,
+        unit: u,
         level: Number(level),
-        term,
+        semester,
       });
       if (error) throw error;
     },
@@ -79,7 +79,7 @@ export function SubjectsPage() {
 
   const delMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("subjects").delete().eq("id", id);
+      const { error } = await supabase.from("courses").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Subject removed"); qc.invalidateQueries({ queryKey: ["subjects"] }); qc.invalidateQueries({ queryKey: ["count", "subjects"] }); },
@@ -92,10 +92,10 @@ export function SubjectsPage() {
         throw new Error("Fill all required fields");
       }
       const result = await editSubject({
-        subject_id: editingId,
+        course_id: editingId,
         code: editCode.trim().toUpperCase(),
         title: editTitle.trim(),
-        weight: Number(editWeight),
+        unit: Number(editWeight),
       }, "admin");
       if (!result.success) {
         throw new Error(result.message);
@@ -105,7 +105,7 @@ export function SubjectsPage() {
     onSuccess: (result) => {
       toast.success(result.message);
       if (result.recalculated) {
-        toast.info(`Term Average/Academic Average recalculated for ${result.affectedStudents} student term(s)`);
+        toast.info(`Term Average/Academic Average recalculated for ${result.affectedStudents} student semester(s)`);
       }
       setEditingId(null);
       setEditSafety(null);
@@ -118,10 +118,10 @@ export function SubjectsPage() {
     setEditingId(subject.id);
     setEditCode(subject.code);
     setEditTitle(subject.title);
-    setEditWeight(String(subject.weight));
+    setEditWeight(String(subject.unit));
     
     // Check edit safety
-    const safety = await checkEditSafety({ subject_id: subject.id });
+    const safety = await checkEditSafety({ course_id: subject.id });
     setEditSafety({
       affectedRecords: safety.affectedRecords,
       warnings: safety.warnings,
@@ -140,7 +140,7 @@ export function SubjectsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Subject Setup</h2>
-        <p className="text-sm text-muted-foreground">Add subjects by code, title, weight, level, and term.</p>
+        <p className="text-sm text-muted-foreground">Add subjects by code, title, unit, level, and semester.</p>
       </div>
 
       <Card className="tsu-shadow">
@@ -157,7 +157,7 @@ export function SubjectsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Weight</Label>
-              <Input type="number" min={1} max={10} value={weight} onChange={(e) => setWeight(e.target.value)} required />
+              <Input type="number" min={1} max={10} value={unit} onChange={(e) => setWeight(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
               <Label>Level</Label>
@@ -168,7 +168,7 @@ export function SubjectsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Term</Label>
-              <Select value={term} onValueChange={setTerm}>
+              <Select value={semester} onValueChange={setTerm}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{SEMESTERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
@@ -224,9 +224,9 @@ export function SubjectsPage() {
                   <TableRow key={c.id}>
                     <TableCell className="font-mono font-medium">{c.code}</TableCell>
                     <TableCell>{c.title}</TableCell>
-                    <TableCell className="text-center">{c.weight}</TableCell>
+                    <TableCell className="text-center">{c.unit}</TableCell>
                     <TableCell className="text-center">{c.level}</TableCell>
-                    <TableCell>{c.term}</TableCell>
+                    <TableCell>{c.semester}</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => handleEditClick(c)} className="mr-2">
                         <Edit2 className="h-4 w-4" />
@@ -249,7 +249,7 @@ export function SubjectsPage() {
           <DialogHeader>
             <DialogTitle>Edit Subject</DialogTitle>
             <DialogDescription>
-              Update subject details. System-calculated fields (Term Average/Academic Average) will auto-update if weight changes.
+              Update subject details. System-calculated fields (Term Average/Academic Average) will auto-update if unit changes.
             </DialogDescription>
           </DialogHeader>
 
@@ -294,9 +294,9 @@ export function SubjectsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-weight">Weight</Label>
+              <Label htmlFor="edit-unit">Weight</Label>
               <Input
-                id="edit-weight"
+                id="edit-unit"
                 type="number"
                 min="1"
                 max="10"
@@ -305,7 +305,7 @@ export function SubjectsPage() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Changing weight will recalculate affected student Term Average/Academic Average
+                Changing unit will recalculate affected student Term Average/Academic Average
               </p>
             </div>
 

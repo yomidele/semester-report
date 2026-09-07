@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
-import { TeacherShell } from "./TeacherShell";
+import { TeacherShell } from "./LecturerShell";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedTeacher({ children }: { children: ReactNode }) {
@@ -13,7 +13,7 @@ export function ProtectedTeacher({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading || roleLoading) return;
-    if (!session || !allowed) navigate({ to: "/teacher/login" });
+    if (!session || !allowed) navigate({ to: "/lecturer/login" });
   }, [loading, roleLoading, session, allowed, navigate]);
 
   if (loading || roleLoading || !session) {
@@ -21,3 +21,5 @@ export function ProtectedTeacher({ children }: { children: ReactNode }) {
   }
   return <TeacherShell>{children}</TeacherShell>;
 }
+
+export const ProtectedLecturer = ProtectedTeacher;

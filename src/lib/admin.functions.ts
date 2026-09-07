@@ -84,3 +84,6 @@ export const deleteFacultyAdmin = createServerFn({ method: "POST" })
     await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     return { ok: true };
   });
+
+export const createSectionAdmin = createFacultyAdmin;
+export const deleteSectionAdmin = deleteFacultyAdmin;
