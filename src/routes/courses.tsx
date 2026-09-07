@@ -254,9 +254,9 @@ export function SubjectsPage() {
           </DialogHeader>
 
           {editSafety && editSafety.warnings.length > 0 && (
-            <Alert className="border-yellow-200 bg-yellow-50">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-sm text-yellow-800">
+            <Alert className="border-accent bg-accent/25">
+              <AlertTriangle className="h-4 w-4 text-primary-dark" />
+              <AlertDescription className="text-sm text-foreground">
                 {editSafety.warnings.map((w, i) => (
                   <div key={i}>• {w}</div>
                 ))}

@@ -20,7 +20,7 @@ export const Route = createFileRoute("/student/result-pins")({
 
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-primary/10 text-primary",
-  exhausted: "bg-amber-100 text-amber-800",
+  exhausted: "bg-accent/35 text-foreground",
   expired: "bg-muted text-muted-foreground",
   disabled: "bg-destructive/10 text-destructive",
 };

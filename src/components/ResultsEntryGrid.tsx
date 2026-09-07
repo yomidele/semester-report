@@ -414,7 +414,7 @@ export function ResultsEntryGrid() {
 
       {/* Subject Details Card (shown when subject is selected) */}
       {selectedSubject && hasLoadedStudents && (
-        <Card className="tsu-shadow bg-blue-50 border-blue-200">
+        <Card className="tsu-shadow bg-secondary/30 border-border">
           <CardContent className="pt-4 text-sm">
             <div className="flex gap-6">
               <div>
@@ -525,14 +525,14 @@ export function ResultsEntryGrid() {
             {validationStatus.validCount > 0 || Object.keys(validationStatus.errors).length > 0 ? (
               <div className="px-4 py-4 border-t space-y-3">
                 {validationStatus.validCount > 0 && (
-                  <div className="rounded-md bg-green-50 p-3 text-sm flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="rounded-md bg-secondary/35 p-3 text-sm flex gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary-dark flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium text-green-900">
+                      <p className="font-medium text-foreground">
                         {validationStatus.validCount} student{validationStatus.validCount !== 1 ? "s" : ""} ready to save
                       </p>
                       {validationStatus.emptyCount > 0 && (
-                        <p className="text-xs text-green-700 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {validationStatus.emptyCount} student{validationStatus.emptyCount !== 1 ? "s" : ""} skipped (no scores)
                         </p>
                       )}

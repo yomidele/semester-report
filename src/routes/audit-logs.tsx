@@ -52,10 +52,10 @@ function AuditLogsPage() {
         </p>
       </div>
 
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-border bg-secondary/30">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <LogIcon className="h-5 w-5 text-blue-600" />
+            <LogIcon className="h-5 w-5 text-primary-dark" />
             System Audit Trail
           </CardTitle>
           <CardDescription>

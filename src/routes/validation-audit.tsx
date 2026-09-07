@@ -69,10 +69,10 @@ function ValidationAuditPage() {
         </p>
       </div>
 
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-border bg-secondary/30">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-blue-600" />
+            <AlertTriangle className="h-5 w-5 text-primary-dark" />
             Academic Integrity Check
           </CardTitle>
           <CardDescription>
@@ -108,17 +108,17 @@ function ValidationAuditPage() {
 
       {auditReport && (
         <>
-          <Card className={auditReport.recordsWithErrors === 0 ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
+           <Card className={auditReport.recordsWithErrors === 0 ? "border-primary/30 bg-secondary/25" : "border-accent bg-accent/20"}>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 {auditReport.recordsWithErrors === 0 ? (
                   <>
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-primary-dark" />
                     All Records Valid
                   </>
                 ) : (
                   <>
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <AlertTriangle className="h-5 w-5 text-primary-dark" />
                     Issues Detected
                   </>
                 )}
@@ -141,7 +141,7 @@ function ValidationAuditPage() {
                   <p className="text-sm text-muted-foreground">With Issues</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-primary-dark">
                     {auditReport.recordsCorrected}
                   </p>
                   <p className="text-sm text-muted-foreground">Corrections Available</p>
@@ -149,9 +149,9 @@ function ValidationAuditPage() {
               </div>
 
               {auditReport.recordsWithErrors === 0 && (
-                <Alert className="mt-4 border-green-300 bg-green-100">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">
+                <Alert className="mt-4 border-primary/30 bg-secondary/40">
+                  <CheckCircle2 className="h-4 w-4 text-primary-dark" />
+                  <AlertDescription className="text-foreground">
                     ✓ Excellent! All records passed validation. No corrections needed.
                   </AlertDescription>
                 </Alert>
@@ -159,17 +159,17 @@ function ValidationAuditPage() {
 
               {auditReport.recordsWithErrors > 0 && (
                 <div className="mt-4 space-y-3">
-                  <Alert className="border-yellow-300 bg-yellow-100">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <AlertDescription className="text-yellow-800">
+                  <Alert className="border-accent bg-accent/30">
+                    <AlertTriangle className="h-4 w-4 text-primary-dark" />
+                    <AlertDescription className="text-foreground">
                       {auditReport.recordsWithErrors} semester group(s) have validation issues.
                       Review details below.
                     </AlertDescription>
                   </Alert>
 
-                  <div className="max-h-96 overflow-y-auto rounded-md border border-yellow-200 bg-white">
+                   <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-card">
                     {auditReport.errors.map((err, idx) => (
-                      <div key={idx} className="border-b border-yellow-100 p-3 last:border-b-0">
+                       <div key={idx} className="border-b border-border p-3 last:border-b-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="font-medium">
@@ -180,7 +180,7 @@ function ValidationAuditPage() {
                                {err.courseCount} subject{err.courseCount !== 1 ? "s" : ""}
                             </p>
                           </div>
-                          <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                           <AlertTriangle className="h-4 w-4 text-primary-dark flex-shrink-0 mt-0.5" />
                         </div>
                         <ul className="mt-1 ml-4 space-y-0.5">
                           {err.issues.map((issue, i) => (
