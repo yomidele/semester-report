@@ -7,16 +7,16 @@ import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/publi
 export const Route = createFileRoute("/departments")({
   head: () => ({
     meta: [
-      { title: "Classs — Health Training Classs" },
+      { title: "Classes — Model Day Primary School Kazaure" },
       { name: "description", content: "Explore the departments of the college and the health programmes each one runs, from community health to medical laboratory technology." },
-      { property: "og:title", content: "Classs — Health Training Classs" },
-      { property: "og:description", content: "Classs of the college and the programmes they offer." },
+      { property: "og:title", content: "Classes — Model Day Primary School Kazaure" },
+      { property: "og:description", content: "Explore primary classes and learning programmes at Model Day Primary School Kazaure." },
     ],
   }),
-  component: Classs,
+  component: Classes,
 });
 
-function Classs() {
+function Classes() {
   const { data: schools = [] } = useSchools();
   const { data: departments = [], isLoading } = useClasss();
   const { data: programmes = [] } = useProgrammes();
@@ -25,9 +25,9 @@ function Classs() {
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-primary-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Classs</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">Classes</h1>
           <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">
-            Classs deliver teaching, clinical supervision and student support within each school.
+            Classes provide a supportive learning environment for every child.
           </p>
         </div>
       </div>

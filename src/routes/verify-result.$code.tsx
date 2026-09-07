@@ -44,7 +44,7 @@ function VerifyResultPage() {
                   <Row label="Student Name" value={data.student_name} />
                   <Row label="Programme" value={data.programme_name} />
                   <Row label="Session" value={data.session_name} />
-                  <Row label="Term" value={`${data.term} Term`} />
+                  <Row label="Term" value={`${data.semester} Term`} />
                   <Row label="Issued" value={new Date(data.generated_at).toLocaleDateString()} />
                 </dl>
                 <p className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">

@@ -18,7 +18,7 @@ export const lecturerSubmitResults = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => TransitionInput.parse(i))
   .handler(async ({ data, context }) => {
     const roles = await getCallerRoles(context.userId);
-    if (!roles.includes("lecturer")) throw new Error("Forbidden");
+    if (!roles.includes("lecturer") && !roles.includes("teacher")) throw new Error("Forbidden");
     const { error } = await supabaseAdmin
       .from("results")
       .update({ status: "submitted", submitted_at: new Date().toISOString() })
@@ -27,6 +27,8 @@ export const lecturerSubmitResults = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const teacherSubmitResults = lecturerSubmitResults;
 
 async function assertDeptAdminCanTouch(userId: string, resultIds: string[]) {
   const { data: scope } = await supabaseAdmin

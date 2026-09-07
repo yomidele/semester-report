@@ -21,7 +21,7 @@ const LEVELS = [100, 200, 300, 400] as const;
 
 export function StudentsPage() {
   const qc = useQueryClient();
-  const [matric, setAdmission No] = useState("");
+  const [matric, setAdmissionNumber] = useState("");
   const [name, setName] = useState("");
   const [level, setLevel] = useState("100");
   const [filterLevel, setFilterLevel] = useState("all");
@@ -29,7 +29,7 @@ export function StudentsPage() {
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("*").order("admission_number");
+      const { data, error } = await supabase.from("students").select("*").order("matric_number");
       if (error) throw error;
       return data;
     },
@@ -41,7 +41,7 @@ export function StudentsPage() {
     mutationFn: async () => {
       if (!matric.trim() || !name.trim()) throw new Error("Fill all fields");
       const { error } = await supabase.from("students").insert({
-        admission_number: matric.trim().toUpperCase(),
+        matric_number: matric.trim().toUpperCase(),
         full_name: name.trim(),
         level: Number(level),
       });
@@ -49,7 +49,7 @@ export function StudentsPage() {
     },
     onSuccess: () => {
       toast.success("Student added");
-      setAdmission No(""); setName("");
+      setAdmissionNumber(""); setName("");
       qc.invalidateQueries({ queryKey: ["students"] });
       qc.invalidateQueries({ queryKey: ["count", "students"] });
     },
@@ -77,8 +77,8 @@ export function StudentsPage() {
         <CardContent>
           <form onSubmit={(e) => { e.preventDefault(); addMut.mutate(); }} className="grid gap-3 md:grid-cols-4">
             <div className="space-y-1.5">
-              <Label>Admission No No</Label>
-              <Input placeholder="DEPT/24/1001" value={matric} onChange={(e) => setAdmission No(e.target.value)} required />
+              <Label>Admission Number</Label>
+              <Input placeholder="DEPT/24/1001" value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} required />
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label>Full name</Label>
@@ -116,7 +116,7 @@ export function StudentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Admission No No</TableHead>
+                  <TableHead>Admission Number</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead className="text-center">Level</TableHead>
                   <TableHead className="text-right">Action</TableHead>
@@ -129,7 +129,7 @@ export function StudentsPage() {
                 )}
                 {filtered.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell className="font-mono">{s.admission_number}</TableCell>
+                    <TableCell className="font-mono">{s.matric_number}</TableCell>
                     <TableCell className="font-medium">{s.full_name}</TableCell>
                     <TableCell className="text-center">{s.level}</TableCell>
                     <TableCell className="text-right">

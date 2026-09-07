@@ -9,7 +9,7 @@ import { useAuthSession } from "@/hooks/use-auth";
 
 const NAV = [
   { to: "/faculty/dashboard", label: "Section Dashboard", icon: LayoutDashboard },
-  { to: "/faculty/subjects", label: "Subjects", icon: BookOpen },
+  { to: "/faculty/courses", label: "Subjects", icon: BookOpen },
   { to: "/faculty/students", label: "Students", icon: Users },
   { to: "/faculty/dept-admins", label: "Department Admins", icon: UserCog },
   { to: "/faculty/result-entry", label: "Result Entry", icon: ClipboardEdit },

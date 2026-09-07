@@ -24,10 +24,10 @@ function Page() {
   const { isSuperAdmin, loading } = useRole();
   if (loading) return <Loader2 className="m-8 h-6 w-6 animate-spin text-primary" />;
   if (!isSuperAdmin) return <Navigate to="/dashboard" />;
-  return <Classes & ArmsPage />;
+  return <ClassesAndArmsPage />;
 }
 
-function Classes & ArmsPage() {
+function ClassesAndArmsPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<ProgrammeForm>(emptyForm);
   const faculties = useQuery({ queryKey: ["admin-faculties"], queryFn: async () => { const { data, error } = await supabase.from("faculties").select("id, name").order("name"); if (error) throw error; return data ?? []; } });

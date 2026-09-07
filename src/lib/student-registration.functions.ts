@@ -30,6 +30,8 @@ export const listFacultiesAndDepartments = createServerFn({ method: "POST" })
     return { faculties: faculties ?? [], departments: departments ?? [] };
   });
 
+export const listFacultiesAndClasss = listFacultiesAndDepartments;
+
 // Public: register student. Student chooses faculty/department/level themselves.
 export const registerStudentWithToken = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>

@@ -20,11 +20,11 @@ type VerifiedStudent = Awaited<ReturnType<typeof verifyStudentForPin>>;
 
 function BuyPinPage() {
   const [step, setStep] = useState<1 | 2>(1);
-  const [matric, setAdmission No] = useState("");
+  const [matric, setAdmissionNumber] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [student, setStudent] = useState<VerifiedStudent | null>(null);
   const [sessionId, setSessionId] = useState("");
-  const [term, setTerm] = useState<"First" | "Second" | "">("");
+  const [semester, setTerm] = useState<"First" | "Second" | "">("");
   const [paying, setPaying] = useState(false);
 
   const verifyStudent = useServerFn(verifyStudentForPin);
@@ -39,7 +39,7 @@ function BuyPinPage() {
     event.preventDefault();
     setVerifying(true);
     try {
-      const result = await verifyStudent({ data: { admission_number: matric } });
+      const result = await verifyStudent({ data: { matric_number: matric } });
       setStudent(result);
       setStep(2);
     } catch (error) {
@@ -50,15 +50,15 @@ function BuyPinPage() {
   }
 
   async function handlePay() {
-    if (!sessionId || !term) {
-      toast.error("Select the academic session and term.");
+    if (!sessionId || !semester) {
+      toast.error("Select the academic session and semester.");
       return;
     }
     setPaying(true);
     try {
       const callbackUrl = `${window.location.origin}/result-pin/callback`;
       const result = await initPurchase({
-        data: { admission_number: matric, session_id: sessionId, term, callback_url: callbackUrl },
+        data: { matric_number: matric, session_id: sessionId, semester, callback_url: callbackUrl },
       });
       window.location.href = result.authorization_url;
     } catch (error) {
@@ -94,8 +94,8 @@ function BuyPinPage() {
             <CardContent>
               <form onSubmit={handleVerify} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label>Student / Admission Noulation Number</Label>
-                  <Input value={matric} onChange={(e) => setAdmission No(e.target.value)} placeholder="e.g. KCOHT/CH/26/0045" required />
+                  <Label>Student / Admission Number</Label>
+                  <Input value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} placeholder="e.g. KCOHT/CH/26/0045" required />
                 </div>
                 <Button type="submit" disabled={verifying} className="w-full">
                   {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -123,7 +123,7 @@ function BuyPinPage() {
                   <dt className="text-muted-foreground">Name</dt>
                   <dd className="font-medium text-foreground">{student.full_name}</dd>
                   <dt className="text-muted-foreground">Student ID</dt>
-                  <dd className="font-medium text-foreground">{student.admission_number}</dd>
+                  <dd className="font-medium text-foreground">{student.matric_number}</dd>
                   <dt className="text-muted-foreground">Programme</dt>
                   <dd className="font-medium text-foreground">{student.programme_name ?? "\u2014"}</dd>
                   <dt className="text-muted-foreground">Class</dt>
@@ -146,8 +146,8 @@ function BuyPinPage() {
                   </label>
                   <label className="space-y-1.5 text-sm font-medium">
                     <Label>Term</Label>
-                    <select value={term} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                      <option value="">Select term</option>
+                    <select value={semester} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                      <option value="">Select semester</option>
                       <option value="First">First Term</option>
                       <option value="Second">Second Term</option>
                     </select>

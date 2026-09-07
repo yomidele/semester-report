@@ -34,7 +34,7 @@ function Page() {
   const teachersQ = useQuery({
     queryKey: ["dept-teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("teachers").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("lecturers").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },

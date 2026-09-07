@@ -31,7 +31,7 @@ function ValidationAuditPage() {
         toast.success("✓ All records validated successfully!");
       } else {
         toast.warning(
-          `⚠ Found ${report.recordsWithErrors} term(s) with potential issues`
+          `⚠ Found ${report.recordsWithErrors} semester(s) with potential issues`
         );
       }
     } catch (error) {
@@ -162,7 +162,7 @@ function ValidationAuditPage() {
                   <Alert className="border-yellow-300 bg-yellow-100">
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
                     <AlertDescription className="text-yellow-800">
-                      {auditReport.recordsWithErrors} term group(s) have validation issues.
+                      {auditReport.recordsWithErrors} semester group(s) have validation issues.
                       Review details below.
                     </AlertDescription>
                   </Alert>
@@ -176,8 +176,8 @@ function ValidationAuditPage() {
                               {err.studentName} ({err.studentId.slice(0, 8)})
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {err.session} • {err.level}L • {err.term} Sem •{" "}
-                              {err.subjectCount} subject{err.subjectCount !== 1 ? "s" : ""}
+                              {err.session} • {err.level}L • {err.semester} Sem •{" "}
+                               {err.courseCount} subject{err.courseCount !== 1 ? "s" : ""}
                             </p>
                           </div>
                           <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />

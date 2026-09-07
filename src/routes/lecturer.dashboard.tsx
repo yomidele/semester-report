@@ -14,14 +14,14 @@ function Page() {
   const { session } = useAuthSession();
   const teacher = useQuery({
     queryKey: ["teacher-self", session?.user.id], enabled: !!session,
-    queryFn: async () => (await supabase.from("teachers").select("id, full_name").eq("user_id", session!.user.id).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("lecturers").select("id, full_name").eq("user_id", session!.user.id).maybeSingle()).data,
   });
   const assignments = useQuery({
     queryKey: ["teacher-assignments", teacher.data?.id], enabled: !!teacher.data,
     queryFn: async () => {
-      const { data } = await supabase.from("subject_assignments")
-        .select("id, term, subject_id, session_id, subjects(code, title, level, unit), academic_sessions(name)")
-        .eq("teacher_id", teacher.data!.id);
+      const { data } = await supabase.from("course_assignments")
+               .select("id, semester, course_id, session_id, courses(code, title, level, unit), academic_sessions(name)")
+        .eq("lecturer_id", teacher.data!.id);
       return data ?? [];
     },
   });
@@ -34,11 +34,11 @@ function Page() {
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {(assignments.data ?? []).map((a: any) => (
-          <Link key={a.id} to="/teacher/entry" search={{ assignment_id: a.id }}>
+           <Link key={a.id} to="/lecturer/entry" search={{ assignment_id: a.id }}>
             <Card className="tsu-shadow transition-colors hover:border-primary">
-              <CardHeader><CardTitle className="text-base">{a.subjects?.code} — {a.subjects?.title}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{a.courses?.code} — {a.courses?.title}</CardTitle></CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                Level {a.subjects?.level} · {a.term} Term · {a.subjects?.unit} units · {a.academic_sessions?.name}
+                Level {a.courses?.level} · {a.semester} Term · {a.courses?.unit} units · {a.academic_sessions?.name}
               </CardContent>
             </Card>
           </Link>

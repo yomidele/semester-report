@@ -8,24 +8,24 @@ import { useRole } from "@/hooks/use-role";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/sessions", label: "Academic Sessions", icon: CalendarDays },
-  { to: "/subjects", label: "Subjects", icon: BookOpen },
+  { to: "/sessions", label: "Sessions & Terms", icon: CalendarDays },
+  { to: "/courses", label: "Subjects", icon: BookOpen },
   { to: "/students", label: "Students", icon: Users },
   { to: "/result-entry", label: "Result Entry", icon: ClipboardEdit },
   { to: "/results", label: "View / Export Results", icon: FileSpreadsheet },
-  { to: "/transcripts", label: "Transcripts", icon: FileText },
+  { to: "/transcripts", label: "Report Cards", icon: FileText },
   { to: "/audit-logs", label: "Audit Logs", icon: ScrollText },
   { to: "/validation-audit", label: "Validation Audit", icon: ShieldCheck },
 ] as const;
 
 const SUPER_ADMIN_NAV = [
   { to: "/admin/settings", label: "Settings", icon: Settings },
-  { to: "/admin/programmes", label: "Programmes", icon: GraduationCap },
+  { to: "/admin/programmes", label: "Classes & Arms", icon: GraduationCap },
   { to: "/admin/applications", label: "Applications", icon: UserRoundCheck },
   { to: "/admin/result-pins", label: "Result PINs", icon: KeyRound },
   { to: "/admin/news", label: "News", icon: Newspaper },
-  { to: "/admin/faculties", label: "Faculties", icon: Building2 },
-  { to: "/admin/faculty-admins", label: "Faculty Admins", icon: Shield },
+  { to: "/admin/faculties", label: "School Sections", icon: Building2 },
+  { to: "/admin/faculty-admins", label: "Section Admins", icon: Shield },
   { to: "/admin/registration-links", label: "Registration Links", icon: LinkIcon },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ] as const;
@@ -98,7 +98,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <main className="min-w-0 flex-1">{children}</main>
       </div>
       <footer className="border-t border-border py-3 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Kazaure College of Health Technology — Admin Portal
+         © {new Date().getFullYear()} Model Day Primary School Kazaure — Admin Portal
       </footer>
     </div>
   );

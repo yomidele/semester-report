@@ -56,7 +56,7 @@ function DeptAdminLogin() {
               <Button type="submit" className="w-full" disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}</Button>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <Link to="/faculty/login" className="hover:underline">Section Admin →</Link>
-                <Link to="/teacher/login" className="hover:underline">Teacher →</Link>
+                <Link to="/lecturer/login" className="hover:underline">Teacher →</Link>
               </div>
             </form>
           </CardContent>

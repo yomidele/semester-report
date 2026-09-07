@@ -10,7 +10,7 @@ export const Route = createFileRoute("/dashboard")({
   component: () => <ProtectedAdmin><DashboardPage /></ProtectedAdmin>,
 });
 
-function useCount(table: "academic_sessions" | "subjects" | "students" | "results") {
+function useCount(table: "academic_sessions" | "courses" | "students" | "results") {
   return useQuery({
     queryKey: ["count", table],
     queryFn: async () => {
@@ -23,13 +23,13 @@ function useCount(table: "academic_sessions" | "subjects" | "students" | "result
 
 function DashboardPage() {
   const sessions = useCount("academic_sessions");
-  const subjects = useCount("subjects");
+  const subjects = useCount("courses");
   const students = useCount("students");
   const results = useCount("results");
 
   const stats = [
     { label: "Academic Sessions", value: sessions.data, icon: CalendarDays, to: "/sessions" },
-    { label: "Subjects", value: subjects.data, icon: BookOpen, to: "/subjects" },
+    { label: "Subjects", value: subjects.data, icon: BookOpen, to: "/courses" },
     { label: "Students", value: students.data, icon: Users, to: "/students" },
     { label: "Results Recorded", value: results.data, icon: ClipboardList, to: "/results" },
   ] as const;
@@ -64,7 +64,7 @@ function DashboardPage() {
         <CardContent>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-foreground">
             <li>Create an <Link to="/sessions" className="font-medium text-primary underline">Academic Session</Link> (e.g. 2024/2025).</li>
-            <li>Add <Link to="/subjects" className="font-medium text-primary underline">Subjects</Link> for each level and term.</li>
+            <li>Add <Link to="/courses" className="font-medium text-primary underline">Subjects</Link> for each level and semester.</li>
             <li>Register <Link to="/students" className="font-medium text-primary underline">Students</Link> with matric numbers.</li>
             <li>Use <Link to="/result-entry" className="font-medium text-primary underline">Result Entry</Link> to record CA &amp; Exam scores.</li>
             <li>View, print, or export the result sheet from <Link to="/results" className="font-medium text-primary underline">View / Export Results</Link>.</li>

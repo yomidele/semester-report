@@ -25,7 +25,7 @@ function Page() {
   });
   const teachersCount = useQuery({
     queryKey: ["dept-teachers-count"],
-    queryFn: async () => (await supabase.from("teachers").select("*", { count: "exact", head: true })).count ?? 0,
+    queryFn: async () => (await supabase.from("lecturers").select("*", { count: "exact", head: true })).count ?? 0,
   });
   const pending = useQuery({
     queryKey: ["dept-pending-count"],
@@ -33,12 +33,12 @@ function Page() {
   });
   const subjects = useQuery({
     queryKey: ["dept-subjects-count"],
-    queryFn: async () => (await supabase.from("subjects").select("*", { count: "exact", head: true })).count ?? 0,
+    queryFn: async () => (await supabase.from("courses").select("*", { count: "exact", head: true })).count ?? 0,
   });
 
   const dept = (selfQ.data?.departments as { name?: string } | null)?.name;
   const stats = [
-    { label: "Teachers", value: teachersCount.data, icon: Users, to: "/dept-admin/teachers" as const },
+    { label: "Teachers", value: teachersCount.data, icon: Users, to: "/dept-admin/lecturers" as const },
     { label: "Subjects", value: subjects.data, icon: BookOpen, to: "/dept-admin/assignments" as const },
     { label: "Pending Approvals", value: pending.data, icon: ClipboardCheck, to: "/dept-admin/approvals" as const },
     { label: "Assignments", value: "→", icon: LinkIcon, to: "/dept-admin/assignments" as const },

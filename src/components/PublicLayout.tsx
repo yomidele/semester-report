@@ -13,8 +13,8 @@ const NAV = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/schools", label: "Schools" },
-  { to: "/departments", label: "Departments" },
-  { to: "/programmes", label: "Programmes" },
+  { to: "/departments", label: "Classes" },
+  { to: "/programmes", label: "Subjects" },
   { to: "/admissions", label: "Admissions" },
   { to: "/news", label: "News" },
   { to: "/check-result", label: "Check Result" },
@@ -54,7 +54,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         ? "/faculty/dashboard"
         : roles.includes("department_admin")
           ? "/dept-admin/dashboard"
-          : "/teacher/dashboard";
+           : "/lecturer/dashboard";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -186,8 +186,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Portals</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-primary-foreground/80">
               <li><Link to="/student/login" className="hover:text-accent">Student Portal</Link></li>
-              <li><Link to="/teacher/login" className="hover:text-accent">Teacher Portal</Link></li>
-              <li><Link to="/dept-admin/login" className="hover:text-accent">Department Admin</Link></li>
+               <li><Link to="/lecturer/login" className="hover:text-accent">Teacher Portal</Link></li>
+               <li><Link to="/dept-admin/login" className="hover:text-accent">Class Admin</Link></li>
               <li><Link to="/faculty/login" className="hover:text-accent">School Admin</Link></li>
               <li><Link to="/login" className="hover:text-accent">Administration</Link></li>
             </ul>

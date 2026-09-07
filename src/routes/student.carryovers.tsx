@@ -26,7 +26,7 @@ function RepeatsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("carryovers")
-        .select("*, subjects(code, title, unit), failed_session:academic_sessions!failed_session_id(name)")
+        .select("*, courses(code, title, unit), failed_session:academic_sessions!failed_session_id(name)")
         .eq("student_id", student!.id)
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -61,14 +61,14 @@ function RepeatsPage() {
               </TableHeader>
               <TableBody>
                 {pending.map((c) => {
-                  const subject = c.subjects as { code?: string; title?: string; unit?: number } | null;
+                   const subject = c.courses as { code?: string; title?: string; unit?: number } | null;
                   const sess = (c.failed_session as { name?: string } | null)?.name;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-mono font-medium">{subject?.code}</TableCell>
                       <TableCell>{subject?.title}</TableCell>
                       <TableCell className="text-center">{subject?.unit}</TableCell>
-                      <TableCell>{sess} • {c.failed_level}L • {c.failed_term}</TableCell>
+                      <TableCell>{sess} • {c.failed_level}L • {c.failed_semester}</TableCell>
                       <TableCell><Badge variant="destructive">Pending</Badge></TableCell>
                     </TableRow>
                   );
@@ -93,7 +93,7 @@ function RepeatsPage() {
               </TableHeader>
               <TableBody>
                 {cleared.map((c) => {
-                  const subject = c.subjects as { code?: string; title?: string } | null;
+                   const subject = c.courses as { code?: string; title?: string } | null;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-mono font-medium">{subject?.code}</TableCell>

@@ -64,6 +64,8 @@ export function useDepartments() {
   });
 }
 
+export const useClasss = useDepartments;
+
 export function useProgrammes() {
   return useQuery({
     queryKey: ["public", "programmes"],

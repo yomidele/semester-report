@@ -31,10 +31,10 @@ type ResultData = Awaited<ReturnType<typeof checkResult>>;
 function CheckResultPage() {
   const { settings } = useCollegeSettings();
   const check = useServerFn(checkResult);
-  const [matric, setAdmission No] = useState("");
+  const [matric, setAdmissionNumber] = useState("");
   const [pin, setPin] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [term, setTerm] = useState<"First" | "Second" | "">("");
+  const [semester, setTerm] = useState<"First" | "Second" | "">("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +43,14 @@ function CheckResultPage() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!sessionId || !term) {
-      toast.error("Select the academic session and term.");
+    if (!sessionId || !semester) {
+      toast.error("Select the academic session and semester.");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const data = await check({ data: { admission_number: matric, pin, session_id: sessionId, term } });
+      const data = await check({ data: { matric_number: matric, pin, session_id: sessionId, semester } });
       setResult(data);
     } catch (err) {
       setError((err as Error).message);
@@ -89,19 +89,19 @@ function CheckResultPage() {
     };
     const col2 = pageWidth / 2 + 10;
     line("Student Name", result.student.full_name, margin);
-    line("Admission Number", result.student.admission_number, col2);
+    line("Admission Number", result.student.matric_number, col2);
     y += 32;
     line("Programme", result.student.programme_name ?? "\u2014", margin);
     line("Class", result.student.department_name ?? "\u2014", col2);
     y += 32;
     line("School/Section", result.student.faculty_name ?? "\u2014", margin);
-    line("Session / Term", `${result.session_name} \u2014 ${result.term} Term`, col2);
+    line("Session / Term", `${result.session_name} \u2014 ${result.semester} Term`, col2);
     y += 40;
 
     const rows = result.results.map((r) => {
       const total = effectiveTotal(r);
       const { grade, remark } = computeGrade(total, settings.grading_scale);
-      return [r.subject_code, r.subject_title, String(r.unit), String(r.ca_score), String(r.exam_score), String(total), grade, remark ?? ""];
+      return [r.course_code, r.course_title, String(r.unit), String(r.ca_score), String(r.exam_score), String(total), grade, remark ?? ""];
     });
 
     autoTable(doc, {
@@ -123,7 +123,7 @@ function CheckResultPage() {
     const gpa = totalUnits ? (totalPoints / totalUnits).toFixed(2) : "0.00";
 
     doc.setFont("helvetica", "bold").setFontSize(10);
-    doc.text(`Term Term Average: ${gpa}`, margin, finalY);
+    doc.text(`Term Average: ${gpa}`, margin, finalY);
     doc.text(`Total Units: ${totalUnits}`, margin + 180, finalY);
     finalY += 30;
 
@@ -144,7 +144,7 @@ function CheckResultPage() {
       // QR generation failing is non-fatal — the printed verification number still works.
     }
 
-    doc.save(`${result.student.admission_number}-${result.session_name}-${result.term}-result.pdf`);
+    doc.save(`${result.student.matric_number}-${result.session_name}-${result.semester}-result.pdf`);
   }
 
   return (
@@ -169,7 +169,7 @@ function CheckResultPage() {
             <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Student / Matr No.</Label>
-                <Input value={matric} onChange={(e) => setAdmission No(e.target.value)} required />
+                <Input value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} required />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Result PIN</Label>
@@ -184,8 +184,8 @@ function CheckResultPage() {
               </label>
               <label className="space-y-1.5 text-sm font-medium">
                 <Label>Term</Label>
-                <select value={term} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Select term</option>
+                <select value={semester} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select semester</option>
                   <option value="First">First Term</option>
                   <option value="Second">Second Term</option>
                 </select>
@@ -211,7 +211,7 @@ function CheckResultPage() {
               <div>
                 <h2 className="font-serif text-xl font-bold text-foreground">{result.student.full_name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {result.student.admission_number} &middot; {result.student.programme_name} &middot; {result.session_name} &middot; {result.term} Term
+                  {result.student.matric_number} &middot; {result.student.programme_name} &middot; {result.session_name} &middot; {result.semester} Term
                 </p>
               </div>
               <div className="overflow-x-auto">
@@ -232,9 +232,9 @@ function CheckResultPage() {
                       const total = effectiveTotal(r);
                       const { grade } = computeGrade(total, settings.grading_scale);
                       return (
-                        <tr key={r.subject_code} className="border-b border-border/60">
-                          <td className="py-2 pr-3 font-medium">{r.subject_code}</td>
-                          <td className="py-2 pr-3">{r.subject_title}</td>
+                        <tr key={r.course_code} className="border-b border-border/60">
+                          <td className="py-2 pr-3 font-medium">{r.course_code}</td>
+                          <td className="py-2 pr-3">{r.course_title}</td>
                           <td className="py-2 pr-3">{r.unit}</td>
                           <td className="py-2 pr-3">{r.ca_score}</td>
                           <td className="py-2 pr-3">{r.exam_score}</td>
