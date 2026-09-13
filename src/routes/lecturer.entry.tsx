@@ -29,7 +29,7 @@ function Page() {
   const assignmentQ = useQuery({
     queryKey: ["assignment", assignment_id], enabled: !!assignment_id,
     queryFn: async () => (await supabase.from("course_assignments")
-      .select("id, lecturer_id, course_id, session_id, semester, department_id, faculty_id, courses(code, title, level), academic_sessions(name)")
+      .select("id, lecturer_id, course_id, session_id, semester, department_id, faculty_id, class_arm_id, courses(code, title, level), academic_sessions(name)")
       .eq("id", assignment_id!).maybeSingle()).data,
   });
 
@@ -37,11 +37,12 @@ function Page() {
     queryKey: ["assignment-students", assignmentQ.data?.id], enabled: !!assignmentQ.data,
     queryFn: async () => {
       const a = assignmentQ.data!;
-      const { data } = await supabase.from("students")
+      let query = supabase.from("students")
         .select("id, matric_number, full_name")
         .eq("department_id", a.department_id)
-        .eq("level", (a.courses as any)?.level)
-        .order("matric_number");
+        .eq("level", (a.courses as any)?.level);
+      if (a.class_arm_id) query = query.eq("class_arm_id", a.class_arm_id);
+      const { data } = await query.order("matric_number");
       return data ?? [];
     },
   });

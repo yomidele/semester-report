@@ -66,8 +66,8 @@ export const DEFAULT_GRADING_SCALE: GradeBand[] = [
 
 export const FALLBACK_SETTINGS: CollegeSettings = {
   id: "",
-  college_name: "Kazaure College of Health Technology",
-  short_name: "KCOHT",
+  college_name: "Model Day Primary School Kazaure",
+  short_name: "MDPS",
   motto: "Knowledge, Service, Compassion",
   logo_url: null,
   address: null,
@@ -81,7 +81,7 @@ export const FALLBACK_SETTINGS: CollegeSettings = {
   matric_seq_padding: 4,
   grading_scale: DEFAULT_GRADING_SCALE,
   pass_mark: 40,
-  use_gpa: true,
+  use_gpa: false,
   pin_settings: DEFAULT_PIN_SETTINGS,
   payment_settings: DEFAULT_PAYMENT_SETTINGS,
 };

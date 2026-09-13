@@ -1,3 +1,12 @@
+// NOTE: no longer run automatically by `npm run build` (see package.json).
+// This was a static-SPA-only fallback for hosts with no server runtime; now
+// that vite.config.ts targets Vercel's Nitro "vercel" preset, the real
+// server build handles routing/serving and this hack isn't needed. Left
+// here in case you ever deploy this app as a pure static SPA again — but
+// note the college name below ("SCOE Pambula Michika") is stale leftover
+// branding from before the primary-school conversion and would need fixing
+// first.
+//
 // Postbuild: emit a static index.html into dist/client so static hosts (Vercel, Netlify) can serve the SPA.
 // TanStack Start's default build targets a Worker SSR runtime and does NOT emit index.html.
 // We discover the client entry chunk + CSS from the server-side Vite manifest and inline them.

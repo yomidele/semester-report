@@ -47,5 +47,7 @@ export function useRole() {
     isStudent: roles.includes("student" as AppRole),
     isSectionAdmin: roles.includes("faculty_admin" as AppRole),
     isTeacher: roles.includes("teacher" as AppRole) || roles.includes("lecturer" as AppRole),
+    isExamOfficer: roles.includes("exam_officer" as AppRole),
+    isAdmissionOfficer: roles.includes("admission_officer" as AppRole),
   };
 }

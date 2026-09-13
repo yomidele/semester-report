@@ -1,16 +1,24 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// No nitro preset override here — @lovable.dev/vite-tanstack-config's default
-// build target is Cloudflare Pages (that's what Lovable's own "Publish" button
-// deploys to). The project previously had `nitro: { preset: "node-server" }`
-// set here for a Railway deployment (see railway.json) — that preset builds a
-// plain Node server bundle, which is NOT what Cloudflare Pages/Workers expects,
-// and would break a Cloudflare deploy. If you go back to Railway later, restore
-// that line; for Cloudflare, leave this block out entirely.
+// Switched from the Cloudflare Pages default to Vercel's Nitro preset.
+// Cloudflare Pages was Lovable's own "Publish" button target; now that this
+// project is moving off Lovable and deploying to Vercel directly, it needs
+// Nitro to emit a Vercel-compatible server (Build Output API v3) so that
+// TanStack Start server functions (enrollStudent, createExamOfficer,
+// createFacultyAdmin, etc.) keep running server-side with the service-role
+// key. Without this, Vercel would only get the static client bundle and
+// every one of those server functions would 404 in production.
+//
+// If you ever go back to Railway, restore `nitro: { preset: "node-server" }`
+// (see railway.json). If you go back to Cloudflare Pages, remove the
+// `nitro` block entirely.
 export default defineConfig({
   vite: {
     build: {
       outDir: 'dist',
     },
+  },
+  nitro: {
+    preset: "vercel",
   },
 });

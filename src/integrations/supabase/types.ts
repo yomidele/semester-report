@@ -362,6 +362,7 @@ export type Database = {
           code: string
           created_at: string
           department_id: string
+          form_teacher_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -371,6 +372,7 @@ export type Database = {
           code: string
           created_at?: string
           department_id: string
+          form_teacher_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -380,6 +382,7 @@ export type Database = {
           code?: string
           created_at?: string
           department_id?: string
+          form_teacher_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -391,6 +394,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_arms_form_teacher_id_fkey"
+            columns: ["form_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "lecturers"
             referencedColumns: ["id"]
           },
         ]
@@ -475,6 +485,7 @@ export type Database = {
       }
       course_assignments: {
         Row: {
+          class_arm_id: string | null
           course_id: string
           created_at: string
           department_id: string
@@ -485,6 +496,7 @@ export type Database = {
           session_id: string
         }
         Insert: {
+          class_arm_id?: string | null
           course_id: string
           created_at?: string
           department_id: string
@@ -495,6 +507,7 @@ export type Database = {
           session_id: string
         }
         Update: {
+          class_arm_id?: string | null
           course_id?: string
           created_at?: string
           department_id?: string
@@ -505,6 +518,13 @@ export type Database = {
           session_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "course_assignments_class_arm_id_fkey"
+            columns: ["class_arm_id"]
+            isOneToOne: false
+            referencedRelation: "class_arms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "course_assignments_lecturer_id_fkey"
             columns: ["lecturer_id"]
@@ -749,6 +769,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          next_department_id: string | null
           updated_at: string
         }
         Insert: {
@@ -759,6 +780,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          next_department_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -769,6 +791,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          next_department_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -777,6 +800,13 @@ export type Database = {
             columns: ["faculty_id"]
             isOneToOne: false
             referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "departments_next_department_id_fkey"
+            columns: ["next_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
         ]
@@ -1482,10 +1512,80 @@ export type Database = {
           },
         ]
       }
+      student_class_history: {
+        Row: {
+          created_at: string
+          from_class_arm_id: string | null
+          from_department_id: string | null
+          id: string
+          outcome: string
+          session_id: string
+          student_id: string
+          to_department_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_class_arm_id?: string | null
+          from_department_id?: string | null
+          id?: string
+          outcome: string
+          session_id: string
+          student_id: string
+          to_department_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_class_arm_id?: string | null
+          from_department_id?: string | null
+          id?: string
+          outcome?: string
+          session_id?: string
+          student_id?: string
+          to_department_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_class_history_from_class_arm_id_fkey"
+            columns: ["from_class_arm_id"]
+            isOneToOne: false
+            referencedRelation: "class_arms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_class_history_from_department_id_fkey"
+            columns: ["from_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_class_history_to_department_id_fkey"
+            columns: ["to_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_class_history_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "academic_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_class_history_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           address: string | null
           arm: string | null
+          class_arm_id: string | null
           created_at: string
           date_of_birth: string | null
           department: string | null
@@ -1497,6 +1597,7 @@ export type Database = {
           guardian_name: string | null
           guardian_phone: string | null
           id: string
+          repeat_flag: boolean
           level: number
           matric_number: string
           passport_url: string | null
@@ -1508,6 +1609,7 @@ export type Database = {
         Insert: {
           address?: string | null
           arm?: string | null
+          class_arm_id?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
@@ -1521,6 +1623,7 @@ export type Database = {
           id?: string
           level: number
           matric_number: string
+          repeat_flag?: boolean
           passport_url?: string | null
           phone?: string | null
           programme_id?: string | null
@@ -1530,6 +1633,7 @@ export type Database = {
         Update: {
           address?: string | null
           arm?: string | null
+          class_arm_id?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
@@ -1543,6 +1647,7 @@ export type Database = {
           id?: string
           level?: number
           matric_number?: string
+          repeat_flag?: boolean
           passport_url?: string | null
           phone?: string | null
           programme_id?: string | null
@@ -1550,6 +1655,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "students_class_arm_id_fkey"
+            columns: ["class_arm_id"]
+            isOneToOne: false
+            referencedRelation: "class_arms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "students_department_id_fkey"
             columns: ["department_id"]
@@ -1625,6 +1737,8 @@ export type Database = {
         | "lecturer"
         | "teacher"
         | "parent"
+        | "exam_officer"
+        | "admission_officer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1760,6 +1874,8 @@ export const Constants = {
         "lecturer",
         "teacher",
         "parent",
+        "exam_officer",
+        "admission_officer",
       ],
     },
   },

@@ -33,17 +33,23 @@ function SessionsPage() {
     mutationFn: async (n: string) => {
       const { data, error } = await supabase.from("academic_sessions").insert({ name: n }).select("id").single();
       if (error) throw error;
-      // Trigger has already populated student_academic_records — fetch counts
+      // The trg_academic_sessions_promote_primary trigger has already run
+      // promote_primary_students() for this new session — fetch what it did.
       const { data: records } = await supabase
-        .from("student_academic_records")
-        .select("status")
-        .eq("academic_session_id", data!.id);
-      const promoted = (records ?? []).filter((r: any) => r.status === "active").length;
-      const carryovers = (records ?? []).filter((r: any) => r.status === "carryover").length;
-      return { promoted, carryovers };
+        .from("student_class_history")
+        .select("outcome")
+        .eq("session_id", data!.id);
+      const promoted = (records ?? []).filter((r: any) => r.outcome === "promoted").length;
+      const repeated = (records ?? []).filter((r: any) => r.outcome === "repeated").length;
+      const completed = (records ?? []).filter((r: any) => r.outcome === "completed_final_class").length;
+      return { promoted, repeated, completed };
     },
-    onSuccess: ({ promoted, carryovers }) => {
-      toast.success(`Session created — ${promoted} promoted${carryovers ? `, ${carryovers} carryover` : ""}`);
+    onSuccess: ({ promoted, repeated, completed }) => {
+      toast.success(
+        `Session created — ${promoted} promoted` +
+        (repeated ? `, ${repeated} repeating` : "") +
+        (completed ? `, ${completed} completed their final class` : ""),
+      );
       setName("");
       qc.invalidateQueries({ queryKey: ["sessions"] });
       qc.invalidateQueries({ queryKey: ["count","academic_sessions"]});

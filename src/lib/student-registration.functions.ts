@@ -104,6 +104,7 @@ export const registerStudentWithToken = createServerFn({ method: "POST" })
     const matric = matricFormat
       .replaceAll("{FAC}", facCode)
       .replaceAll("{DEPT}", deptCode)
+      .replaceAll("{CLASS}", deptCode)
       .replaceAll("{YY}", yearCode)
       .replaceAll("{SEQ}", sequence);
 

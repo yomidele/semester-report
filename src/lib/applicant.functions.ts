@@ -54,6 +54,7 @@ export const convertApplicationToStudent = createServerFn({ method: "POST" })
     const sequenceText = String(sequence).padStart(settings?.matric_seq_padding ?? 4, "0");
     const matricNumber = (settings?.matric_format ?? "{DEPT}/{YY}/{SEQ}")
       .replaceAll("{FAC}", (faculty?.code ?? "FAC").toUpperCase()).replaceAll("{DEPT}", (department?.code ?? "DEPT").toUpperCase())
+      .replaceAll("{CLASS}", (department?.code ?? "DEPT").toUpperCase())
       .replaceAll("{YY}", yearCode).replaceAll("{SEQ}", sequenceText);
     const temporaryPassword = `Kz${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}!`;
     const { data: created, error: userError } = await supabaseAdmin.auth.admin.createUser({ email: applicant.email, password: temporaryPassword, email_confirm: true, user_metadata: { full_name: applicant.full_name, matric_number: matricNumber } });

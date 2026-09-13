@@ -1,7 +1,3 @@
 {
-  "buildCommand": "bun run build",
-  "outputDirectory": "dist/client",
-  "rewrites": [
-    { "source": "/((?!assets/|favicon\\.ico).*)", "destination": "/index.html" }
-  ]
+  "buildCommand": "npm run build"
 }
