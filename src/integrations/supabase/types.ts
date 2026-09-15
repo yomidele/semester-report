@@ -1512,6 +1512,45 @@ export type Database = {
           },
         ]
       }
+      staff_profiles: {
+        Row: {
+          bio: string | null
+          category: string
+          created_at: string
+          display_order: number
+          full_name: string
+          id: string
+          is_published: boolean
+          photo_url: string | null
+          role_title: string
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          category?: string
+          created_at?: string
+          display_order?: number
+          full_name: string
+          id?: string
+          is_published?: boolean
+          photo_url?: string | null
+          role_title: string
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          category?: string
+          created_at?: string
+          display_order?: number
+          full_name?: string
+          id?: string
+          is_published?: boolean
+          photo_url?: string | null
+          role_title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_class_history: {
         Row: {
           created_at: string

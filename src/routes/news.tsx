@@ -30,10 +30,10 @@ function NewsPage() {
 
   return (
     <PublicLayout>
-      <div className="tsu-header-grad py-12 text-primary-foreground">
+      <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <h1 className="font-serif text-3xl font-bold md:text-4xl">News &amp; Events</h1>
-          <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">
+          <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
             Admission notices, campus updates and events from across the college.
           </p>
         </div>

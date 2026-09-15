@@ -224,3 +224,32 @@ can be fixed.
 4A only would have seen every pupil in Primary 4 (both arms) when entering
 scores. Fixed: the query now also filters by `class_arm_id` when the
 assignment has one set.
+
+## New: "School Administration" team section on the homepage
+
+Added a `staff_profiles` table + a public `staff-photos` storage bucket
+(migration `20260913110000_staff_profiles_directory.sql`), a Super Admin
+management page at `/admin/staff-profiles`, and a new homepage section
+(`src/routes/index.tsx`) that displays the Head Teacher, Vice Head Teacher,
+teachers, and other staff with a photo, name, and role title — similar to a
+company site's team page. The section only renders when at least one
+profile is published, so it's invisible until the Super Admin adds someone.
+
+## Bulk Add Pupils (this pass, part 4)
+
+Added `/admission-officer/bulk-add` — paste a class list (one name per line,
+e.g. transcribed from a photo of a paper register), pick the class/arm, and
+the whole list is added at once via the new `bulkEnrollStudents` server
+function. Deliberately does NOT create a login account per pupil (a class
+list has no parent emails); each pupil still gets a real `students` row and
+admission number, so they immediately appear in rosters, assignments, and
+report sheets. A combined multi-page PDF of all admission letters can be
+downloaded right after (`generateBulkAdmissionLettersPdf` in
+`admission-letter.ts`). Safe to run more than once for the same class/arm —
+it only adds, never replaces, so a class split across two photos just means
+running it twice.
+
+Not built: reading names directly off a photo (OCR) inside the app — that
+part was done outside the app for this pass. If this comes up often, a
+"paste a photo, we extract the names for you to review" step would be the
+natural next addition to this same page.

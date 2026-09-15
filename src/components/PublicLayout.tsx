@@ -58,7 +58,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="tsu-header-grad text-primary-foreground">
+      <div className="tsu-header-grad text-sidebar-foreground">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-1.5 text-xs md:px-6">
           <span className="flex items-center gap-4">
             {settings.phone && (
@@ -159,20 +159,20 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="mt-16 tsu-header-grad text-primary-foreground">
+      <footer className="mt-16 tsu-header-grad text-sidebar-foreground">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-3 md:px-6">
           <div>
             <h2 className="font-serif text-lg font-bold uppercase">{settings.college_name}</h2>
-            <p className="mt-2 text-sm text-primary-foreground/80">{settings.motto}</p>
+            <p className="mt-2 text-sm text-sidebar-foreground/80">{settings.motto}</p>
             {address && (
-              <p className="mt-3 flex items-start gap-2 text-sm text-primary-foreground/80">
+              <p className="mt-3 flex items-start gap-2 text-sm text-sidebar-foreground/80">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {address}
               </p>
             )}
           </div>
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Quick Links</h3>
-            <ul className="mt-3 space-y-1.5 text-sm text-primary-foreground/80">
+            <ul className="mt-3 space-y-1.5 text-sm text-sidebar-foreground/80">
               {NAV.slice(1).map((n) => (
                 <li key={n.to}>
                   <Link to={n.to} className="hover:text-accent">
@@ -184,7 +184,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Portals</h3>
-            <ul className="mt-3 space-y-1.5 text-sm text-primary-foreground/80">
+            <ul className="mt-3 space-y-1.5 text-sm text-sidebar-foreground/80">
               <li><Link to="/student/login" className="hover:text-accent">Student Portal</Link></li>
                <li><Link to="/lecturer/login" className="hover:text-accent">Teacher Portal</Link></li>
                <li><Link to="/dept-admin/login" className="hover:text-accent">Class Admin</Link></li>
@@ -193,7 +193,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             </ul>
           </div>
         </div>
-        <div className="border-t border-primary-foreground/15 py-3 text-center text-xs text-primary-foreground/70">
+        <div className="border-t border-sidebar-foreground/15 py-3 text-center text-xs text-sidebar-foreground/70">
           © {new Date().getFullYear()} {settings.college_name}. All rights reserved.
         </div>
       </footer>

@@ -30,6 +30,7 @@ const SUPER_ADMIN_NAV = [
   { to: "/admin/applications", label: "Applications", icon: UserRoundCheck, roles: ["super_admin"] },
   { to: "/admin/result-pins", label: "Result PINs", icon: KeyRound, roles: ["super_admin"] },
   { to: "/admin/news", label: "News", icon: Newspaper, roles: ["super_admin"] },
+  { to: "/admin/staff-profiles", label: "School Administration", icon: Users, roles: ["super_admin"] },
   { to: "/admin/faculties", label: "School Sections", icon: Building2, roles: ["super_admin"] },
   { to: "/admin/faculty-admins", label: "Staff Accounts", icon: Shield, roles: ["super_admin"] },
   { to: "/admin/staff-officers", label: "Exam & Admission Officers", icon: Shield, roles: ["super_admin"] },

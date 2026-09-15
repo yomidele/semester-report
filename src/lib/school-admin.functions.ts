@@ -329,3 +329,104 @@ export const enrollStudent = createServerFn({ method: "POST" })
       },
     };
   });
+
+// ---------------------------------------------------------------------------
+// Bulk-enrol a whole class at once from a plain list of names (e.g. copied
+// from a class register photo). Unlike enrollStudent, this does NOT create a
+// login account for each pupil — most class lists are just names, with no
+// parent email available at the time of entry. Each pupil still gets a real
+// admission number and a students row, so they immediately show up in
+// rosters, teacher assignments, and report sheets. A login can be added for
+// an individual pupil later (once a parent email is available) by re-running
+// the single enrol flow's account-creation step — not built in this pass.
+// ---------------------------------------------------------------------------
+export const bulkEnrollStudents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        faculty_id: z.string().uuid(),
+        department_id: z.string().uuid(),
+        class_arm_id: z.string().uuid().optional().nullable(),
+        full_names: z.array(z.string().min(1).max(120)).min(1).max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertRole(context.userId, ["super_admin", "admission_officer"]);
+
+    const { data: dept, error: deptErr } = await supabaseAdmin
+      .from("departments")
+      .select("id, code, faculty_id")
+      .eq("id", data.department_id)
+      .maybeSingle();
+    if (deptErr) throw new Error(deptErr.message);
+    if (!dept || dept.faculty_id !== data.faculty_id) {
+      throw new Error("Selected class does not belong to the selected section");
+    }
+
+    const { data: settings } = await supabaseAdmin
+      .from("college_settings")
+      .select("matric_format, matric_seq_padding")
+      .limit(1)
+      .maybeSingle();
+    const matricFormat = settings?.matric_format ?? "{CLASS}/{YY}/{SEQ}";
+    const yearCode = String(new Date().getFullYear()).slice(-2);
+    const deptCode = (dept.code ?? "PRI").toUpperCase();
+
+    const results: { full_name: string; admission_number: string }[] = [];
+
+    // Sequential, not parallel: next_matric_seq must be awaited one at a time
+    // so each pupil gets a distinct, gap-free sequence number.
+    for (const rawName of data.full_names) {
+      const full_name = rawName.trim();
+      if (!full_name) continue;
+
+      const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
+        _department_id: data.department_id,
+        _year_code: yearCode,
+      });
+      if (seqErr || typeof seq !== "number") throw new Error(seqErr?.message ?? `Could not allocate an admission number for ${full_name}`);
+
+      const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
+      const admissionNumber = matricFormat
+        .replaceAll("{FAC}", "PRI")
+        .replaceAll("{DEPT}", deptCode)
+        .replaceAll("{CLASS}", deptCode)
+        .replaceAll("{YY}", yearCode)
+        .replaceAll("{SEQ}", sequence);
+
+      const { error: insertErr } = await supabaseAdmin.from("students").insert({
+        user_id: null,
+        matric_number: admissionNumber,
+        full_name,
+        email: null,
+        level: 1,
+        faculty_id: data.faculty_id,
+        department_id: data.department_id,
+        class_arm_id: data.class_arm_id ?? null,
+      } as never);
+      if (insertErr) throw new Error(`Failed to add ${full_name}: ${insertErr.message}`);
+
+      results.push({ full_name, admission_number: admissionNumber });
+    }
+
+    const { data: schoolSettings } = await supabaseAdmin
+      .from("college_settings")
+      .select("college_name, short_name, address, city, state, motto, logo_url")
+      .limit(1)
+      .maybeSingle();
+
+    return {
+      ok: true as const,
+      count: results.length,
+      pupils: results,
+      school: {
+        name: schoolSettings?.college_name ?? "the school",
+        address: schoolSettings?.address ?? "",
+        city: schoolSettings?.city ?? "",
+        state: schoolSettings?.state ?? "",
+        motto: schoolSettings?.motto ?? "",
+      },
+    };
+  });

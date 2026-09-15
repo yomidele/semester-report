@@ -23,10 +23,10 @@ function About() {
   const { settings } = useCollegeSettings();
   return (
     <PublicLayout>
-      <div className="tsu-header-grad py-12 text-primary-foreground">
+      <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <h1 className="font-serif text-3xl font-bold md:text-4xl">About Our School</h1>
-          <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">{settings.motto}</p>
+          <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">{settings.motto}</p>
         </div>
       </div>
 

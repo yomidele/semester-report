@@ -15,8 +15,7 @@ export type AdmissionLetterData = {
   };
 };
 
-export function generateAdmissionLetterPdf(data: AdmissionLetterData) {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
+function drawAdmissionLetter(doc: jsPDF, data: AdmissionLetterData) {
   const pageW = doc.internal.pageSize.getWidth();
   let y = 56;
 
@@ -75,6 +74,21 @@ export function generateAdmissionLetterPdf(data: AdmissionLetterData) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text(`Admission No: ${data.admission_number}`, pageW - 56, 56 + (schoolAddressLine ? 14 : 0) + (data.school.motto ? 14 : 0), { align: "right" });
+}
 
+export function generateAdmissionLetterPdf(data: AdmissionLetterData) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  drawAdmissionLetter(doc, data);
   doc.save(`admission_letter_${data.admission_number.replace(/[\/\\]/g, "_")}.pdf`);
+}
+
+/** One combined PDF, one admission letter per page — for a bulk-added class list. */
+export function generateBulkAdmissionLettersPdf(entries: AdmissionLetterData[], fileLabel: string) {
+  if (entries.length === 0) return;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  entries.forEach((entry, i) => {
+    if (i > 0) doc.addPage();
+    drawAdmissionLetter(doc, entry);
+  });
+  doc.save(`admission_letters_${fileLabel.replace(/[^a-z0-9]+/gi, "_")}.pdf`);
 }

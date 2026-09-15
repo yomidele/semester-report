@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { GraduationCap, BookOpen, Users, HeartHandshake, ArrowRight, CheckCircle2 } from "lucide-react";
+import { GraduationCap, BookOpen, Users, HeartHandshake, ArrowRight, CheckCircle2, User } from "lucide-react";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
+import { usePublishedStaff, categoryLabel } from "@/lib/staff";
 import heroImg from "@/assets/campus-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -36,6 +38,7 @@ function Home() {
   const { settings } = useCollegeSettings();
   const { data: schools = [] } = useSchools();
   const { data: programmes = [] } = useProgrammes();
+  const { data: staff = [] } = usePublishedStaff();
   const activeProgrammes = programmes.filter((p) => p.is_active).slice(0, 6);
 
   return (
@@ -121,11 +124,39 @@ function Home() {
         </Button>
       </section>
 
-      <section className="tsu-header-grad py-14 text-primary-foreground">
+      {staff.length > 0 && (
+        <section className="bg-secondary/60 py-14">
+          <div className="mx-auto max-w-7xl px-4 md:px-6">
+            <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">School Administration</h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Meet the Head Teacher, Vice Head Teacher, and the teachers who guide our pupils every day.
+            </p>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {staff.map((member) => (
+                <Card key={member.id} className="tsu-shadow border-border text-center">
+                  <CardContent className="flex flex-col items-center p-6">
+                    <Avatar className="h-24 w-24 border-2 border-primary/20">
+                      <AvatarImage src={member.photo_url ?? undefined} alt={member.full_name} className="object-cover" />
+                      <AvatarFallback className="bg-primary/10">
+                        <User className="h-10 w-10 text-primary/60" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <h3 className="mt-4 font-serif text-base font-bold text-foreground">{member.full_name}</h3>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-primary">{member.role_title || categoryLabel(member.category)}</p>
+                    {member.bio && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{member.bio}</p>}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="tsu-header-grad py-14 text-sidebar-foreground">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 md:grid-cols-2 md:px-6">
           <div>
             <h2 className="font-serif text-2xl font-bold md:text-3xl">Admission Requirements</h2>
-            <p className="mt-2 text-sm text-primary-foreground/80">
+            <p className="mt-2 text-sm text-sidebar-foreground/80">
               Enrolment is open for children entering the appropriate primary class, subject to available places.
             </p>
           </div>

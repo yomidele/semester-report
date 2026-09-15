@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, UserPlus, LogOut } from "lucide-react";
+import { LayoutDashboard, UserPlus, Users, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 const NAV = [
   { to: "/admission-officer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admission-officer/enroll", label: "Enrol a Pupil", icon: UserPlus },
+  { to: "/admission-officer/bulk-add", label: "Bulk Add Pupils", icon: Users },
 ] as const;
 
 export function AdmissionOfficerShell({ children }: { children: React.ReactNode }) {

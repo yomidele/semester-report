@@ -8,7 +8,7 @@ import { useCollegeSettings } from "@/lib/college-settings";
 export function CollegeHeader({ subtitle, caption }: { subtitle?: string; caption?: string }) {
   const { settings } = useCollegeSettings();
   return (
-    <header className="tsu-header-grad text-primary-foreground">
+    <header className="tsu-header-grad text-sidebar-foreground">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4 md:gap-4 md:px-6">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-primary-foreground text-primary md:h-14 md:w-14">
           {settings.logo_url ? (
@@ -22,7 +22,7 @@ export function CollegeHeader({ subtitle, caption }: { subtitle?: string; captio
             {settings.college_name}
           </h1>
           <p className="text-xs text-accent md:text-sm">{caption ?? "School Administration Office — Academic Management Portal"}</p>
-          {subtitle && <p className="mt-0.5 truncate text-xs text-primary-foreground/80">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 truncate text-xs text-sidebar-foreground/80">{subtitle}</p>}
         </div>
       </div>
     </header>

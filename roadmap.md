@@ -23,6 +23,8 @@ Status as of this pass (see NOTES.md for full detail on each item).
       actual class) with a primary-appropriate version: exam officer configures which class
       follows which, can flag individual pupils to repeat, and promotion still runs
       automatically the moment a new session is created — now doing the right thing
+- [x] Added a "School Administration" team section to the homepage (Head Teacher, Vice Head
+      Teacher, teachers, other staff — photo + name + role), managed from `/admin/staff-profiles`
 
 ## Known gaps / follow-ups (see NOTES.md)
 - [ ] A teacher (`lecturers` row) still belongs to exactly one department — fine for a form master,
