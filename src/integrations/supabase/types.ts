@@ -668,9 +668,9 @@ export type Database = {
           department_id: string | null
           faculty_id: string
           id: string
-          level: number
+          level: number | null
           programme_id: string | null
-          semester: string
+          semester: string | null
           title: string
           unit: number
         }
@@ -681,11 +681,11 @@ export type Database = {
           department_id?: string | null
           faculty_id?: string
           id?: string
-          level: number
+          level?: number | null
           programme_id?: string | null
-          semester: string
+          semester?: string | null
           title: string
-          unit: number
+          unit?: number
         }
         Update: {
           code?: string
@@ -694,9 +694,9 @@ export type Database = {
           department_id?: string | null
           faculty_id?: string
           id?: string
-          level?: number
+          level?: number | null
           programme_id?: string | null
-          semester?: string
+          semester?: string | null
           title?: string
           unit?: number
         }

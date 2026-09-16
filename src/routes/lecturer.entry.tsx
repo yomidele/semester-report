@@ -39,8 +39,7 @@ function Page() {
       const a = assignmentQ.data!;
       let query = supabase.from("students")
         .select("id, matric_number, full_name")
-        .eq("department_id", a.department_id)
-        .eq("level", (a.courses as any)?.level);
+        .eq("department_id", a.department_id);
       if (a.class_arm_id) query = query.eq("class_arm_id", a.class_arm_id);
       const { data } = await query.order("matric_number");
       return data ?? [];

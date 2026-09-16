@@ -253,3 +253,50 @@ Not built: reading names directly off a photo (OCR) inside the app — that
 part was done outside the app for this pass. If this comes up often, a
 "paste a photo, we extract the names for you to review" step would be the
 natural next addition to this same page.
+Deleted unused campus-hero.jpg (replaced by pupils-hero.jpg). primary-school-hero.jpg was already unused before this change.
+
+## Simplified Subjects — removed remaining college terminology (this pass, part 5)
+
+The Subjects page (`/courses`) still required a college-style numeric
+**Level** (100/200/300/400), a **Term**, and a credit **Weight (unit)** for
+every subject — leftover from the original degree-programme model, and
+wrong for a primary school where the same subject (Mathematics, English,
+etc.) is taught across every class, not tied to one level or term.
+
+Fixed in `20260915120000_simplify_subjects.sql` + a full rewrite of
+`courses.tsx`:
+- `courses.level` and `courses.semester` are now nullable; `courses.unit`
+  defaults to `1` and is no longer shown or asked for.
+- The Subjects page is now just: Code + Subject name. A subject is
+  assigned to a specific class/arm/term at the point of **Teacher
+  Assignments** (`/exam-officer/assignments`), not when the subject itself
+  is created — matching how you actually described it working.
+- `src/lib/course-editor.ts` (`editCourse`/`checkEditSafety`) is no longer
+  imported anywhere — it existed to safely recalculate GPA-style totals
+  when a course's unit changed, which no longer applies now that unit is
+  fixed at 1 for every subject. Left in place, unused, rather than deleted,
+  in case any other planned feature still wants that recalculation logic.
+
+**Real bug this surfaced and fixed**: `lecturer.entry.tsx` filtered the
+pupil list shown to a teacher by matching `students.level` to the assigned
+subject's `courses.level`. Every pupil created via `enrollStudent` /
+`bulkEnrollStudents` has `level = 1` (primary pupils don't have a
+college-style level), but subjects created through the old Subjects page
+defaulted to `level = 100`. That mismatch meant a teacher's score-entry
+list could come back **completely empty** — `department_id` (+
+`class_arm_id` when set) is already sufficient to identify the right
+pupils, so the level filter has been removed entirely.
+
+**Not touched**: `dept-admin.assignments.tsx` (the old, now-superseded
+department-scoped assignment page) still fetches and orders subjects by
+`level` for display — harmless with `level` now nullable, just cosmetically
+outdated. `/exam-officer/assignments` is the actively used replacement and
+already listed subjects with no level filtering. Also not touched: the
+public `/admissions` page, `admin.applications.tsx`, and the transcript/
+carryover/GPA-only pages (`transcripts.tsx`, `faculty.carryovers.tsx`,
+`student.carryovers.tsx`) — these are pre-existing college-only features
+that were already flagged as unconverted earlier in this file, and still
+reference `unit`/level in ways specific to a GPA system this school
+doesn't use (`use_gpa = false`). They don't block anything primary-related
+from working, but are still on the list of things to eventually strip out
+or convert.

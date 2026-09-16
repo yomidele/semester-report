@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
 import { usePublishedStaff, categoryLabel } from "@/lib/staff";
-import heroImg from "@/assets/campus-hero.jpg";
+import heroImg from "@/assets/pupils-hero.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,8 +44,9 @@ function Home() {
   return (
     <PublicLayout>
       <section className="relative isolate overflow-hidden">
-        <img src={heroImg} alt="Pupils learning together in a primary school classroom" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-primary/85" />
+        <img src={heroImg} alt="Smiling pupils in uniform arriving at school with their backpacks" className="absolute inset-0 h-full w-full object-cover object-top" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary/15" />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Admissions open for the new session</p>
           <h1 className="mt-4 max-w-3xl font-serif text-3xl font-bold leading-tight text-primary-foreground md:text-5xl">
@@ -78,6 +79,34 @@ function Home() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          <div className="order-2 md:order-1">
+            <p className="text-sm font-semibold uppercase tracking-[0.15em] text-accent-foreground">Life at school</p>
+            <h2 className="mt-3 font-serif text-2xl font-bold text-foreground md:text-3xl">
+              Every morning, a fresh start
+            </h2>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
+              Our pupils arrive each day to a school that knows them by name — small class arms, attentive form
+              masters, and teachers who track every child's progress closely enough to catch it when they need help,
+              and celebrate it when they excel.
+            </p>
+            <Button asChild variant="outline" className="mt-6">
+              <Link to="/about">More about our school</Link>
+            </Button>
+          </div>
+          <div className="order-1 md:order-2">
+            <div className="relative overflow-hidden rounded-2xl border-4 border-accent/40 shadow-lg">
+              <img
+                src={heroImg}
+                alt="Pupils in uniform walking together at school, smiling"
+                className="h-72 w-full object-cover object-top sm:h-80 md:h-96"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
