@@ -199,10 +199,13 @@ export const setNextClassLevel = createServerFn({ method: "POST" })
       .eq("id", data.department_id);
     if (error) throw new Error(error.message);
     return { ok: true };
-  }); Unlike the old public
+  });
+
+// ---------------------------------------------------------------------------
+// Enrol a pupil (admission officer + super admin). Unlike the old public
 // "apply to the college" flow, this is staff-entered: no application review
-// step, no payment — the officer keys in the child's details and the
-// account + admission number are created immediately so a letter can be
+// step, no payment, the officer keys in the child's details and the
+// account plus admission number are created immediately so a letter can be
 // generated straight away.
 // ---------------------------------------------------------------------------
 export const enrollStudent = createServerFn({ method: "POST" })
@@ -333,12 +336,12 @@ export const enrollStudent = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 // Bulk-enrol a whole class at once from a plain list of names (e.g. copied
 // from a class register photo). Unlike enrollStudent, this does NOT create a
-// login account for each pupil — most class lists are just names, with no
+// login account for each pupil, most class lists are just names, with no
 // parent email available at the time of entry. Each pupil still gets a real
 // admission number and a students row, so they immediately show up in
 // rosters, teacher assignments, and report sheets. A login can be added for
 // an individual pupil later (once a parent email is available) by re-running
-// the single enrol flow's account-creation step — not built in this pass.
+// the single enrol flow's account-creation step, not built in this pass.
 // ---------------------------------------------------------------------------
 export const bulkEnrollStudents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
