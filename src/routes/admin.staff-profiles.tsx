@@ -175,7 +175,9 @@ function StaffAdminPage() {
                 onChange={(e) => setForm({ ...form, category: e.target.value as StaffProfile["category"] })}
               >
                 <option value="head_teacher">Head Teacher</option>
-                <option value="vice_head_teacher">Vice Head Teacher</option>
+                <option value="vice_head_teacher">Assistant Head Teacher</option>
+                <option value="exams_officer">Exams Officer</option>
+                <option value="admission_officer">Admission Officer</option>
                 <option value="teacher">Teacher</option>
                 <option value="staff">Other Staff</option>
               </select>
