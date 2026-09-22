@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
-import { usePublishedStaff, categoryLabel } from "@/lib/staff";
+import { useManagementBoard, categoryLabel } from "@/lib/staff";
 import heroImg from "@/assets/pupils-hero.jpg";
 
 export const Route = createFileRoute("/")({
@@ -38,7 +38,7 @@ function Home() {
   const { settings } = useCollegeSettings();
   const { data: schools = [] } = useSchools();
   const { data: programmes = [] } = useProgrammes();
-  const { data: staff = [] } = usePublishedStaff();
+  const { data: staff = [] } = useManagementBoard();
   const activeProgrammes = programmes.filter((p) => p.is_active).slice(0, 6);
 
   return (
@@ -90,7 +90,7 @@ function Home() {
               Every morning, a fresh start
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
-              Our pupils arrive each day to a school that knows them by name — small class arms, attentive form
+              Our pupils arrive each day to a school that knows them by name, small class arms, attentive form
               masters, and teachers who track every child's progress closely enough to catch it when they need help,
               and celebrate it when they excel.
             </p>
@@ -156,9 +156,9 @@ function Home() {
       {staff.length > 0 && (
         <section className="bg-secondary/60 py-14">
           <div className="mx-auto max-w-7xl px-4 md:px-6">
-            <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">School Administration</h2>
+            <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">School Management Board</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Meet the Head Teacher, Vice Head Teacher, and the teachers who guide our pupils every day.
+              Meet the team leading our school, from the Head Teacher down to our Exams and Admission Officers.
             </p>
             <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {staff.map((member) => (
