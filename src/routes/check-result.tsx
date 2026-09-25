@@ -34,7 +34,7 @@ function CheckResultPage() {
   const [matric, setAdmissionNumber] = useState("");
   const [pin, setPin] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [semester, setTerm] = useState<"First" | "Second" | "">("");
+  const [semester, setTerm] = useState<"First" | "Second" | "Third" | "">("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ function CheckResultPage() {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!sessionId || !semester) {
-      toast.error("Select the academic session and semester.");
+      toast.error("Select the academic session and term.");
       return;
     }
     setLoading(true);
@@ -88,25 +88,22 @@ function CheckResultPage() {
       doc.text(value || "\u2014", x, y + 14);
     };
     const col2 = pageWidth / 2 + 10;
-    line("Student Name", result.student.full_name, margin);
+    line("Pupil Name", result.student.full_name, margin);
     line("Admission Number", result.student.matric_number, col2);
     y += 32;
-    line("Programme", result.student.programme_name ?? "\u2014", margin);
-    line("Class", result.student.department_name ?? "\u2014", col2);
-    y += 32;
-    line("School/Section", result.student.faculty_name ?? "\u2014", margin);
+    line("Class", result.student.department_name ?? "\u2014", margin);
     line("Session / Term", `${result.session_name} \u2014 ${result.semester} Term`, col2);
     y += 40;
 
     const rows = result.results.map((r) => {
       const total = effectiveTotal(r);
       const { grade, remark } = computeGrade(total, settings.grading_scale);
-      return [r.course_code, r.course_title, String(r.unit), String(r.ca_score), String(r.exam_score), String(total), grade, remark ?? ""];
+      return [r.course_code, r.course_title, String(r.ca_score), String(r.exam_score), String(total), grade, remark ?? ""];
     });
 
     autoTable(doc, {
       startY: y,
-      head: [["Code", "Subject Title", "Unit", "CA", "Exam", "Total", "Grade", "Remark"]],
+      head: [["Code", "Subject Title", "CA", "Exam", "Total", "Grade", "Remark"]],
       body: rows,
       theme: "grid",
       headStyles: { fillColor: [5, 87, 56], textColor: 255, fontStyle: "bold" },
@@ -118,13 +115,13 @@ function CheckResultPage() {
     let finalY = (doc as any).lastAutoTable?.finalY ?? y + 40;
     finalY += 30;
 
-    const totalUnits = result.results.reduce((s, r) => s + r.unit, 0);
-    const totalPoints = result.results.reduce((s, r) => s + computeGrade(effectiveTotal(r), settings.grading_scale).point * r.unit, 0);
-    const gpa = totalUnits ? (totalPoints / totalUnits).toFixed(2) : "0.00";
+    const totalSubjects = result.results.length;
+    const totalScore = result.results.reduce((s, r) => s + effectiveTotal(r), 0);
+    const average = totalSubjects ? (totalScore / totalSubjects).toFixed(1) : "0.0";
 
     doc.setFont("helvetica", "bold").setFontSize(10);
-    doc.text(`Term Average: ${gpa}`, margin, finalY);
-    doc.text(`Total Units: ${totalUnits}`, margin + 180, finalY);
+    doc.text(`Term Average: ${average}%`, margin, finalY);
+    doc.text(`Subjects: ${totalSubjects}`, margin + 180, finalY);
     finalY += 30;
 
     doc.setFont("helvetica", "normal").setFontSize(9);
@@ -168,7 +165,7 @@ function CheckResultPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Student / Matr No.</Label>
+                <Label>Pupil / Admission No.</Label>
                 <Input value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} required />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
@@ -184,10 +181,11 @@ function CheckResultPage() {
               </label>
               <label className="space-y-1.5 text-sm font-medium">
                 <Label>Term</Label>
-                <select value={semester} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Select semester</option>
+                <select value={semester} onChange={(e) => setTerm(e.target.value as "First" | "Second" | "Third")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select term</option>
                   <option value="First">First Term</option>
                   <option value="Second">Second Term</option>
+                  <option value="Third">Third Term</option>
                 </select>
               </label>
 
@@ -211,7 +209,7 @@ function CheckResultPage() {
               <div>
                 <h2 className="font-serif text-xl font-bold text-foreground">{result.student.full_name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {result.student.matric_number} &middot; {result.student.programme_name} &middot; {result.session_name} &middot; {result.semester} Term
+                  {result.student.matric_number} &middot; {result.student.department_name ?? "\u2014"} &middot; {result.session_name} &middot; {result.semester} Term
                 </p>
               </div>
               <div className="overflow-x-auto">
@@ -220,7 +218,6 @@ function CheckResultPage() {
                     <tr className="border-b border-border text-xs uppercase text-muted-foreground">
                       <th className="py-2 pr-3">Code</th>
                       <th className="py-2 pr-3">Subject Title</th>
-                      <th className="py-2 pr-3">Unit</th>
                       <th className="py-2 pr-3">CA</th>
                       <th className="py-2 pr-3">Exam</th>
                       <th className="py-2 pr-3">Total</th>
@@ -235,7 +232,6 @@ function CheckResultPage() {
                         <tr key={r.course_code} className="border-b border-border/60">
                           <td className="py-2 pr-3 font-medium">{r.course_code}</td>
                           <td className="py-2 pr-3">{r.course_title}</td>
-                          <td className="py-2 pr-3">{r.unit}</td>
                           <td className="py-2 pr-3">{r.ca_score}</td>
                           <td className="py-2 pr-3">{r.exam_score}</td>
                           <td className="py-2 pr-3 font-semibold">{total}</td>

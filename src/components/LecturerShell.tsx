@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, ClipboardEdit, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardEdit, CalendarCheck, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 const NAV = [
   { to: "/lecturer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/lecturer/entry", label: "Grade Entry", icon: ClipboardEdit },
+  { to: "/lecturer/attendance", label: "Attendance", icon: CalendarCheck },
 ] as const;
 
 export function TeacherShell({ children }: { children: React.ReactNode }) {

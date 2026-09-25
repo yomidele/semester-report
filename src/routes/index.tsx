@@ -160,21 +160,18 @@ function Home() {
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Meet the team leading our school, from the Head Teacher down to our Exams and Admission Officers.
             </p>
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden px-4 pb-2 [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [touch-action:pan-x] sm:gap-6 [&::-webkit-scrollbar]:hidden">
               {staff.map((member) => (
-                <Card key={member.id} className="tsu-shadow border-border text-center">
-                  <CardContent className="flex flex-col items-center p-6">
-                    <Avatar className="h-24 w-24 border-2 border-primary/20">
-                      <AvatarImage src={member.photo_url ?? undefined} alt={member.full_name} className="object-cover" />
-                      <AvatarFallback className="bg-primary/10">
-                        <User className="h-10 w-10 text-primary/60" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <h3 className="mt-4 font-serif text-base font-bold text-foreground">{member.full_name}</h3>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-primary">{member.role_title || categoryLabel(member.category)}</p>
-                    {member.bio && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{member.bio}</p>}
-                  </CardContent>
-                </Card>
+                <div key={member.id} className="flex w-32 shrink-0 snap-start flex-col items-center text-center sm:w-40">
+                  <Avatar className="h-24 w-24 border-2 border-primary/20 sm:h-32 sm:w-32">
+                    <AvatarImage src={member.photo_url ?? undefined} alt={member.full_name} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10">
+                      <User className="h-10 w-10 text-primary/60" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{member.role_title || categoryLabel(member.category)}</p>
+                  <h3 className="mt-1 font-serif text-base font-bold text-foreground">{member.full_name}</h3>
+                </div>
               ))}
             </div>
           </div>

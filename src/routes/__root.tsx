@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/use-auth";
 import appCss from "../styles.css?url";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -44,6 +44,20 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } }));
+
+  // Registers the offline app-shell cache used by the Teacher/Form Master
+  // Attendance page (src/routes/lecturer.attendance.tsx) so it — and the
+  // pages it needs — can open with no network. Safe to call on every route;
+  // the browser no-ops if it's already registered.
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        // Offline support is a progressive enhancement — ignore failures
+        // (e.g. running over plain http in local dev).
+      });
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

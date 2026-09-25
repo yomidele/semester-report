@@ -25,6 +25,13 @@ function Page() {
       return data ?? [];
     },
   });
+  const formClasses = useQuery({
+    queryKey: ["form-master-classes", teacher.data?.id], enabled: !!teacher.data,
+    queryFn: async () => {
+      const { data } = await supabase.from("class_arms").select("id, name").eq("form_teacher_id", teacher.data!.id);
+      return data ?? [];
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -32,6 +39,16 @@ function Page() {
         <h2 className="font-serif text-2xl font-bold">Welcome{teacher.data ? `, ${teacher.data.full_name}` : ""}</h2>
         <p className="text-sm text-muted-foreground">Subjects assigned to you. Click one to enter scores.</p>
       </div>
+      {(formClasses.data ?? []).length > 0 && (
+        <Link to="/lecturer/attendance">
+          <Card className="tsu-shadow border-primary/40 transition-colors hover:border-primary">
+            <CardHeader><CardTitle className="text-base">Take attendance — {(formClasses.data ?? []).map((c: any) => c.name).join(", ")}</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              You're the form master here. Mark today's attendance — works offline too.
+            </CardContent>
+          </Card>
+        </Link>
+      )}
       <div className="grid gap-3 md:grid-cols-2">
         {(assignments.data ?? []).map((a: any) => (
            <Link key={a.id} to="/lecturer/entry" search={{ assignment_id: a.id }}>

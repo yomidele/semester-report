@@ -8,48 +8,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
+import { adminEnrollStudent } from "@/lib/admin-students.functions";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "Students — School Portal" }] }),
   component: () => <ProtectedAdmin><StudentsPage /></ProtectedAdmin>,
 });
 
-const LEVELS = [100, 200, 300, 400] as const;
-
 export function StudentsPage() {
   const qc = useQueryClient();
-  const [matric, setAdmissionNumber] = useState("");
+  const enroll = useServerFn(adminEnrollStudent);
   const [name, setName] = useState("");
-  const [level, setLevel] = useState("100");
-  const [filterLevel, setFilterLevel] = useState("all");
+  const [classArmId, setClassArmId] = useState("");
+  const [filterClassArmId, setFilterClassArmId] = useState("all");
+
+  const { data: classArms = [] } = useQuery({
+    queryKey: ["class-arms-for-students"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("class_arms")
+        .select("id, name, departments:department_id(name)")
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string; departments: { name: string } | null }[];
+    },
+  });
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("*").order("matric_number");
+      const { data, error } = await supabase.from("students").select("id, full_name, class_arm_id").order("full_name");
       if (error) throw error;
       return data;
     },
   });
 
-  const filtered = students.filter((s) => filterLevel === "all" || s.level === Number(filterLevel));
+  const classLabel = (id: string | null) => {
+    const arm = classArms.find((a) => a.id === id);
+    if (!arm) return "—";
+    return arm.departments?.name ? `${arm.departments.name} ${arm.name}` : arm.name;
+  };
+
+  const filtered = students.filter((s) => filterClassArmId === "all" || s.class_arm_id === filterClassArmId);
 
   const addMut = useMutation({
     mutationFn: async () => {
-      if (!matric.trim() || !name.trim()) throw new Error("Fill all fields");
-      const { error } = await supabase.from("students").insert({
-        matric_number: matric.trim().toUpperCase(),
-        full_name: name.trim(),
-        level: Number(level),
-      });
-      if (error) throw error;
+      if (!name.trim() || !classArmId) throw new Error("Enter the pupil's name and pick a class");
+      return enroll({ data: { full_name: name.trim(), class_arm_id: classArmId } });
     },
     onSuccess: () => {
-      toast.success("Student added");
-      setAdmissionNumber(""); setName("");
+      toast.success("Pupil added");
+      setName("");
       qc.invalidateQueries({ queryKey: ["students"] });
       qc.invalidateQueries({ queryKey: ["count", "students"] });
     },
@@ -61,7 +74,7 @@ export function StudentsPage() {
       const { error } = await supabase.from("students").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Student removed"); qc.invalidateQueries({ queryKey: ["students"] }); qc.invalidateQueries({ queryKey: ["count", "students"] }); },
+    onSuccess: () => { toast.success("Pupil removed"); qc.invalidateQueries({ queryKey: ["students"] }); qc.invalidateQueries({ queryKey: ["count", "students"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -69,30 +82,33 @@ export function StudentsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Student Management</h2>
-        <p className="text-sm text-muted-foreground">Register students by matric number, name, and level.</p>
+        <p className="text-sm text-muted-foreground">
+          Register pupils by name and class. An admission number is generated automatically behind the scenes —
+          it's only needed later when printing an admission letter.
+        </p>
       </div>
 
       <Card className="tsu-shadow">
-        <CardHeader><CardTitle className="text-base">Add a student</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Add a pupil</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={(e) => { e.preventDefault(); addMut.mutate(); }} className="grid gap-3 md:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label>Admission Number</Label>
-              <Input placeholder="DEPT/24/1001" value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} required />
-            </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label>Full name</Label>
               <Input placeholder="Tommy Ruth" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
-            <div className="space-y-1.5">
-              <Label>Level</Label>
-              <Select value={level} onValueChange={setLevel}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{LEVELS.map((l) => <SelectItem key={l} value={String(l)}>{l}</SelectItem>)}</SelectContent>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label>Class</Label>
+              <Select value={classArmId} onValueChange={setClassArmId}>
+                <SelectTrigger><SelectValue placeholder={classArms.length ? "Select class" : "Set up classes first"} /></SelectTrigger>
+                <SelectContent>
+                  {classArms.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.departments?.name ? `${a.departments.name} ${a.name}` : a.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="md:col-span-4">
-              <Button type="submit" disabled={addMut.isPending}>{addMut.isPending ? "Saving…" : "Add student"}</Button>
+              <Button type="submit" disabled={addMut.isPending}>{addMut.isPending ? "Saving…" : "Add pupil"}</Button>
             </div>
           </form>
         </CardContent>
@@ -101,12 +117,14 @@ export function StudentsPage() {
       <Card className="tsu-shadow">
         <CardHeader>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-base">All students</CardTitle>
-            <Select value={filterLevel} onValueChange={setFilterLevel}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Level" /></SelectTrigger>
+            <CardTitle className="text-base">All pupils</CardTitle>
+            <Select value={filterClassArmId} onValueChange={setFilterClassArmId}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Class" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All levels</SelectItem>
-                {LEVELS.map((l) => <SelectItem key={l} value={String(l)}>{l} Level</SelectItem>)}
+                <SelectItem value="all">All classes</SelectItem>
+                {classArms.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.departments?.name ? `${a.departments.name} ${a.name}` : a.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -116,24 +134,22 @@ export function StudentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Admission Number</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead className="text-center">Level</TableHead>
+                  <TableHead>Class</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+                {isLoading && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
                 {!isLoading && filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No students match.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No pupils match.</TableCell></TableRow>
                 )}
                 {filtered.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell className="font-mono">{s.matric_number}</TableCell>
                     <TableCell className="font-medium">{s.full_name}</TableCell>
-                    <TableCell className="text-center">{s.level}</TableCell>
+                    <TableCell>{classLabel(s.class_arm_id)}</TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${s.full_name}? Related results will be removed.`)) delMut.mutate(s.id); }}>
+                      <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Remove ${s.full_name}? Related results will be removed.`)) delMut.mutate(s.id); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

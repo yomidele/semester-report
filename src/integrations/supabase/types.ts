@@ -405,6 +405,42 @@ export type Database = {
           },
         ]
       }
+      class_subjects: {
+        Row: {
+          class_arm_id: string
+          course_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          class_arm_id: string
+          course_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          class_arm_id?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_subjects_class_arm_id_fkey"
+            columns: ["class_arm_id"]
+            isOneToOne: false
+            referencedRelation: "class_arms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_subjects_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       college_settings: {
         Row: {
           address: string | null

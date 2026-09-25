@@ -8,18 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { computeGrade, classOfDegree, effectiveTotal } from "@/lib/grading";
-import {
-  generateSpreadsheet,
-  validateHeaderConfig,
-  calculateCurrentSemester,
-  calculatePreviousResults,
-  calculateCumulative,
-  generateFilename,
-  exportToExcel,
-  safeDivide,
-  formatDecimal,
-} from "@/lib/spreadsheet-generator";
+import { computeGrade, effectiveTotal } from "@/lib/grading";
 import { FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -29,8 +18,7 @@ export const Route = createFileRoute("/results")({
   component: () => <ProtectedAdmin><ResultsViewPage /></ProtectedAdmin>,
 });
 
-const LEVELS = [100, 200, 300, 400] as const;
-const SEMESTERS = ["First", "Second"] as const;
+const TERMS = ["First", "Second", "Third"] as const;
 
 interface ResultJoined {
   id: string;
@@ -41,54 +29,52 @@ interface ResultJoined {
   total_score: number | null;
   semester: string;
   session_id: string;
-  level: number;
   students: { matric_number: string; full_name: string } | null;
-  courses: { code: string; title: string; unit: number } | null;
-  academic_sessions: { name: string } | null;
+  courses: { code: string; title: string } | null;
 }
 
 export function ResultsViewPage() {
   const [sessionId, setSessionId] = useState("");
   const [semester, setTerm] = useState("First");
-  const [level, setLevel] = useState("100");
+  const [classArmId, setClassArmId] = useState("");
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["sessions"],
     queryFn: async () => (await supabase.from("academic_sessions").select("*").order("name", { ascending: false })).data ?? [],
   });
 
-  const { data: results = [], isLoading } = useQuery<ResultJoined[]>({
-    queryKey: ["results", sessionId, semester, level],
-    enabled: !!sessionId,
+  const { data: classArms = [] } = useQuery({
+    queryKey: ["class-arms-for-results"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("results")
-        .select("id, student_id, course_id, session_id, level, semester, ca_score, exam_score, total_score, students(matric_number, full_name), courses(code, title, unit), academic_sessions(name)")
-        .eq("session_id", sessionId)
-        .eq("semester", semester)
-        .eq("level", Number(level));
+        .from("class_arms")
+        .select("id, name, departments:department_id(name)")
+        .order("name");
       if (error) throw error;
-      return (data ?? []) as unknown as ResultJoined[];
+      return data as { id: string; name: string; departments: { name: string } | null }[];
     },
   });
 
-  // All historical results for selected students (for Academic Average)
-  const studentIds = useMemo(() => Array.from(new Set(results.map((r) => r.student_id))), [results]);
-
-  const { data: allHistory = [] } = useQuery<ResultJoined[]>({
-    queryKey: ["history", studentIds.join(",")],
-    enabled: studentIds.length > 0,
+  const { data: results = [], isLoading } = useQuery<ResultJoined[]>({
+    queryKey: ["results", sessionId, semester, classArmId],
+    enabled: !!sessionId && !!classArmId,
     queryFn: async () => {
+      const { data: classStudents, error: sErr } = await supabase.from("students").select("id").eq("class_arm_id", classArmId);
+      if (sErr) throw sErr;
+      const studentIds = (classStudents ?? []).map((s) => s.id);
+      if (studentIds.length === 0) return [];
       const { data, error } = await supabase
         .from("results")
-        .select("id, student_id, course_id, session_id, level, semester, ca_score, exam_score, total_score, courses(code, title, unit)")
+        .select("id, student_id, course_id, session_id, semester, ca_score, exam_score, total_score, students(matric_number, full_name), courses(code, title)")
+        .eq("session_id", sessionId)
+        .eq("semester", semester)
         .in("student_id", studentIds);
       if (error) throw error;
       return (data ?? []) as unknown as ResultJoined[];
     },
   });
 
-  // Group results by student for current view
+  // Group results by student
   const grouped = useMemo(() => {
     const m = new Map<string, { matric: string; name: string; rows: ResultJoined[] }>();
     for (const r of results) {
@@ -96,307 +82,62 @@ export function ResultsViewPage() {
       if (!m.has(key)) m.set(key, { matric: r.students?.matric_number ?? "—", name: r.students?.full_name ?? "—", rows: [] });
       m.get(key)!.rows.push(r);
     }
-    return Array.from(m.entries()).sort((a, b) => a[1].matric.localeCompare(b[1].matric));
+    return Array.from(m.entries()).sort((a, b) => a[1].name.localeCompare(b[1].name));
   }, [results]);
 
-  const cgpaFor = (sid: string): { gpa: number; cgpa: number; tcu: number; tcp: number } => {
-    const cur = results.filter((r) => r.student_id === sid);
-    let gpaPts = 0, gpaUnits = 0;
-    for (const r of cur) {
-      const u = r.courses?.unit ?? 0;
-      const { point } = computeGrade(effectiveTotal(r));
-      gpaPts += point * u; gpaUnits += u;
-    }
-    const gpa = gpaUnits ? gpaPts / gpaUnits : 0;
-
-    const hist = allHistory.filter((r) => r.student_id === sid);
-    let cPts = 0, cUnits = 0;
-    for (const r of hist) {
-      const u = r.courses?.unit ?? 0;
-      const { point } = computeGrade(effectiveTotal(r));
-      cPts += point * u; cUnits += u;
-    }
-    const cgpa = cUnits ? cPts / cUnits : 0;
-    return { gpa, cgpa, tcu: cUnits, tcp: cPts };
+  const averageFor = (sid: string): number => {
+    const rows = results.filter((r) => r.student_id === sid);
+    if (rows.length === 0) return 0;
+    return rows.reduce((s, r) => s + effectiveTotal(r), 0) / rows.length;
   };
 
   const handleExport = () => {
     if (grouped.length === 0) { toast.error("Nothing to export"); return; }
     const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? "session";
+    const className = classArms.find((c) => c.id === classArmId);
+    const classLabel = className ? (className.departments?.name ? `${className.departments.name} ${className.name}` : className.name) : "Class";
 
     const detailRows = results.map((r) => {
       const total = effectiveTotal(r);
-      const { grade, point } = computeGrade(total);
+      const { grade } = computeGrade(total);
       return {
         "Admission Number": r.students?.matric_number ?? "",
         "Name": r.students?.full_name ?? "",
         "Subject Code": r.courses?.code ?? "",
         "Subject Title": r.courses?.title ?? "",
-        "Unit": r.courses?.unit ?? 0,
         "CA (40)": Number(r.ca_score),
         "Exam (70)": Number(r.exam_score),
         "Total (100)": total,
         "Grade": grade,
-        "Point": point,
       };
-    }).sort((a, b) => a["Admission Number"].localeCompare(b["Admission Number"]) || a["Subject Code"].localeCompare(b["Subject Code"]));
+    }).sort((a, b) => a["Name"].localeCompare(b["Name"]) || a["Subject Code"].localeCompare(b["Subject Code"]));
 
-    const summary = grouped.map(([sid, info]) => {
-      const { gpa, cgpa } = cgpaFor(sid);
-      return {
-        "Admission Number": info.matric,
-        "Name": info.name,
-        "Subjects": info.rows.length,
-        "Term Average": Number(gpa.toFixed(2)),
-        "Academic Average": Number(cgpa.toFixed(2)),
-        "Academic Standing": classOfDegree(cgpa),
-      };
-    });
+    const summary = grouped.map(([sid, info]) => ({
+      "Admission Number": info.matric,
+      "Name": info.name,
+      "Subjects": info.rows.length,
+      "Term Average (%)": Number(averageFor(sid).toFixed(1)),
+    }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), "Result Sheet");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Term Average-Academic Average Summary");
-    const fname = `Kazaure_Results_${sessionName.replace("/","-")}_${semester}_${level}L.xlsx`;
-    XLSX.writeFile(wb, fname);
-    toast.success(`Exported ${fname}`);
-  };
-
-  // Standardized Academic Format Export - Uses spreadsheet-generator with strict header validation
-  const handleExportStandardizedFormat = async () => {
-    if (grouped.length === 0) {
-      toast.error("Nothing to export");
-      return;
-    }
-
-    const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? "unknown";
-
-    // Get subject list sorted by code
-    const subjectList = Array.from(
-      new Map(
-        results
-          .filter((r) => r.courses)
-          .map((r) => [
-            r.course_id,
-            { code: r.courses!.code, title: r.courses!.title, units: r.courses!.unit },
-          ])
-      ).entries()
-    )
-      .map(([, c]) => c)
-      .sort((a, b) => a.code.localeCompare(b.code));
-
-    // Demo: Social and Management Sciences - Class placeholder
-    // In production, this would come from a department selector/database
-    const headerConfig = {
-      department: "SOCIAL STUDIES EDUCATION", // Demo department
-      program: "B.Sc",
-      semester: (semester === "First" ? "FIRST" : "SECOND") as "FIRST" | "SECOND",
-      level: Number(level) as 100 | 200 | 300 | 400,
-      academicSession: sessionName, // e.g., "2025/2026"
-    };
-
-    // Validate header configuration
-    const validation = validateHeaderConfig(headerConfig);
-    if (!validation.isValid) {
-      toast.error(`Header validation failed:\n${validation.errors.join("\n")}`);
-      return;
-    }
-
-    // Build student data
-    const studentsData = grouped.map(([sid, info]) => {
-      const currentSubjects = info.rows.map((r) => {
-        const total = effectiveTotal(r);
-        const { grade, point } = computeGrade(total);
-        return {
-          courseId: r.course_id,
-          courseCode: r.courses?.code ?? "",
-          units: r.courses?.unit ?? 0,
-          grade,
-          gradePoint: point,
-        };
-      });
-
-      const currentIds = new Set(info.rows.map((r) => r.id));
-      const previousSubjects = allHistory
-        .filter((r) => r.student_id === sid && !currentIds.has(r.id))
-        .map((r) => {
-          const total = effectiveTotal(r);
-          const { grade, point } = computeGrade(total);
-          return {
-            courseId: r.course_id,
-            courseCode: r.courses?.code ?? "",
-            units: r.courses?.unit ?? 0,
-            grade,
-            gradePoint: point,
-          };
-        });
-
-      const currentTerm = calculateCurrentSemester(currentSubjects);
-      const previousResults = calculatePreviousResults(previousSubjects);
-      const cumulative = calculateCumulative(currentTerm, previousResults);
-
-      // Build subject grades map: subjectCode -> { score, grade }
-      const subjectGrades: Record<string, { score: number | null; grade: string | null }> = {};
-      for (const r of info.rows) {
-        const code = r.courses?.code;
-        if (!code) continue;
-        const total = effectiveTotal(r);
-        const { grade } = computeGrade(total);
-        subjectGrades[code] = { score: total, grade };
-      }
-
-      return {
-        matricNumber: info.matric,
-        studentName: info.name,
-        courseGrades: subjectGrades,
-        currentSemester: currentTerm,
-        previousResults,
-        cumulative,
-      };
-    });
-
-    try {
-      const workbook = await generateSpreadsheet({
-        header: headerConfig,
-        students: studentsData,
-        courseList: subjectList,
-      });
-      const filename = generateFilename(sessionName, semester, Number(level));
-      await exportToExcel(workbook, filename);
-      toast.success(`Exported standardized results: ${filename}`);
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error during export";
-      toast.error(`Export failed: ${errorMsg}`);
-    }
-  };
-
-  // Structured export: Student Info | Subject grades | Current | Previous | Cumulative
-  const handleExportStructured = () => {
-    if (grouped.length === 0) { toast.error("Nothing to export"); return; }
-    const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? "session";
-
-    const subjectList = Array.from(
-      new Map(
-        results
-          .filter((r) => r.courses)
-          .map((r) => [r.course_id, { code: r.courses!.code, title: r.courses!.title, unit: r.courses!.unit }])
-      ).entries()
-    ).sort((a, b) => a[1].code.localeCompare(b[1].code));
-
-    const studentInfoCols = ["Admission Number", "Student Name"];
-    const subjectHeaders = subjectList.map(([, c]) => `${c.code} (${c.unit}u)`);
-    const currentHeaders = ["RCU", "ECU", "GP", "Term Average"];
-    const previousHeaders = ["TRCU (Prev)", "TECU (Prev)", "TGP (Prev)", "Academic Average (Prev)"];
-    const cumulativeHeaders = ["TRCU (Cum)", "TECU (Cum)", "TGP (Cum)", "Academic Average (Cum)"];
-
-    const bannerRow = [
-      ...studentInfoCols.map(() => ""),
-      ...subjectHeaders.map((_, i) => (i === 0 ? "Subject Grades" : "")),
-      ...currentHeaders.map((_, i) => (i === 0 ? "Current Term" : "")),
-      ...previousHeaders.map((_, i) => (i === 0 ? "Previous Results" : "")),
-      ...cumulativeHeaders.map((_, i) => (i === 0 ? "Cumulative Results" : "")),
-    ];
-    const headerRow = [
-      ...studentInfoCols,
-      ...subjectHeaders,
-      ...currentHeaders,
-      ...previousHeaders,
-      ...cumulativeHeaders,
-    ];
-
-    const dataRows = grouped.map(([sid, info]) => {
-      const currentBySubject = new Map<string, string>();
-      let rcu = 0, ecu = 0, gp = 0;
-      for (const r of info.rows) {
-        const u = r.courses?.unit ?? 0;
-        const total = effectiveTotal(r);
-        const { grade, point } = computeGrade(total);
-        currentBySubject.set(r.course_id, grade);
-        rcu += u;
-        if (grade !== "F") ecu += u;
-        gp += point * u;
-      }
-      const gpa = safeDivide(gp, rcu);
-
-      const currentIds = new Set(info.rows.map((r) => r.id));
-      const prev = allHistory.filter((r) => r.student_id === sid && !currentIds.has(r.id));
-      let trcuP = 0, tecuP = 0, tgpP = 0;
-      for (const r of prev) {
-        const u = r.courses?.unit ?? 0;
-        const total = effectiveTotal(r);
-        const { point, grade } = computeGrade(total);
-        trcuP += u;
-        if (grade !== "F") tecuP += u;
-        tgpP += point * u;
-      }
-      const cgpaP = safeDivide(tgpP, trcuP);
-
-      const trcuC = trcuP + rcu;
-      const tecuC = tecuP + ecu;
-      const tgpC = tgpP + gp;
-      const cgpaC = safeDivide(tgpC, trcuC);
-
-      const subjectCells = subjectList.map(([cid]) => currentBySubject.get(cid) ?? "");
-
-      return [
-        info.matric,
-        info.name,
-        ...subjectCells,
-        rcu,
-        ecu,
-        formatDecimal(gp),
-        gpa,
-        trcuP,
-        tecuP,
-        formatDecimal(tgpP),
-        trcuP ? formatDecimal(cgpaP) : 0,
-        trcuC,
-        tecuC,
-        formatDecimal(tgpC),
-        formatDecimal(cgpaC),
-      ];
-    });
-
-    const aoa = [bannerRow, headerRow, ...dataRows];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-    const subjectStart = studentInfoCols.length;
-    const subjectEnd = subjectStart + subjectHeaders.length - 1;
-    const currentStart = subjectEnd + 1;
-    const currentEnd = currentStart + currentHeaders.length - 1;
-    const prevStart = currentEnd + 1;
-    const prevEnd = prevStart + previousHeaders.length - 1;
-    const cumStart = prevEnd + 1;
-    const cumEnd = cumStart + cumulativeHeaders.length - 1;
-
-    ws["!merges"] = [
-      ...(subjectHeaders.length > 1 ? [{ s: { r: 0, c: subjectStart }, e: { r: 0, c: subjectEnd } }] : []),
-      { s: { r: 0, c: currentStart }, e: { r: 0, c: currentEnd } },
-      { s: { r: 0, c: prevStart }, e: { r: 0, c: prevEnd } },
-      { s: { r: 0, c: cumStart }, e: { r: 0, c: cumEnd } },
-    ];
-
-    ws["!cols"] = [
-      { wch: 22 }, { wch: 28 },
-      ...subjectHeaders.map(() => ({ wch: 12 })),
-      ...currentHeaders.map(() => ({ wch: 8 })),
-      ...previousHeaders.map(() => ({ wch: 12 })),
-      ...cumulativeHeaders.map(() => ({ wch: 12 })),
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `${level}L ${semester} Sem`);
-    const fname = `Kazaure_Structured_${sessionName.replace("/","-")}_${semester}_${level}L.xlsx`;
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Term Averages");
+    const fname = `Kazaure_Results_${sessionName.replace("/", "-")}_${semester}Term_${classLabel.replace(/\s+/g, "-")}.xlsx`;
     XLSX.writeFile(wb, fname);
     toast.success(`Exported ${fname}`);
   };
 
   const sessionName = sessions.find((s) => s.id === sessionId)?.name;
+  const classLabel = useMemo(() => {
+    const c = classArms.find((a) => a.id === classArmId);
+    return c ? (c.departments?.name ? `${c.departments.name} ${c.name}` : c.name) : "";
+  }, [classArms, classArmId]);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">View &amp; Export Results</h2>
-        <p className="text-sm text-muted-foreground">Pick a session, semester, and level to view the result sheet.</p>
+        <p className="text-sm text-muted-foreground">Pick a session, term, and class to view the result sheet. Results are recorded per term.</p>
       </div>
 
       <Card className="tsu-shadow">
@@ -414,40 +155,32 @@ export function ResultsViewPage() {
               <Label>Term</Label>
               <Select value={semester} onValueChange={setTerm}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{SEMESTERS.map((s) => <SelectItem key={s} value={s}>{s} Term</SelectItem>)}</SelectContent>
+                <SelectContent>{TERMS.map((s) => <SelectItem key={s} value={s}>{s} Term</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Level</Label>
-              <Select value={level} onValueChange={setLevel}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{LEVELS.map((l) => <SelectItem key={l} value={String(l)}>{l} Level</SelectItem>)}</SelectContent>
+              <Label>Class</Label>
+              <Select value={classArmId} onValueChange={setClassArmId}>
+                <SelectTrigger><SelectValue placeholder={classArms.length ? "Select class" : "Set up classes first"} /></SelectTrigger>
+                <SelectContent>{classArms.map((c) => <SelectItem key={c.id} value={c.id}>{c.departments?.name ? `${c.departments.name} ${c.name}` : c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Button onClick={handleExport} variant="outline" disabled={grouped.length === 0} className="w-full">
-              <FileSpreadsheet className="mr-2 h-4 w-4" /> Basic Export
-            </Button>
-            <Button onClick={handleExportStructured} variant="outline" disabled={grouped.length === 0} className="w-full">
-              <FileSpreadsheet className="mr-2 h-4 w-4" /> Structured
-            </Button>
-            <Button onClick={handleExportStandardizedFormat} disabled={grouped.length === 0} className="w-full">
-              <FileSpreadsheet className="mr-2 h-4 w-4" /> Academic Format
-            </Button>
-          </div>
+          <Button onClick={handleExport} disabled={grouped.length === 0} className="w-full sm:w-auto">
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Export to Excel
+          </Button>
         </CardContent>
       </Card>
 
-      {!sessionId && (
-        <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">Select a session to load results.</CardContent></Card>
+      {(!sessionId || !classArmId) && (
+        <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">Select a session and class to load results.</CardContent></Card>
       )}
 
-      {sessionId && isLoading && (
+      {sessionId && classArmId && isLoading && (
         <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">Loading…</CardContent></Card>
       )}
 
-      {sessionId && !isLoading && grouped.length === 0 && (
+      {sessionId && classArmId && !isLoading && grouped.length === 0 && (
         <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">No results recorded for this scope.</CardContent></Card>
       )}
 
@@ -455,24 +188,19 @@ export function ResultsViewPage() {
         <Card className="tsu-shadow">
           <CardHeader>
             <CardTitle className="font-serif text-lg">
-              Result Sheet — {sessionName} · {semester} Term · {level} Level
+              Result Sheet — {sessionName} · {semester} Term · {classLabel}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {grouped.map(([sid, info]) => {
-              const { gpa, cgpa, tcu } = cgpaFor(sid);
+              const avg = averageFor(sid);
               return (
                 <div key={sid} className="rounded-md border border-border">
                   <div className="flex flex-col gap-1 border-b border-border bg-secondary/50 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-semibold text-foreground">{info.name}</p>
-                      <p className="font-mono text-xs text-muted-foreground">{info.matric}</p>
-                    </div>
+                    <p className="font-semibold text-foreground">{info.name}</p>
                     <div className="flex flex-wrap gap-3 text-xs">
-                      <Stat label="Term Average" value={gpa.toFixed(2)} />
-                      <Stat label="Academic Average" value={cgpa.toFixed(2)} />
-                      <Stat label="Total Units (cum.)" value={String(tcu)} />
-                      <Stat label="Class" value={classOfDegree(cgpa)} />
+                      <Stat label="Term Average" value={`${avg.toFixed(1)}%`} />
+                      <Stat label="Subjects" value={String(info.rows.length)} />
                     </div>
                   </div>
                   <div className="overflow-x-auto">
@@ -480,13 +208,11 @@ export function ResultsViewPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Code</TableHead>
-                          <TableHead>Title</TableHead>
-                          <TableHead className="text-center">Unit</TableHead>
+                          <TableHead>Subject</TableHead>
                           <TableHead className="text-center">CA</TableHead>
                           <TableHead className="text-center">Exam</TableHead>
                           <TableHead className="text-center">Total</TableHead>
                           <TableHead className="text-center">Grade</TableHead>
-                          <TableHead className="text-center">Pt</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -497,14 +223,12 @@ export function ResultsViewPage() {
                             <TableRow key={r.id}>
                               <TableCell className="font-mono">{r.courses?.code}</TableCell>
                               <TableCell>{r.courses?.title}</TableCell>
-                              <TableCell className="text-center">{r.courses?.unit}</TableCell>
                               <TableCell className="text-center">{Number(r.ca_score)}</TableCell>
                               <TableCell className="text-center">{Number(r.exam_score)}</TableCell>
                               <TableCell className="text-center font-medium">{total}</TableCell>
                               <TableCell className="text-center">
                                 <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${g.grade === "F" ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"}`}>{g.grade}</span>
                               </TableCell>
-                              <TableCell className="text-center">{g.point}</TableCell>
                             </TableRow>
                           );
                         })}

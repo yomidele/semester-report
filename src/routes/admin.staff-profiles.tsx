@@ -60,7 +60,22 @@ function StaffAdminPage() {
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("staff-photos").upload(path, file, { upsert: true });
-    if (error) throw new Error(`Photo upload failed: ${error.message}`);
+    if (error) {
+      // "Bucket not found" means the storage bucket itself was never created
+      // in this Supabase project — the staff_profiles table migration
+      // creates it, but if that migration wasn't applied to this project
+      // (common right after cloning/deploying), the bucket is simply
+      // missing. Give a message that points at the actual fix instead of
+      // the raw Supabase error.
+      if (/bucket not found/i.test(error.message)) {
+        throw new Error(
+          "Photo upload failed: the \"staff-photos\" storage bucket doesn't exist yet in this Supabase project. " +
+          "Run the pending database migrations (supabase db push), or open the Supabase SQL Editor and run the " +
+          "storage.buckets insert from supabase/migrations/20260913110000_staff_profiles_directory.sql."
+        );
+      }
+      throw new Error(`Photo upload failed: ${error.message}`);
+    }
     return supabase.storage.from("staff-photos").getPublicUrl(path).data.publicUrl;
   };
 

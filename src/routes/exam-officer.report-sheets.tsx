@@ -170,10 +170,7 @@ function Page() {
         <CardContent className="space-y-2">
           {(studentsQ.data ?? []).map((s) => (
             <div key={s.id} className="flex items-center justify-between rounded-md border border-border p-3">
-              <div>
-                <p className="text-sm font-medium">{s.full_name}</p>
-                <p className="text-xs text-muted-foreground">{s.matric_number}</p>
-              </div>
+              <p className="text-sm font-medium">{s.full_name}</p>
               <Button size="sm" variant="outline" disabled={generatingId === s.id} onClick={() => handleGenerate(s.id)}>
                 {generatingId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Download className="mr-2 h-4 w-4" /> Report sheet</>}
               </Button>

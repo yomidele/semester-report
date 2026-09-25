@@ -96,7 +96,7 @@ export const getPinPurchaseOptions = createServerFn({ method: "GET" }).handler(a
   ]);
   return {
     sessions: sessions ?? [],
-    semesters: ["First", "Second"] as const,
+    semesters: ["First", "Second", "Third"] as const,
     price: settings.pin_settings.price,
     currency: settings.pin_settings.currency,
     paystack_configured: isPaystackConfigured(),
@@ -108,7 +108,7 @@ export const getPinPurchaseOptions = createServerFn({ method: "GET" }).handler(a
 const initSchema = z.object({
   matric_number: z.string().min(3).max(40),
   session_id: z.string().uuid(),
-  semester: z.enum(["First", "Second"]),
+  semester: z.enum(["First", "Second", "Third"]),
   callback_url: z.string().url(),
 });
 
@@ -308,7 +308,7 @@ const checkSchema = z.object({
   matric_number: z.string().min(3).max(40),
   pin: z.string().min(8).max(20),
   session_id: z.string().uuid(),
-  semester: z.enum(["First", "Second"]),
+  semester: z.enum(["First", "Second", "Third"]),
 });
 
 const GENERIC_INVALID = "The supplied student details or Result PIN are invalid.";
@@ -570,7 +570,7 @@ export const adminListPinPayments = createServerFn({ method: "GET" })
     }));
   });
 
-const manualSchema = z.object({ matric_number: z.string().min(3), session_id: z.string().uuid(), semester: z.enum(["First", "Second"]) });
+const manualSchema = z.object({ matric_number: z.string().min(3), session_id: z.string().uuid(), semester: z.enum(["First", "Second", "Third"]) });
 
 export const adminGenerateManualPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
