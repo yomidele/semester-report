@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "./use-auth";
-import type { Database } from "@/integrations/supabase/types";
-
-export type AppRole = Database["public"]["Enums"] extends { app_role: infer R } ? R : "super_admin" | "faculty_admin" | "student";
+export type AppRole = "super_admin" | "teacher" | "exam_officer" | "admission_officer";
 
 export function useRole() {
   const { session, loading: sessionLoading } = useAuthSession();
@@ -38,16 +36,37 @@ export function useRole() {
   // Successful role data stays available while React Query refreshes it.
   const roles = query.data ?? [];
   const loading = sessionLoading || (Boolean(userId) && query.isPending);
+  const isTeacher = roles.includes("teacher");
+  const isSuperAdmin = roles.includes("super_admin");
+  const formMasterQuery = useQuery({
+    queryKey: ["form-master-assignments", userId],
+    enabled: Boolean(userId) && !loading && isTeacher,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lecturers")
+        .select("id")
+        .eq("user_id", userId!)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return [];
+      const { data: assignments, error: assignmentError } = await supabase
+        .from("class_arms")
+        .select("id, department_id, name, departments(name)")
+        .eq("form_teacher_id", data.id);
+      if (assignmentError) throw assignmentError;
+      return assignments ?? [];
+    },
+  });
 
   return {
     roles,
-    loading,
-    isSuperAdmin: roles.includes("super_admin" as AppRole),
-    isFacultyAdmin: roles.includes("faculty_admin" as AppRole),
-    isStudent: roles.includes("student" as AppRole),
-    isSectionAdmin: roles.includes("faculty_admin" as AppRole),
-    isTeacher: roles.includes("teacher" as AppRole) || roles.includes("lecturer" as AppRole),
-    isExamOfficer: roles.includes("exam_officer" as AppRole),
-    isAdmissionOfficer: roles.includes("admission_officer" as AppRole),
+    loading: loading || (isTeacher && formMasterQuery.isPending),
+    isSuperAdmin,
+    isTeacher,
+    isExamOfficer: roles.includes("exam_officer"),
+    isAdmissionOfficer: roles.includes("admission_officer"),
+    isFormMaster: (formMasterQuery.data?.length ?? 0) > 0,
+    formMasterAssignments: formMasterQuery.data ?? [],
   };
 }

@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon } from "lucide-react";
+import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,8 +13,8 @@ import { useRole } from "@/hooks/use-role";
 // not the security boundary.
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["super_admin", "exam_officer", "admission_officer"] },
-  { to: "/sessions", label: "Sessions & Terms", icon: CalendarDays, roles: ["super_admin"] },
-  { to: "/courses", label: "Subjects", icon: BookOpen, roles: ["super_admin", "exam_officer"] },
+  { to: "/sessions", label: "Sessions & Terms", icon: CalendarDays, roles: ["super_admin", "exam_officer"] },
+  { to: "/courses", label: "Subjects", icon: BookOpen, roles: ["super_admin"] },
   { to: "/students", label: "Pupils / Admission", icon: Users, roles: ["super_admin", "exam_officer", "admission_officer"] },
   { to: "/result-entry", label: "Result Entry", icon: ClipboardEdit, roles: ["super_admin", "exam_officer"] },
   { to: "/results", label: "View / Export Results", icon: FileSpreadsheet, roles: ["super_admin", "exam_officer"] },
@@ -25,16 +25,16 @@ const NAV = [
 
 const SUPER_ADMIN_NAV = [
   { to: "/admin/settings", label: "Settings", icon: Settings, roles: ["super_admin"] },
-  { to: "/exam-officer/classes", label: "Classes & Arms", icon: GraduationCap, roles: ["super_admin", "exam_officer"] },
-  { to: "/exam-officer/assignments", label: "Teacher Assignments", icon: AssignIcon, roles: ["super_admin", "exam_officer"] },
+  { to: "/exam-officer/classes", label: "Classes & Arms", icon: GraduationCap, roles: ["super_admin"] },
+  { to: "/admin/assignments", label: "Teacher Assignments", icon: AssignIcon, roles: ["super_admin"] },
   { to: "/admin/applications", label: "Applications", icon: UserRoundCheck, roles: ["super_admin"] },
   { to: "/admin/result-pins", label: "Result PINs", icon: KeyRound, roles: ["super_admin"] },
   { to: "/admin/news", label: "News", icon: Newspaper, roles: ["super_admin"] },
   { to: "/admin/staff-profiles", label: "School Administration", icon: Users, roles: ["super_admin"] },
   { to: "/admin/faculties", label: "School Sections", icon: Building2, roles: ["super_admin"] },
-  { to: "/admin/faculty-admins", label: "Staff Accounts", icon: Shield, roles: ["super_admin"] },
+  { to: "/admin/teachers", label: "Teachers & Staff Accounts", icon: Shield, roles: ["super_admin"] },
   { to: "/admin/staff-officers", label: "Exam & Admission Officers", icon: Shield, roles: ["super_admin"] },
-  { to: "/admin/registration-links", label: "Registration Links", icon: LinkIcon, roles: ["super_admin"] },
+  { to: "/admin/form-masters", label: "Form Master Assignments", icon: UserRoundCog, roles: ["super_admin"] },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3, roles: ["super_admin"] },
 ] as const;
 

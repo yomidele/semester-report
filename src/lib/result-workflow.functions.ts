@@ -18,7 +18,7 @@ export const lecturerSubmitResults = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => TransitionInput.parse(i))
   .handler(async ({ data, context }) => {
     const roles = await getCallerRoles(context.userId);
-    if (!roles.includes("lecturer") && !roles.includes("teacher")) throw new Error("Forbidden");
+    if (!roles.includes("teacher")) throw new Error("Forbidden");
     const { error } = await supabaseAdmin
       .from("results")
       .update({ status: "submitted", submitted_at: new Date().toISOString() })
@@ -30,27 +30,12 @@ export const lecturerSubmitResults = createServerFn({ method: "POST" })
 
 export const teacherSubmitResults = lecturerSubmitResults;
 
-async function assertDeptAdminCanTouch(userId: string, resultIds: string[]) {
-  const { data: scope } = await supabaseAdmin
-    .from("department_admins").select("department_id").eq("user_id", userId).maybeSingle();
-  if (!scope) throw new Error("Forbidden: not a department admin");
-  const { data: rows } = await supabaseAdmin
-    .from("results").select("id, student_id").in("id", resultIds);
-  const studentIds = Array.from(new Set((rows ?? []).map((r) => r.student_id)));
-  if (studentIds.length === 0) throw new Error("No matching results");
-  const { data: students } = await supabaseAdmin
-    .from("students").select("id, department_id").in("id", studentIds);
-  const bad = (students ?? []).find((s) => s.department_id !== scope.department_id);
-  if (bad) throw new Error("Forbidden: results contain another department's students");
-}
-
-export const deptAdminApproveResults = createServerFn({ method: "POST" })
+export const examOfficerApproveResults = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => TransitionInput.parse(i))
   .handler(async ({ data, context }) => {
     const roles = await getCallerRoles(context.userId);
-    if (!roles.includes("department_admin")) throw new Error("Forbidden");
-    await assertDeptAdminCanTouch(context.userId, data.result_ids);
+    if (!roles.includes("exam_officer") && !roles.includes("super_admin")) throw new Error("Forbidden");
     const { error } = await supabaseAdmin.from("results")
       .update({ status: "approved", approved_at: new Date().toISOString() })
       .in("id", data.result_ids).eq("status", "submitted");
@@ -58,13 +43,12 @@ export const deptAdminApproveResults = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deptAdminPublishResults = createServerFn({ method: "POST" })
+export const examOfficerPublishResults = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => TransitionInput.parse(i))
   .handler(async ({ data, context }) => {
     const roles = await getCallerRoles(context.userId);
-    if (!roles.includes("department_admin")) throw new Error("Forbidden");
-    await assertDeptAdminCanTouch(context.userId, data.result_ids);
+    if (!roles.includes("exam_officer") && !roles.includes("super_admin")) throw new Error("Forbidden");
     const { error } = await supabaseAdmin.from("results")
       .update({ status: "published", published_at: new Date().toISOString() })
       .in("id", data.result_ids).in("status", ["approved", "submitted"]);
@@ -72,13 +56,12 @@ export const deptAdminPublishResults = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deptAdminReturnResults = createServerFn({ method: "POST" })
+export const examOfficerReturnResults = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => TransitionInput.parse(i))
   .handler(async ({ data, context }) => {
     const roles = await getCallerRoles(context.userId);
-    if (!roles.includes("department_admin")) throw new Error("Forbidden");
-    await assertDeptAdminCanTouch(context.userId, data.result_ids);
+    if (!roles.includes("exam_officer") && !roles.includes("super_admin")) throw new Error("Forbidden");
     const { error } = await supabaseAdmin.from("results")
       .update({ status: "draft", submitted_at: null, approved_at: null, returned_reason: data.reason ?? null })
       .in("id", data.result_ids).in("status", ["submitted", "approved"]);

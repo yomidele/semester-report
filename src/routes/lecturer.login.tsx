@@ -47,7 +47,7 @@ function TeacherLogin() {
         <Card className="w-full max-w-md tsu-shadow">
           <CardHeader>
             <CardTitle className="font-serif text-2xl">Teacher Sign In</CardTitle>
-            <CardDescription>Accounts are created by your Class Admin.</CardDescription>
+            <CardDescription>Teacher accounts are created by the Super Admin. Form Master assignments are managed separately.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
@@ -55,8 +55,8 @@ function TeacherLogin() {
               <div className="space-y-1.5"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
               <Button type="submit" className="w-full" disabled={submitting}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}</Button>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <Link to="/dept-admin/login" className="hover:underline">Class Admin →</Link>
-                <Link to="/student/login" className="hover:underline">Student →</Link>
+                <Link to="/login" className="hover:underline">Super Admin →</Link>
+                <Link to="/exam-officer/login" className="hover:underline">Exam Officer →</Link>
               </div>
             </form>
           </CardContent>

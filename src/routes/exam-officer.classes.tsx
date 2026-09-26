@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ProtectedExamOfficer } from "@/components/ProtectedExamOfficer";
+import { ProtectedAdmin } from "@/components/ProtectedAdmin";
+import { useRole } from "@/hooks/use-role";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,18 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
-import { createClassLevel, createClassArm, assignFormMaster, setNextClassLevel } from "@/lib/school-admin.functions";
+import { createClassLevel, createClassArm, setNextClassLevel } from "@/lib/school-admin.functions";
 
 export const Route = createFileRoute("/exam-officer/classes")({
   head: () => ({ meta: [{ title: "Classes & Arms — Exam Officer" }] }),
-  component: () => <ProtectedExamOfficer><Page /></ProtectedExamOfficer>,
+  component: () => <ProtectedAdmin><Page /></ProtectedAdmin>,
 });
 
 function Page() {
+  const { isSuperAdmin } = useRole();
+  if (!isSuperAdmin) return <Navigate to="/dashboard" />;
   const qc = useQueryClient();
   const createLevel = useServerFn(createClassLevel);
   const createArm = useServerFn(createClassArm);
-  const setFormMaster = useServerFn(assignFormMaster);
   const setNextClass = useServerFn(setNextClassLevel);
 
   const [levelForm, setLevelForm] = useState({ faculty_id: "", name: "", code: "" });
@@ -57,15 +59,6 @@ function Page() {
     },
   });
 
-  const lecturersQ = useQuery({
-    queryKey: ["lecturers-all"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("lecturers").select("id, full_name").order("full_name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const createLevelMut = useMutation({
     mutationFn: () => createLevel({ data: { faculty_id: levelForm.faculty_id, name: levelForm.name.trim(), code: levelForm.code.trim() } }),
     onSuccess: () => {
@@ -86,16 +79,6 @@ function Page() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const formMasterMut = useMutation({
-    mutationFn: ({ class_arm_id, lecturer_id }: { class_arm_id: string; lecturer_id: string | null }) =>
-      setFormMaster({ data: { class_arm_id, lecturer_id } }),
-    onSuccess: () => {
-      toast.success("Form master updated");
-      qc.invalidateQueries({ queryKey: ["class-arms-full"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const nextClassMut = useMutation({
     mutationFn: ({ department_id, next_department_id }: { department_id: string; next_department_id: string | null }) =>
       setNextClass({ data: { department_id, next_department_id } }),
@@ -110,7 +93,7 @@ function Page() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Classes &amp; Arms</h2>
-        <p className="text-sm text-muted-foreground">Add new class levels and arms as the school grows, and assign each arm a form master.</p>
+        <p className="text-sm text-muted-foreground">Add class levels and arms as the school grows. Manage Form Masters from the dedicated assignments section.</p>
       </div>
 
       <Card>
@@ -229,26 +212,14 @@ function Page() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Class arms &amp; form masters</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Class arms</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           {(armsQ.data ?? []).map((arm) => (
             <div key={arm.id} className="flex flex-col gap-2 rounded-md border border-border p-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-medium">{(arm.departments as { name?: string } | null)?.name} — {arm.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  Form master: {(arm.lecturers as { full_name?: string } | null)?.full_name ?? "Not assigned"}
-                </p>
+                <p className="text-xs text-muted-foreground">Class arm</p>
               </div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm md:w-64"
-                defaultValue={arm.form_teacher_id ?? ""}
-                onChange={(e) => formMasterMut.mutate({ class_arm_id: arm.id, lecturer_id: e.target.value || null })}
-              >
-                <option value="">Not assigned</option>
-                {(lecturersQ.data ?? []).map((l) => (
-                  <option key={l.id} value={l.id}>{l.full_name}</option>
-                ))}
-              </select>
             </div>
           ))}
           {armsQ.data?.length === 0 && <p className="text-sm text-muted-foreground">No class arms yet — add one above.</p>}

@@ -1,28 +1,27 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, Users, ClipboardCheck, LinkIcon, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardEdit, CalendarCheck, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const NAV = [
-  { to: "/dept-admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/dept-admin/lecturers", label: "Teachers", icon: Users },
-  { to: "/dept-admin/assignments", label: "Subject Assignments", icon: LinkIcon },
-  { to: "/dept-admin/approvals", label: "Result Approvals", icon: ClipboardCheck },
+  { to: "/lecturer/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/lecturer/entry", label: "Grade Entry", icon: ClipboardEdit },
+  { to: "/lecturer/attendance", label: "Attendance", icon: CalendarCheck },
 ] as const;
 
-export function DeptAdminShell({ children }: { children: React.ReactNode }) {
+export function TeacherShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out");
-    navigate({ to: "/dept-admin/login" });
+    navigate({ to: "/lecturer/login" });
   };
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <TSUHeader subtitle="Class Admin Console" />
+      <TSUHeader subtitle="Teacher Console" />
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-2 py-4 md:flex-row md:px-6">
         <aside className="md:w-60 md:shrink-0">
           <nav className="tsu-shadow flex flex-row gap-1 overflow-x-auto rounded-md border border-border bg-card p-2 md:flex-col md:overflow-visible">

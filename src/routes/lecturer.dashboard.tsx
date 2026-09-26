@@ -27,8 +27,19 @@ function Page() {
   });
   const formClasses = useQuery({
     queryKey: ["form-master-classes", teacher.data?.id], enabled: !!teacher.data,
+    queryFn: async () => (await supabase.from("class_arms").select("id, name, department_id, departments(name)").eq("form_teacher_id", teacher.data!.id)).data ?? [],
+  });
+  const formMasterResults = useQuery({
+    queryKey: ["form-master-results", teacher.data?.id, formClasses.data?.map((item) => item.id)],
+    enabled: !!teacher.data && Boolean(formClasses.data?.length),
     queryFn: async () => {
-      const { data } = await supabase.from("class_arms").select("id, name").eq("form_teacher_id", teacher.data!.id);
+      const departmentIds = Array.from(new Set((formClasses.data ?? []).map((item) => item.department_id)));
+      const { data: students, error: studentsError } = await supabase.from("students").select("id").in("department_id", departmentIds);
+      if (studentsError) throw studentsError;
+      const studentIds = (students ?? []).map((item) => item.id);
+      if (!studentIds.length) return [];
+      const { data, error } = await supabase.from("results").select("id, status, total_score, student_id").in("student_id", studentIds);
+      if (error) throw error;
       return data ?? [];
     },
   });
@@ -40,14 +51,21 @@ function Page() {
         <p className="text-sm text-muted-foreground">Subjects assigned to you. Click one to enter scores.</p>
       </div>
       {(formClasses.data ?? []).length > 0 && (
-        <Link to="/lecturer/attendance">
-          <Card className="tsu-shadow border-primary/40 transition-colors hover:border-primary">
-            <CardHeader><CardTitle className="text-base">Take attendance — {(formClasses.data ?? []).map((c: any) => c.name).join(", ")}</CardTitle></CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              You're the form master here. Mark today's attendance — works offline too.
-            </CardContent>
-          </Card>
-        </Link>
+        <div className="grid gap-3 md:grid-cols-2">
+          {(formClasses.data ?? []).map((classArm: any) => (
+            <Card key={classArm.id} className="tsu-shadow border-primary/40">
+              <CardHeader><CardTitle className="text-base">Form Master — {classArm.departments?.name} {classArm.name}</CardTitle></CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>Monitor this assigned class, its pupils, attendance, and academic performance.</p>
+                <div className="flex flex-wrap gap-2">
+                  <Link className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground" to="/lecturer/attendance">Take attendance</Link>
+                  <Link className="rounded-md border border-border px-3 py-2 font-medium text-foreground" to="/lecturer/class" search={{ class_arm_id: classArm.id }}>View class</Link>
+                </div>
+                <p>{(formMasterResults.data ?? []).length} result records across assigned class(es)</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
       <div className="grid gap-3 md:grid-cols-2">
         {(assignments.data ?? []).map((a: any) => (
@@ -60,7 +78,7 @@ function Page() {
             </Card>
           </Link>
         ))}
-        {(assignments.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No subjects assigned yet. Contact your Class Admin.</p>}
+        {(assignments.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No subjects assigned yet. Contact the Super Admin.</p>}
       </div>
     </div>
   );

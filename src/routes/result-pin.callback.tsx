@@ -66,14 +66,14 @@ function CallbackPage() {
                   ) : (
                     <p className="text-xs text-destructive">
                       Your PIN was saved, but the download link couldn't be generated right now. Visit{" "}
-                      <Link to="/student/result-pins" className="underline">My Result PINs</Link> in the student portal to retry.
+                      <Link to="/check-result" className="underline">Check Result</Link> to try again.
                     </p>
                   )}
                   <Button asChild variant="outline" size="lg">
                     <Link to="/check-result">Check Result</Link>
                   </Button>
                   <Button asChild variant="ghost">
-                    <Link to="/student/login">Go to Student Portal</Link>
+                    <Link to="/">Return to school website</Link>
                   </Button>
                 </div>
               </>

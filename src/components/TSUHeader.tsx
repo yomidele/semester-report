@@ -2,7 +2,7 @@ import { HeartPulse } from "lucide-react";
 import { useCollegeSettings } from "@/lib/college-settings";
 
 /**
- * Institutional header used across every staff/student portal.
+ * Institutional header used across the school staff portals.
  * All branding comes from configurable college settings.
  */
 export function CollegeHeader({ subtitle, caption }: { subtitle?: string; caption?: string }) {

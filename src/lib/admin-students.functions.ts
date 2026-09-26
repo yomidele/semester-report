@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // shouldn't have to invent or type an admission number by hand — it's not
 // something anyone in a primary/secondary school thinks about day to day —
 // so this allocates one the same way self-registration does (see
-// registerStudentWithToken in student-registration.functions.ts), using the
+// school's configured admission-number format, using the
 // school's configured matric_format, and only ever surfaces it later, on
 // the printed admission letter.
 

@@ -22,7 +22,7 @@ function Page() {
   return <Analytics />;
 }
 
-function useCount(table: "faculties" | "departments" | "students" | "courses" | "results" | "faculty_admins") {
+function useCount(table: "faculties" | "departments" | "students" | "courses" | "results") {
   return useQuery({
     queryKey: ["analytics-count", table],
     queryFn: async () => {
@@ -39,7 +39,6 @@ function Analytics() {
   const students = useCount("students");
   const subjects = useCount("courses");
   const results = useCount("results");
-  const admins = useCount("faculty_admins");
 
   const bySection = useQuery({
     queryKey: ["analytics-by-faculty"],
@@ -60,7 +59,6 @@ function Analytics() {
   const stats = [
     { label: "Faculties", value: faculties.data, icon: Building2 },
     { label: "Classes", value: departments.data, icon: Building2 },
-    { label: "Section Admins", value: admins.data, icon: Users },
     { label: "Students", value: students.data, icon: Users },
     { label: "Subjects", value: subjects.data, icon: BookOpen },
     { label: "Results", value: results.data, icon: ClipboardList },

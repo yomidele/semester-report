@@ -1,16 +1,16 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, School, LinkIcon, ClipboardCheck, ArrowUpCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ClipboardCheck, FileText, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const NAV = [
   { to: "/exam-officer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/exam-officer/classes", label: "Classes & Arms", icon: School },
-  { to: "/exam-officer/assignments", label: "Teacher Assignments", icon: LinkIcon },
+  { to: "/sessions", label: "Sessions & Terms", icon: CalendarDays },
+  { to: "/exam-officer/results", label: "Review Results", icon: ClipboardCheck },
   { to: "/exam-officer/report-sheets", label: "Report Sheets", icon: ClipboardCheck },
-  { to: "/exam-officer/promotions", label: "Promotions & Repeats", icon: ArrowUpCircle },
+  { to: "/transcripts", label: "Result Sheets", icon: FileText },
 ] as const;
 
 export function ExamOfficerShell({ children }: { children: React.ReactNode }) {

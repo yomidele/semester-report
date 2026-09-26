@@ -115,7 +115,7 @@ export const createClassLevel = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertRole(context.userId, ["super_admin", "exam_officer"]);
+    await assertRole(context.userId, ["super_admin"]);
     const { data: dept, error } = await supabaseAdmin
       .from("departments")
       .insert({
@@ -143,7 +143,7 @@ export const createClassArm = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertRole(context.userId, ["super_admin", "exam_officer"]);
+    await assertRole(context.userId, ["super_admin"]);
     const { data: arm, error } = await supabaseAdmin
       .from("class_arms")
       .insert({ department_id: data.department_id, name: data.name, code: data.code.toUpperCase() } as never)
@@ -164,7 +164,24 @@ export const assignFormMaster = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertRole(context.userId, ["super_admin", "exam_officer"]);
+    await assertRole(context.userId, ["super_admin"]);
+    if (data.lecturer_id) {
+      const { data: teacher, error: teacherError } = await supabaseAdmin
+        .from("lecturers")
+        .select("user_id")
+        .eq("id", data.lecturer_id)
+        .maybeSingle();
+      if (teacherError) throw new Error(teacherError.message);
+      if (!teacher) throw new Error("Form Master must be an existing teacher");
+      const { data: teacherRole, error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("user_id", teacher.user_id)
+        .eq("role", "teacher")
+        .maybeSingle();
+      if (roleError) throw new Error(roleError.message);
+      if (!teacherRole) throw new Error("Only users with the Teacher role can be assigned as Form Master");
+    }
     const { error } = await supabaseAdmin
       .from("class_arms")
       .update({ form_teacher_id: data.lecturer_id } as never)
@@ -179,7 +196,7 @@ export const setStudentRepeatFlag = createServerFn({ method: "POST" })
     z.object({ student_id: z.string().uuid(), repeat_flag: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertRole(context.userId, ["super_admin", "exam_officer"]);
+    await assertRole(context.userId, ["super_admin"]);
     const { error } = await supabaseAdmin.from("students").update({ repeat_flag: data.repeat_flag } as never).eq("id", data.student_id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -191,7 +208,7 @@ export const setNextClassLevel = createServerFn({ method: "POST" })
     z.object({ department_id: z.string().uuid(), next_department_id: z.string().uuid().nullable() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertRole(context.userId, ["super_admin", "exam_officer"]);
+    await assertRole(context.userId, ["super_admin"]);
     if (data.next_department_id === data.department_id) throw new Error("A class cannot come after itself");
     const { error } = await supabaseAdmin
       .from("departments")
@@ -313,7 +330,6 @@ export const enrollStudent = createServerFn({ method: "POST" })
       throw new Error(studentErr.message);
     }
 
-    await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: "student" });
 
     return {
       ok: true as const,

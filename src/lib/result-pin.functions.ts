@@ -498,7 +498,7 @@ async function requireAdmin(userId: string) {
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .in("role", ["super_admin", "faculty_admin", "department_admin"])
+    .eq("role", "super_admin")
     .maybeSingle();
   if (!role) throw new Error("Forbidden: admin access required.");
 }

@@ -3,7 +3,7 @@ import { ProtectedExamOfficer } from "@/components/ProtectedExamOfficer";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { School, Users, LinkIcon, ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, FileText, CalendarDays } from "lucide-react";
 
 export const Route = createFileRoute("/exam-officer/dashboard")({
   head: () => ({ meta: [{ title: "Exam Officer Dashboard — School Portal" }] }),
@@ -11,17 +11,9 @@ export const Route = createFileRoute("/exam-officer/dashboard")({
 });
 
 function Page() {
-  const classesCount = useQuery({
-    queryKey: ["eo-classes-count"],
-    queryFn: async () => (await supabase.from("departments").select("*", { count: "exact", head: true })).count ?? 0,
-  });
-  const armsCount = useQuery({
-    queryKey: ["eo-arms-count"],
-    queryFn: async () => (await supabase.from("class_arms").select("*", { count: "exact", head: true })).count ?? 0,
-  });
-  const teachersCount = useQuery({
-    queryKey: ["eo-teachers-count"],
-    queryFn: async () => (await supabase.from("lecturers").select("*", { count: "exact", head: true })).count ?? 0,
+  const sessionsCount = useQuery({
+    queryKey: ["eo-sessions-count"],
+    queryFn: async () => (await supabase.from("academic_sessions").select("*", { count: "exact", head: true })).count ?? 0,
   });
   const pending = useQuery({
     queryKey: ["eo-pending-count"],
@@ -29,17 +21,17 @@ function Page() {
   });
 
   const stats = [
-    { label: "Classes", value: classesCount.data, icon: School, to: "/exam-officer/classes" as const },
-    { label: "Class Arms", value: armsCount.data, icon: School, to: "/exam-officer/classes" as const },
-    { label: "Teachers", value: teachersCount.data, icon: Users, to: "/exam-officer/assignments" as const },
-    { label: "Pending Results", value: pending.data, icon: ClipboardCheck, to: "/exam-officer/report-sheets" as const },
+    { label: "Sessions / Terms", value: sessionsCount.data, icon: CalendarDays, to: "/sessions" as const },
+    { label: "Results to Review", value: pending.data, icon: ClipboardCheck, to: "/exam-officer/results" as const },
+    { label: "Approved Results", value: undefined, icon: ClipboardCheck, to: "/exam-officer/results" as const },
+    { label: "Report Sheets", value: undefined, icon: FileText, to: "/exam-officer/report-sheets" as const },
   ] as const;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Exam Officer</h2>
-        <p className="text-sm text-muted-foreground">Manage classes and arms, assign teachers school-wide, and compile report sheets.</p>
+        <p className="text-sm text-muted-foreground">Manage examination sessions and terms, review and finalize submitted results, and generate report sheets.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, to }) => (
@@ -55,13 +47,6 @@ function Page() {
             </Card>
           </Link>
         ))}
-      </div>
-      <div className="flex items-center gap-2">
-        <LinkIcon className="h-4 w-4 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Adding a new class level or arm? Head to{" "}
-          <Link to="/exam-officer/classes" className="font-medium text-primary hover:underline">Classes &amp; Arms</Link>.
-        </p>
       </div>
     </div>
   );

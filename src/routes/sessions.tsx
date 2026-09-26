@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedAdmin } from "@/components/ProtectedAdmin";
+import { ProtectedExamOfficer } from "@/components/ProtectedExamOfficer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/sessions")({
   head: () => ({ meta: [{ title: "Academic Sessions — School Portal" }] }),
-  component: () => <ProtectedAdmin><SessionsPage /></ProtectedAdmin>,
+  component: () => <ProtectedExamOfficer><SessionsPage /></ProtectedExamOfficer>,
 });
 
 function SessionsPage() {

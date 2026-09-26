@@ -120,7 +120,7 @@ function Page() {
       if (!ids.length) throw new Error("No draft results to submit. Save first.");
       return submit({ data: { result_ids: ids } });
     },
-    onSuccess: () => { toast.success("Submitted to Class Admin"); qc.invalidateQueries({ queryKey: ["assignment-results"] }); },
+    onSuccess: () => { toast.success("Submitted to the Exam Officer for review"); qc.invalidateQueries({ queryKey: ["assignment-results"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 

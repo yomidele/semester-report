@@ -9,8 +9,7 @@ import { Loader2 } from "lucide-react";
 // session belonged to an admin. That meant any authenticated user (a
 // student, a teacher, anyone) could open /students, /results, /audit-logs,
 // etc. directly by URL. Fixed to match the same role-check pattern already
-// used correctly in ProtectedStudent/ProtectedFaculty/ProtectedTeacher/
-// ProtectedDeptAdmin.
+// used correctly in the role-specific portal guards.
 export function ProtectedAdmin({ children }: { children: ReactNode }) {
   const { session, loading } = useAuthSession();
   const { loading: roleLoading, isSuperAdmin } = useRole();

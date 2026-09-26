@@ -91,8 +91,8 @@ function LoginPage() {
                 <strong>Demo account:</strong> {DEMO_EMAIL} / {DEMO_PASSWORD}
               </p>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <Link to="/faculty/login" className="hover:underline">Section Admin →</Link>
-                <Link to="/student/login" className="hover:underline">Student →</Link>
+                <Link to="/lecturer/login" className="hover:underline">Teacher Portal →</Link>
+                <Link to="/exam-officer/login" className="hover:underline">Exam Officer →</Link>
               </div>
             </form>
           </CardContent>

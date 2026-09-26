@@ -30,9 +30,9 @@ export const convertApplicationToStudent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ application_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: role, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "super_admin").maybeSingle();
+    const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId);
     if (roleError) throw new Error(roleError.message);
-    if (!role) throw new Error("Forbidden: super admin only");
+    if (!(roles ?? []).some((role) => role.role === "super_admin" || role.role === "admission_officer")) throw new Error("Forbidden: admission officer access required");
     const { data: application, error: applicationError } = await supabaseAdmin
       .from("applications").select("id, applicant_id, programme_id, converted_student_id").eq("id", data.application_id).maybeSingle();
     if (applicationError || !application) throw new Error(applicationError?.message ?? "Application not found");
@@ -62,8 +62,22 @@ export const convertApplicationToStudent = createServerFn({ method: "POST" })
     const studentRow = { user_id: created.user.id, matric_number: matricNumber, full_name: applicant.full_name, email: applicant.email, phone: applicant.phone, faculty_id: programme.faculty_id, department_id: programme.department_id, programme_id: programme.id, gender: applicant.gender, date_of_birth: applicant.date_of_birth, address: applicant.address, state_of_origin: applicant.state_of_origin };
     const { data: student, error: studentError } = await supabaseAdmin.from("students").insert(studentRow as never).select("id").single();
     if (studentError || !student) { await supabaseAdmin.auth.admin.deleteUser(created.user.id); throw new Error(studentError?.message ?? "Could not create student record"); }
-    await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "student" });
     const { error: linkError } = await supabaseAdmin.from("applications").update({ status: "admitted", converted_student_id: student.id, reviewed_at: new Date().toISOString() }).eq("id", application.id);
     if (linkError) throw new Error(linkError.message);
     return { matric_number: matricNumber, temporary_password: temporaryPassword };
+  });
+
+export const updateApplicationStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    application_id: z.string().uuid(),
+    status: z.enum(["under_review", "accepted", "rejected"]),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId);
+    if (roleError) throw new Error(roleError.message);
+    if (!(roles ?? []).some((role) => role.role === "super_admin" || role.role === "admission_officer")) throw new Error("Forbidden: admission officer access required");
+    const { error } = await supabaseAdmin.from("applications").update({ status: data.status, reviewed_at: new Date().toISOString() }).eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

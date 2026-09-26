@@ -6,8 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCollegeSettings, formatAddress } from "@/lib/college-settings";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -27,34 +25,16 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { roles } = useRole();
   const [open, setOpen] = useState(false);
   const address = formatAddress(settings);
-  const userId = session?.user.id;
-  const isStudent = roles.includes("student");
-  const { data: student } = useQuery({
-    queryKey: ["public-account-student", userId],
-    enabled: Boolean(userId) && isStudent,
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      if (!userId) return null;
-      const { data } = await supabase
-        .from("students")
-        .select("full_name, passport_url")
-        .eq("user_id", userId)
-        .maybeSingle();
-      return data;
-    },
-  });
   const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
-  const accountName = student?.full_name ?? (metadata?.["full_name"] as string | undefined) ?? (metadata?.["display_name"] as string | undefined) ?? session?.user.email?.split("@")[0] ?? "Account";
-  const accountImage = student?.passport_url ?? (metadata?.["avatar_url"] as string | undefined) ?? (metadata?.["picture"] as string | undefined);
-  const accountTarget = isStudent
-    ? "/student/profile"
-    : roles.includes("super_admin")
+  const accountName = (metadata?.["full_name"] as string | undefined) ?? (metadata?.["display_name"] as string | undefined) ?? session?.user.email?.split("@")[0] ?? "Account";
+  const accountImage = (metadata?.["avatar_url"] as string | undefined) ?? (metadata?.["picture"] as string | undefined);
+  const accountTarget = roles.includes("super_admin")
       ? "/dashboard"
-      : roles.includes("faculty_admin")
-        ? "/faculty/dashboard"
-        : roles.includes("department_admin")
-          ? "/dept-admin/dashboard"
-           : "/lecturer/dashboard";
+      : roles.includes("exam_officer")
+        ? "/exam-officer/dashboard"
+        : roles.includes("admission_officer")
+          ? "/admission-officer/dashboard"
+          : "/lecturer/dashboard";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -114,9 +94,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             </Button>
             <Button asChild size="sm" className="hidden sm:inline-flex">
               <Link to="/admissions">Apply Now</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/student/login">Student Portal</Link>
             </Button>
             {session && (
               <Link
@@ -185,11 +162,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Portals</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-sidebar-foreground/80">
-              <li><Link to="/student/login" className="hover:text-accent">Student Portal</Link></li>
                <li><Link to="/lecturer/login" className="hover:text-accent">Teacher Portal</Link></li>
-               <li><Link to="/dept-admin/login" className="hover:text-accent">Class Admin</Link></li>
-              <li><Link to="/faculty/login" className="hover:text-accent">School Admin</Link></li>
-              <li><Link to="/login" className="hover:text-accent">Administration</Link></li>
+              <li><Link to="/exam-officer/login" className="hover:text-accent">Exam Officer Portal</Link></li>
+              <li><Link to="/admission-officer/login" className="hover:text-accent">Admission Officer Portal</Link></li>
+              <li><Link to="/login" className="hover:text-accent">Super Admin Portal</Link></li>
             </ul>
           </div>
         </div>
