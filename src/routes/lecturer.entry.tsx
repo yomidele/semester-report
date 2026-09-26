@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Loader2, Search as SearchIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { teacherSubmitResults } from "@/lib/result-workflow.functions";
 
@@ -20,11 +20,72 @@ export const Route = createFileRoute("/lecturer/entry")({
   component: () => <ProtectedTeacher><Page /></ProtectedTeacher>,
 });
 
+// Auto-save-to-draft: as a teacher types scores here, they're mirrored into
+// localStorage keyed to this exact assignment. If the teacher navigates back
+// to the dashboard (or loses connection, closes the tab, etc.) without
+// clicking "Save draft", nothing typed is lost — reopening this same
+// assignment restores it. This is distinct from the "Save draft" button,
+// which writes a real draft-status row to the database; this local copy is
+// only a safety net for what hasn't been sent to the server yet, and is
+// cleared the moment "Save draft" succeeds.
+type LocalScores = Record<string, { ca: string; exam: string }>;
+
+function localDraftKey(assignmentId: string | undefined): string | null {
+  return assignmentId ? `lecturerEntryDraft:v1:${assignmentId}` : null;
+}
+
+function readLocalDraft(key: string): LocalScores | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as LocalScores;
+  } catch {
+    return null;
+  }
+}
+
 function Page() {
   const { assignment_id } = Route.useSearch();
   const qc = useQueryClient();
   const submit = useServerFn(teacherSubmitResults);
   const [draft, setDraft] = useState<Record<string, { ca: string; exam: string }>>({});
+  const [studentSearch, setStudentSearch] = useState("");
+  const restoredForAssignment = useRef<string | undefined>(undefined);
+
+  // Restore any unsaved scores left behind from a previous visit to this
+  // assignment, and reset local state when switching to a different one.
+  useEffect(() => {
+    if (restoredForAssignment.current === assignment_id) return;
+    restoredForAssignment.current = assignment_id;
+    setStudentSearch("");
+    const key = localDraftKey(assignment_id);
+    const restored = key ? readLocalDraft(key) : null;
+    if (restored && Object.keys(restored).length > 0) {
+      setDraft(restored);
+      toast.info(`Restored ${Object.keys(restored).length} unsaved score${Object.keys(restored).length !== 1 ? "s" : ""} from where you left off`);
+    } else {
+      setDraft({});
+    }
+  }, [assignment_id]);
+
+  // Mirror the in-progress draft into localStorage as it's typed.
+  useEffect(() => {
+    const key = localDraftKey(assignment_id);
+    if (!key) return;
+    const nonEmpty = Object.fromEntries(
+      Object.entries(draft).filter(([, v]) => v.ca !== "" || v.exam !== "")
+    );
+    try {
+      if (Object.keys(nonEmpty).length === 0) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, JSON.stringify(nonEmpty));
+      }
+    } catch {
+      // localStorage can fail (private browsing, quota) — this is only a
+      // convenience safety net, so fail silently rather than interrupt entry.
+    }
+  }, [draft, assignment_id]);
 
   const assignmentQ = useQuery({
     queryKey: ["assignment", assignment_id], enabled: !!assignment_id,
@@ -71,6 +132,14 @@ function Page() {
     inputRefs.current[`${studentId}-${field}`] = el;
   };
   const students = studentsQ.data ?? [];
+  // Search only narrows what's displayed — it never touches typed scores for
+  // pupils that scroll out of view, and Enter still moves through the full
+  // class list in order below.
+  const filteredStudents = useMemo(() => {
+    const q = studentSearch.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter((s) => s.full_name.toLowerCase().includes(q));
+  }, [students, studentSearch]);
   const handleScoreKeyDown = (studentId: string, field: "ca" | "exam") => (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -110,7 +179,15 @@ function Page() {
       const { error } = await supabase.from("results").upsert(rows as never, { onConflict: "student_id,course_id,session_id,semester" });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Saved as draft"); setDraft({}); qc.invalidateQueries({ queryKey: ["assignment-results"] }); },
+    onSuccess: () => {
+      toast.success("Saved as draft");
+      setDraft({});
+      const key = localDraftKey(assignment_id);
+      if (key) {
+        try { localStorage.removeItem(key); } catch { /* ignore */ }
+      }
+      qc.invalidateQueries({ queryKey: ["assignment-results"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -136,18 +213,32 @@ function Page() {
         <p className="text-sm text-muted-foreground">{a.semester} Term · {(a.academic_sessions as any)?.name}</p>
       </div>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Enter scores</CardTitle>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Save draft</Button>
-            <Button size="sm" variant="secondary" onClick={() => submitMut.mutate()} disabled={submitMut.isPending}>Submit for approval</Button>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Enter scores</CardTitle>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Save draft</Button>
+              <Button size="sm" variant="secondary" onClick={() => submitMut.mutate()} disabled={submitMut.isPending}>Submit for approval</Button>
+            </div>
+          </div>
+          <div className="relative sm:w-64">
+            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              placeholder="Search pupil by name..."
+              className="h-9 pl-8"
+            />
           </div>
         </CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Pupil</th><th className="py-2 pr-3 w-24">CA</th><th className="py-2 pr-3 w-24">Exam</th><th className="py-2 pr-3">Total</th><th className="py-2 pr-3">Status</th></tr></thead>
             <tbody>
-              {(studentsQ.data ?? []).map((s) => {
+              {filteredStudents.length === 0 && students.length > 0 && (
+                <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No pupils match "{studentSearch}"</td></tr>
+              )}
+              {filteredStudents.map((s) => {
                 const existing = byStudent[s.id];
                 const d = draft[s.id] ?? { ca: existing?.ca_score?.toString() ?? "", exam: existing?.exam_score?.toString() ?? "" };
                 const total = (Number(d.ca || 0) + Number(d.exam || 0)) || existing?.total_score || 0;
@@ -184,7 +275,7 @@ function Page() {
                   </tr>
                 );
               })}
-              {(studentsQ.data ?? []).length === 0 && <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No pupils found in this class.</td></tr>}
+              {students.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No pupils found in this class.</td></tr>}
             </tbody>
           </table>
         </CardContent>
