@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { createTeacher, deleteTeacher } from "@/lib/admin-users.functions";
 
-export const Route = createFileRoute("/admin/teachers")({
+export const Route = createFileRoute("/dept-admin/lecturers")({
   head: () => ({ meta: [{ title: "Teachers — Super Admin" }] }),
   component: () => <ProtectedAdmin><Page /></ProtectedAdmin>,
 });

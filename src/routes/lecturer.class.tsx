@@ -34,7 +34,7 @@ function Page() {
     queryKey: ["form-class-students", class_arm_id],
     enabled: Boolean(classArm.data),
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("id, full_name, matric_number").eq("class_arm_id", class_arm_id).order("full_name");
+      const { data, error } = await supabase.from("students").select("id, full_name, matric_number").eq("class_arm_id", class_arm_id).eq("status", "active").order("full_name");
       if (error) throw error;
       return data ?? [];
     },

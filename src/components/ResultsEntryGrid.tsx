@@ -20,6 +20,7 @@ const ALL_ARMS = "all";
 interface Department {
   id: string;
   name: string;
+  faculty_id: string;
 }
 
 interface ClassArm {
@@ -114,7 +115,7 @@ export function ResultsEntryGrid() {
   const { data: departments = [] } = useQuery({
     queryKey: ["departments-for-entry"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("departments").select("id, name").order("name");
+      const { data, error } = await supabase.from("departments").select("id, name, faculty_id").order("name");
       if (error) throw error;
       return (data ?? []) as Department[];
     },
@@ -183,6 +184,7 @@ export function ResultsEntryGrid() {
         .from("students")
         .select("id, full_name, class_arm_id")
         .in("class_arm_id", scopedArmIds)
+        .eq("status", "active")
         .order("full_name");
       if (error) throw error;
       return (data ?? []) as Student[];
@@ -393,6 +395,8 @@ export function ResultsEntryGrid() {
   // Bulk save mutation
   const bulkSaveMut = useMutation({
     mutationFn: async () => {
+      const selectedDepartment = departments.find((d) => d.id === filters.departmentId);
+      if (!selectedDepartment) throw new Error("Select a class first");
       const payload = gridEntries
         .filter((entry) => {
           const ca = entry.ca_score ? Number(entry.ca_score) : null;
@@ -424,6 +428,8 @@ export function ResultsEntryGrid() {
               exam_score: item.exam_score,
               status: "published",
               published_at: new Date().toISOString(),
+              department_id: selectedDepartment.id,
+              faculty_id: selectedDepartment.faculty_id,
             } as never,
             {
               onConflict: "student_id,course_id,session_id,semester",

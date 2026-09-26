@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { computeGrade, classOfDegree, effectiveTotal } from "@/lib/grading";
+import { useCollegeSettings } from "@/lib/college-settings";
+import { computeGrade, effectiveTotal } from "@/lib/grading";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -19,35 +20,39 @@ export const Route = createFileRoute("/transcripts")({
   component: () => <ProtectedAdmin><ReportCardsPage /></ProtectedAdmin>,
 });
 
-const LEVELS = [100, 200, 300, 400] as const;
-const SEMESTERS = ["First", "Second"] as const;
-const SEM_ORDER: Record<string, number> = { First: 1, Second: 2 };
+const TERMS = ["First", "Second", "Third"] as const;
+const TERM_ORDER: Record<string, number> = { First: 1, Second: 2, Third: 3 };
 
 interface ResultRow {
   id: string;
-  level: number;
   semester: string;
   ca_score: number;
   exam_score: number;
   total_score: number | null;
   session_id: string;
-  courses: { code: string; title: string; unit: number } | null;
+  courses: { code: string; title: string } | null;
   academic_sessions: { name: string } | null;
 }
 
+interface StudentRow {
+  id: string;
+  full_name: string;
+  matric_number: string;
+  class_arm_id: string | null;
+}
+
 export function ReportCardsPage() {
+  const { settings } = useCollegeSettings();
   const [search, setSearch] = useState("");
   const [studentId, setStudentId] = useState<string | undefined>();
   const [startSession, setStartSession] = useState<string | undefined>();
-  const [startLevel, setStartLevel] = useState("100");
-  const [startSem, setStartSem] = useState("First");
+  const [startTerm, setStartTerm] = useState("First");
   const [endSession, setEndSession] = useState<string | undefined>();
-  const [endLevel, setEndLevel] = useState("400");
-  const [endSem, setEndSem] = useState("Second");
+  const [endTerm, setEndTerm] = useState("Third");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students-all"],
-    queryFn: async () => (await supabase.from("students").select("*").order("matric_number")).data ?? [],
+    queryFn: async () => ((await supabase.from("students").select("id, full_name, matric_number, class_arm_id").order("full_name")).data ?? []) as StudentRow[],
   });
 
   const { data: sessions = [] } = useQuery({
@@ -63,75 +68,71 @@ export function ReportCardsPage() {
 
   const student = students.find((s) => s.id === studentId);
 
+  const { data: classArm } = useQuery({
+    queryKey: ["student-class-label", student?.class_arm_id],
+    enabled: !!student?.class_arm_id,
+    queryFn: async () => (await supabase.from("class_arms").select("name, departments:department_id(name)").eq("id", student!.class_arm_id!).maybeSingle()).data,
+  });
+  const classLabel = classArm ? `${(classArm.departments as { name?: string } | null)?.name ?? ""} ${classArm.name}`.trim() : "—";
+
   const { data: allResults = [] } = useQuery<ResultRow[]>({
     queryKey: ["transcript-results", studentId],
     enabled: !!studentId,
     queryFn: async () => {
       const { data, error } = await supabase.from("results")
-         .select("id, level, semester, ca_score, exam_score, total_score, session_id, courses(code, title, unit), academic_sessions(name)")
+        .select("id, semester, ca_score, exam_score, total_score, session_id, courses(code, title), academic_sessions(name)")
         .eq("student_id", studentId!);
       if (error) throw error;
       return (data ?? []) as unknown as ResultRow[];
     },
   });
 
-  const sessionRank = (id: string) => {
-    const name = sessions.find((s) => s.id === id)?.name ?? "";
-    return name; // names like "2021/2022" sort lexically
-  };
+  const sessionRank = (id: string) => sessions.find((s) => s.id === id)?.name ?? ""; // names like "2026/2027" sort lexically
 
   const inRange = (r: ResultRow): boolean => {
     if (!startSession || !endSession) return true;
-    const rSess = sessionRank(r.session_id);
-    const sSess = sessionRank(startSession);
-    const eSess = sessionRank(endSession);
-    const key = (sess: string, lvl: number, sem: string) => `${sess}|${lvl}|${SEM_ORDER[sem] ?? 0}`;
-    const k = key(rSess, r.level, r.semester);
-    const ks = key(sSess, Number(startLevel), startSem);
-    const ke = key(eSess, Number(endLevel), endSem);
+    const key = (sess: string, sem: string) => `${sess}|${TERM_ORDER[sem] ?? 0}`;
+    const k = key(sessionRank(r.session_id), r.semester);
+    const ks = key(sessionRank(startSession), startTerm);
+    const ke = key(sessionRank(endSession), endTerm);
     return k >= ks && k <= ke;
   };
 
-  const inRangeResults = useMemo(() => allResults.filter(inRange), [allResults, startSession, endSession, startLevel, endLevel, startSem, endSem]);
+  const inRangeResults = useMemo(() => allResults.filter(inRange), [allResults, startSession, endSession, startTerm, endTerm]);
 
-  // Group by session+semester+level
+  // Group by Session + Term — a pupil's results are recorded per term, not
+  // per "level"; a primary/secondary pupil is in one class at a time.
   const groups = useMemo(() => {
-    const m = new Map<string, { sessionName: string; level: number; semester: string; rows: ResultRow[] }>();
+    const m = new Map<string, { sessionName: string; semester: string; rows: ResultRow[] }>();
     for (const r of inRangeResults) {
       const sn = r.academic_sessions?.name ?? "—";
-      const k = `${sn}__${r.level}__${r.semester}`;
-      if (!m.has(k)) m.set(k, { sessionName: sn, level: r.level, semester: r.semester, rows: [] });
+      const k = `${sn}__${r.semester}`;
+      if (!m.has(k)) m.set(k, { sessionName: sn, semester: r.semester, rows: [] });
       m.get(k)!.rows.push(r);
     }
     return Array.from(m.values()).sort((a, b) => {
       if (a.sessionName !== b.sessionName) return a.sessionName.localeCompare(b.sessionName);
-      if (a.level !== b.level) return a.level - b.level;
-      return (SEM_ORDER[a.semester] ?? 0) - (SEM_ORDER[b.semester] ?? 0);
+      return (TERM_ORDER[a.semester] ?? 0) - (TERM_ORDER[b.semester] ?? 0);
     });
   }, [inRangeResults]);
 
-  const computeStats = (rows: ResultRow[]) => {
-    let pts = 0, units = 0;
-    for (const r of rows) {
-      const u = r.courses?.unit ?? 0;
-      const { point } = computeGrade(effectiveTotal(r));
-      pts += point * u; units += u;
-    }
-    return { pts, units, gpa: units ? pts / units : 0 };
+  const averageOf = (rows: ResultRow[]) => {
+    if (rows.length === 0) return 0;
+    return rows.reduce((s, r) => s + effectiveTotal(r), 0) / rows.length;
   };
 
-  const overall = useMemo(() => computeStats(inRangeResults), [inRangeResults]);
+  const overallAverage = useMemo(() => averageOf(inRangeResults), [inRangeResults]);
 
   const validateRange = () => {
     if (!startSession || !endSession) return "Pick start and end sessions";
-    const sKey = `${sessionRank(startSession)}|${Number(startLevel)}|${SEM_ORDER[startSem]}`;
-    const eKey = `${sessionRank(endSession)}|${Number(endLevel)}|${SEM_ORDER[endSem]}`;
+    const sKey = `${sessionRank(startSession)}|${TERM_ORDER[startTerm]}`;
+    const eKey = `${sessionRank(endSession)}|${TERM_ORDER[endTerm]}`;
     if (sKey > eKey) return "Start must be before End";
     return null;
   };
 
   const handleGenerate = () => {
-    if (!student) { toast.error("Select a student"); return; }
+    if (!student) { toast.error("Select a pupil"); return; }
     const err = validateRange();
     if (err) { toast.error(err); return; }
     if (groups.length === 0) { toast.error("No results in selected range"); return; }
@@ -142,24 +143,24 @@ export function ReportCardsPage() {
 
     // Header
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-    doc.text("KAZAURE COLLEGE OF HEALTH TECHNOLOGY", pageW / 2, y, { align: "center" }); y += 18;
+    doc.text(settings.college_name.toUpperCase(), pageW / 2, y, { align: "center" }); y += 18;
     doc.setFontSize(11); doc.setFont("helvetica", "normal");
-    doc.text("Academic Report Card", pageW / 2, y, { align: "center" }); y += 22;
+    doc.text("Report Card", pageW / 2, y, { align: "center" }); y += 22;
 
     doc.setFontSize(10);
-    doc.text(`Student: ${student.full_name}`, 40, y);
+    doc.text(`Pupil: ${student.full_name}`, 40, y);
     doc.text(`Admission Number: ${student.matric_number}`, pageW - 40, y, { align: "right" }); y += 14;
-    doc.text(`Class: ${student.department ?? "—"}`, 40, y);
+    doc.text(`Class: ${classLabel}`, 40, y);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, pageW - 40, y, { align: "right" }); y += 18;
 
     for (const g of groups) {
-      const stats = computeStats(g.rows);
+      const avg = averageOf(g.rows);
       doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-      doc.text(`${g.sessionName}  ·  ${g.level} Level  ·  ${g.semester} Term`, 40, y); y += 4;
+      doc.text(`${g.sessionName}  \u00b7  ${g.semester} Term`, 40, y); y += 4;
 
       autoTable(doc, {
         startY: y + 4,
-        head: [["Code", "Title", "Unit", "Score", "Grade"]],
+        head: [["Code", "Subject", "CA", "Exam", "Total", "Grade"]],
         body: g.rows
           .sort((a, b) => (a.courses?.code ?? "").localeCompare(b.courses?.code ?? ""))
           .map((r) => {
@@ -168,19 +169,20 @@ export function ReportCardsPage() {
             return [
               r.courses?.code ?? "",
               r.courses?.title ?? "",
-              String(r.courses?.unit ?? 0),
+              String(Number(r.ca_score)),
+              String(Number(r.exam_score)),
               String(total),
               gr.grade,
             ];
           }),
         styles: { fontSize: 9 },
-        headStyles: { fillColor: [40, 60, 90] },
+        headStyles: { fillColor: [5, 87, 56] },
         margin: { left: 40, right: 40 },
       });
       // @ts-expect-error lastAutoTable injected by autotable
       y = doc.lastAutoTable.finalY + 6;
       doc.setFont("helvetica", "italic"); doc.setFontSize(9);
-       doc.text(`Term Average: ${stats.gpa.toFixed(2)}   ·   Subjects: ${stats.units}`, pageW - 40, y, { align: "right" });
+      doc.text(`Term Average: ${avg.toFixed(1)}%   \u00b7   Subjects: ${g.rows.length}`, pageW - 40, y, { align: "right" });
       y += 18;
       if (y > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = 40; }
     }
@@ -189,11 +191,10 @@ export function ReportCardsPage() {
     if (y > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = 40; }
     doc.setDrawColor(180); doc.line(40, y, pageW - 40, y); y += 16;
     doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-    doc.text(`Academic Average: ${overall.gpa.toFixed(2)}`, 40, y);
-    doc.text(`Total Units: ${overall.units}`, pageW / 2, y, { align: "center" });
-    doc.text(`Class: ${classOfDegree(overall.gpa)}`, pageW - 40, y, { align: "right" });
+    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 40, y);
+    doc.text(`Terms Covered: ${groups.length}`, pageW - 40, y, { align: "right" });
 
-    doc.save(`transcript_${student.matric_number.replace(/[\/\\]/g, "_")}.pdf`);
+    doc.save(`report-card_${student.matric_number.replace(/[\/\\]/g, "_")}.pdf`);
     toast.success("Report Card downloaded");
   };
 
@@ -201,19 +202,19 @@ export function ReportCardsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Report Cards</h2>
-        <p className="text-sm text-muted-foreground">Generate a PDF transcript for any student across a chosen academic range.</p>
+        <p className="text-sm text-muted-foreground">Generate a PDF report card for any pupil across a chosen term range.</p>
       </div>
 
       <Card className="tsu-shadow">
-        <CardHeader><CardTitle className="text-base">1. Select Student</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">1. Select Pupil</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Search by name or matric</Label>
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Ahmed or DEPT/24/001" />
+              <Label>Search by name or admission number</Label>
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Sadiq or PR/26/0091" />
             </div>
             <div className="space-y-1.5">
-              <Label>Student</Label>
+              <Label>Pupil</Label>
               <Select value={studentId} onValueChange={setStudentId}>
                 <SelectTrigger><SelectValue placeholder={`${filteredStudents.length} match(es)`} /></SelectTrigger>
                 <SelectContent>
@@ -230,16 +231,16 @@ export function ReportCardsPage() {
       <Card className="tsu-shadow">
         <CardHeader>
           <CardTitle className="text-base">2. Range</CardTitle>
-          <CardDescription>Define the start and end of the transcript window.</CardDescription>
+          <CardDescription>Define the start and end term of the report card.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 rounded-md border border-border p-3">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Start</p>
-            <RangePicker session={startSession} setSession={setStartSession} level={startLevel} setLevel={setStartLevel} semester={startSem} setTerm={setStartSem} sessions={sessions} />
+            <RangePicker session={startSession} setSession={setStartSession} term={startTerm} setTerm={setStartTerm} sessions={sessions} />
           </div>
           <div className="space-y-2 rounded-md border border-border p-3">
             <p className="text-xs font-semibold uppercase text-muted-foreground">End</p>
-            <RangePicker session={endSession} setSession={setEndSession} level={endLevel} setLevel={setEndLevel} semester={endSem} setTerm={setEndSem} sessions={sessions} />
+            <RangePicker session={endSession} setSession={setEndSession} term={endTerm} setTerm={setEndTerm} sessions={sessions} />
           </div>
         </CardContent>
       </Card>
@@ -247,24 +248,24 @@ export function ReportCardsPage() {
       <Card className="tsu-shadow">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">3. Preview & Generate</CardTitle>
-            <CardDescription>{groups.length} semester group(s) · Academic Average {overall.gpa.toFixed(2)} · {overall.units} units</CardDescription>
+            <CardTitle className="text-base">3. Preview &amp; Generate</CardTitle>
+            <CardDescription>{groups.length} term(s) &middot; Overall Average {overallAverage.toFixed(1)}%</CardDescription>
           </div>
           <Button onClick={handleGenerate} disabled={!student || groups.length === 0}>
             <FileDown className="mr-2 h-4 w-4" /> Generate PDF
           </Button>
         </CardHeader>
         <CardContent>
-          {!student && <p className="text-sm text-muted-foreground">Select a student to preview.</p>}
+          {!student && <p className="text-sm text-muted-foreground">Select a pupil to preview.</p>}
           {student && groups.length === 0 && <p className="text-sm text-muted-foreground">No results found in the selected range.</p>}
           {student && groups.length > 0 && (
             <ul className="space-y-1 text-sm">
               {groups.map((g, i) => {
-                const s = computeStats(g.rows);
+                const avg = averageOf(g.rows);
                 return (
                   <li key={i} className="flex items-center justify-between rounded-md bg-secondary/40 px-3 py-2">
-                    <span>{g.sessionName} · {g.level}L · {g.semester} Sem</span>
-                    <span className="text-xs text-muted-foreground">{g.rows.length} subjects · Term Average {s.gpa.toFixed(2)}</span>
+                    <span>{g.sessionName} &middot; {g.semester} Term</span>
+                    <span className="text-xs text-muted-foreground">{g.rows.length} subjects &middot; Average {avg.toFixed(1)}%</span>
                   </li>
                 );
               })}
@@ -276,25 +277,20 @@ export function ReportCardsPage() {
   );
 }
 
-function RangePicker({ session, setSession, level, setLevel, semester, setTerm, sessions }: {
+function RangePicker({ session, setSession, term, setTerm, sessions }: {
   session: string | undefined; setSession: (v: string) => void;
-  level: string; setLevel: (v: string) => void;
-  semester: string; setTerm: (v: string) => void;
+  term: string; setTerm: (v: string) => void;
   sessions: { id: string; name: string }[];
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <Select value={session} onValueChange={setSession}>
         <SelectTrigger><SelectValue placeholder="Session" /></SelectTrigger>
         <SelectContent>{sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
       </Select>
-      <Select value={level} onValueChange={setLevel}>
+      <Select value={term} onValueChange={setTerm}>
         <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>{LEVELS.map((l) => <SelectItem key={l} value={String(l)}>{l}L</SelectItem>)}</SelectContent>
-      </Select>
-      <Select value={semester} onValueChange={setTerm}>
-        <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>{SEMESTERS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+        <SelectContent>{TERMS.map((s) => <SelectItem key={s} value={s}>{s} Term</SelectItem>)}</SelectContent>
       </Select>
     </div>
   );

@@ -100,7 +100,8 @@ function Page() {
       const a = assignmentQ.data!;
       let query = supabase.from("students")
         .select("id, full_name")
-        .eq("department_id", a.department_id);
+        .eq("department_id", a.department_id)
+        .eq("status", "active");
       if (a.class_arm_id) query = query.eq("class_arm_id", a.class_arm_id);
       const { data } = await query.order("full_name");
       return data ?? [];

@@ -59,7 +59,7 @@ export function ResultsViewPage() {
     queryKey: ["results", sessionId, semester, classArmId],
     enabled: !!sessionId && !!classArmId,
     queryFn: async () => {
-      const { data: classStudents, error: sErr } = await supabase.from("students").select("id").eq("class_arm_id", classArmId);
+      const { data: classStudents, error: sErr } = await supabase.from("students").select("id").eq("class_arm_id", classArmId).eq("status", "active");
       if (sErr) throw sErr;
       const studentIds = (classStudents ?? []).map((s) => s.id);
       if (studentIds.length === 0) return [];

@@ -32,7 +32,7 @@ function Page() {
     queryKey: ["students-for-promotion", departmentId, armId],
     enabled: !!departmentId,
     queryFn: async () => {
-      let query = supabase.from("students").select("id, full_name, matric_number, repeat_flag, class_arm_id").eq("department_id", departmentId).order("full_name");
+      let query = supabase.from("students").select("id, full_name, matric_number, repeat_flag, class_arm_id").eq("department_id", departmentId).eq("status", "active").order("full_name");
       if (armId) query = query.eq("class_arm_id", armId);
       const { data, error } = await query;
       if (error) throw error;

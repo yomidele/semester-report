@@ -1679,6 +1679,10 @@ export type Database = {
           phone: string | null
           programme_id: string | null
           state_of_origin: string | null
+          status: string
+          status_reason: string | null
+          status_date: string | null
+          status_changed_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -1703,6 +1707,10 @@ export type Database = {
           phone?: string | null
           programme_id?: string | null
           state_of_origin?: string | null
+          status?: string
+          status_reason?: string | null
+          status_date?: string | null
+          status_changed_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1727,6 +1735,10 @@ export type Database = {
           phone?: string | null
           programme_id?: string | null
           state_of_origin?: string | null
+          status?: string
+          status_reason?: string | null
+          status_date?: string | null
+          status_changed_at?: string | null
           user_id?: string | null
         }
         Relationships: [

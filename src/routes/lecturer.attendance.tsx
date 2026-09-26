@@ -106,7 +106,7 @@ function Page() {
     if (isOnline) {
       try {
         const [{ data: students, error: sErr }, { data: existing, error: aErr }] = await Promise.all([
-          supabase.from("students").select("id, full_name").eq("class_arm_id", class_arm_id).order("full_name"),
+          supabase.from("students").select("id, full_name").eq("class_arm_id", class_arm_id).eq("status", "active").order("full_name"),
           supabase.from("attendance").select("student_id, status, notes").eq("class_arm_id", class_arm_id).eq("attendance_date", attendance_date),
         ]);
         if (sErr) throw sErr;

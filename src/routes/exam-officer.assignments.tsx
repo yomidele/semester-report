@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/admin/assignments")({
+export const Route = createFileRoute("/exam-officer/assignments")({
   head: () => ({ meta: [{ title: "Teacher Assignments — Super Admin" }] }),
   component: () => <ProtectedAdmin><Page /></ProtectedAdmin>,
 });

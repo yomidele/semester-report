@@ -25,11 +25,13 @@ export const adminEnrollStudent = createServerFn({ method: "POST" })
 
     const { data: arm, error: armErr } = await supabaseAdmin
       .from("class_arms")
-      .select("id, department_id, departments(code)")
+      .select("id, department_id, departments(code, faculty_id)")
       .eq("id", data.class_arm_id)
       .maybeSingle();
     if (armErr) throw new Error(armErr.message);
     if (!arm) throw new Error("Class not found");
+    const faculty_id = (arm.departments as { code: string | null; faculty_id: string } | null)?.faculty_id;
+    if (!faculty_id) throw new Error("This class's department has no faculty/section set — fix that first.");
 
     const yearCode = String(new Date().getFullYear()).slice(-2);
     const deptCode = ((arm.departments as { code: string | null } | null)?.code ?? "CLS").toUpperCase();
@@ -54,8 +56,60 @@ export const adminEnrollStudent = createServerFn({ method: "POST" })
       full_name: data.full_name,
       class_arm_id: data.class_arm_id,
       department_id: arm.department_id,
+      faculty_id,
     } as never);
     if (insErr) throw new Error(insErr.message);
 
     return { ok: true as const, admission_number };
+  });
+
+// Takes a pupil off the active roster — withdrawn, transferred elsewhere, or
+// graduated — WITHOUT deleting their row. Their results, attendance and
+// report cards stay exactly where they are and stay findable (e.g. from
+// Report Cards / transcripts) for as long as the school needs them. The
+// database itself also refuses to hard-delete a student with any academic
+// history (see migration 20260927120000), so this status change is the only
+// supported way to remove someone from a class roster once they have any
+// history at all.
+const StatusInput = z.object({
+  student_id: z.string().uuid(),
+  status: z.enum(["active", "withdrawn", "transferred", "graduated"]),
+  reason: z.string().max(500).optional(),
+});
+
+export const adminSetStudentStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => StatusInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId);
+    if (!(roles ?? []).some((r) => r.role === "super_admin")) throw new Error("Forbidden");
+
+    const { data: student, error: findErr } = await supabaseAdmin
+      .from("students")
+      .select("id, full_name, status")
+      .eq("id", data.student_id)
+      .maybeSingle();
+    if (findErr) throw new Error(findErr.message);
+    if (!student) throw new Error("Pupil not found");
+
+    const { error: updErr } = await supabaseAdmin
+      .from("students")
+      .update({
+        status: data.status,
+        status_reason: data.reason?.trim() || null,
+        status_date: new Date().toISOString().slice(0, 10),
+        status_changed_at: new Date().toISOString(),
+      } as never)
+      .eq("id", data.student_id);
+    if (updErr) throw new Error(updErr.message);
+
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "student_status_changed",
+      entity_type: "students",
+      entity_id: data.student_id,
+      details: { from: student.status, to: data.status, reason: data.reason ?? null, full_name: student.full_name },
+    } as never);
+
+    return { ok: true as const };
   });
