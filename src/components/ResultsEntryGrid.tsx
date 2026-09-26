@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { computeGrade } from "@/lib/grading";
 
 const TERMS = ["First", "Second", "Third"] as const;
+
+// Sentinel for the Class Arm select meaning "every arm in this class" —
+// shadcn's Select can't hold a real empty string as a value.
+const ALL_ARMS = "all";
+
+interface Department {
+  id: string;
+  name: string;
+}
 
 interface ClassArm {
   id: string;
@@ -23,6 +32,7 @@ interface ClassArm {
 interface Student {
   id: string;
   full_name: string;
+  class_arm_id: string;
 }
 
 interface Subject {
@@ -39,9 +49,38 @@ interface AcademicSession {
 interface GridEntry {
   student_id: string;
   full_name: string;
+  class_arm_name: string;
   ca_score: string;
   exam_score: string;
   existing_result_id?: string;
+}
+
+// Auto-save-to-draft: while a teacher is typing scores, the in-progress grid
+// is mirrored into localStorage so that navigating away (back to the
+// dashboard, a refresh, a lost connection, etc.) without pressing "Save"
+// never throws the entries away. The draft is scoped to the exact
+// session/term/class/arm/subject combination, so switching scope never mixes
+// drafts, and it's cleared the moment those scores are actually saved.
+const DRAFT_PREFIX = "resultEntryDraft:v1:";
+
+interface DraftPayload {
+  savedAt: number;
+  scores: Record<string, { ca_score: string; exam_score: string }>;
+}
+
+function draftKey(f: { sessionId: string; semester: string; departmentId: string; classArmId: string; subjectId: string }): string | null {
+  if (!f.sessionId || !f.departmentId || !f.subjectId) return null;
+  return `${DRAFT_PREFIX}${f.sessionId}:${f.semester}:${f.departmentId}:${f.classArmId || ALL_ARMS}:${f.subjectId}`;
+}
+
+function readDraft(key: string): DraftPayload | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as DraftPayload;
+  } catch {
+    return null;
+  }
 }
 
 export function ResultsEntryGrid() {
@@ -49,12 +88,14 @@ export function ResultsEntryGrid() {
   const [filters, setFilters] = useState({
     sessionId: "",
     semester: "First",
-    classArmId: "",
+    departmentId: "",
+    classArmId: "", // "" = every arm in the class
     subjectId: "",
   });
 
   const [gridEntries, setGridEntries] = useState<GridEntry[]>([]);
   const [hasLoadedStudents, setHasLoadedStudents] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
 
   // Fetch sessions
   const { data: sessions = [], isLoading: isLoadingSessions } = useQuery({
@@ -69,7 +110,17 @@ export function ResultsEntryGrid() {
     },
   });
 
-  // Fetch classes (arms), for the Class filter
+  // Fetch classes (a "class" = a department, e.g. "SS2"), for the Class filter
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments-for-entry"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("departments").select("id, name").order("name");
+      if (error) throw error;
+      return (data ?? []) as Department[];
+    },
+  });
+
+  // Fetch every arm (e.g. "SS2 A", "SS2 B"), for the Class Arm filter
   const { data: classArms = [] } = useQuery({
     queryKey: ["class-arms-for-entry"],
     queryFn: async () => {
@@ -82,30 +133,56 @@ export function ResultsEntryGrid() {
     },
   });
 
-  // Fetch subjects assigned to the selected class (see Subjects admin page,
-  // where a subject is ticked for the classes that take it).
+  // Arms within the chosen class filter
+  const armsInDepartment = useMemo(
+    () => classArms.filter((a) => a.department_id === filters.departmentId),
+    [classArms, filters.departmentId]
+  );
+
+  // The actual arm ids in scope: a single arm, or every arm in the class
+  // when "All arms" is picked (e.g. because the subject spans the whole class).
+  const scopedArmIds = useMemo(() => {
+    if (filters.classArmId) return [filters.classArmId];
+    return armsInDepartment.map((a) => a.id);
+  }, [filters.classArmId, armsInDepartment]);
+
+  const armNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    classArms.forEach((a) => {
+      m[a.id] = a.departments?.name ? `${a.departments.name} ${a.name}` : a.name;
+    });
+    return m;
+  }, [classArms]);
+
+  // Fetch subjects assigned to any arm in scope (see the Subjects admin page,
+  // where a subject is ticked for the arms that take it — a subject that
+  // spans a whole class simply has every arm ticked).
   const { data: subjects = [] } = useQuery({
-    queryKey: ["subjects-by-class", filters.classArmId],
-    enabled: !!filters.classArmId,
+    queryKey: ["subjects-by-scope", scopedArmIds.slice().sort().join(",")],
+    enabled: scopedArmIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("class_subjects")
         .select("courses:course_id(id, code, title)")
-        .eq("class_arm_id", filters.classArmId);
+        .in("class_arm_id", scopedArmIds);
       if (error) throw error;
-      return ((data ?? []).map((r: any) => r.courses).filter(Boolean) as Subject[]).sort((a, b) => a.code.localeCompare(b.code));
+      const seen = new Map<string, Subject>();
+      (data ?? []).forEach((r: any) => {
+        if (r.courses) seen.set(r.courses.id, r.courses);
+      });
+      return Array.from(seen.values()).sort((a, b) => a.code.localeCompare(b.code));
     },
   });
 
-  // Fetch pupils in the selected class
-  const { data: classStudents = [] } = useQuery({
-    queryKey: ["students-by-class", filters.classArmId],
-    enabled: !!filters.classArmId,
+  // Fetch pupils in scope (one arm, or every arm in the class)
+  const { data: scopedStudents = [] } = useQuery({
+    queryKey: ["students-by-scope", scopedArmIds.slice().sort().join(",")],
+    enabled: scopedArmIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, full_name")
-        .eq("class_arm_id", filters.classArmId)
+        .select("id, full_name, class_arm_id")
+        .in("class_arm_id", scopedArmIds)
         .order("full_name");
       if (error) throw error;
       return (data ?? []) as Student[];
@@ -134,38 +211,68 @@ export function ResultsEntryGrid() {
     [subjects, filters.subjectId]
   );
 
+  // Whether the grid currently spans more than one arm, so we know whether
+  // to show the Arm column and whether a save covers the whole class.
+  const isWholeClassView = !filters.classArmId && armsInDepartment.length > 1;
+
   // Handle filter changes
   const handleFilterChange = useCallback(
     (field: keyof typeof filters, value: string) => {
-      setFilters((prev) => ({ ...prev, [field]: value, ...(field === "classArmId" ? { subjectId: "" } : {}) }));
+      setFilters((prev) => ({
+        ...prev,
+        [field]: value,
+        ...(field === "departmentId" ? { classArmId: "", subjectId: "" } : {}),
+        ...(field === "classArmId" ? { subjectId: "" } : {}),
+      }));
       setGridEntries([]);
       setHasLoadedStudents(false);
+      setStudentSearch("");
     },
     []
   );
 
   // Load students into the grid
   const handleLoadStudents = useCallback(() => {
-    if (!filters.sessionId || !filters.subjectId || !filters.classArmId) {
+    if (!filters.sessionId || !filters.subjectId || !filters.departmentId) {
       toast.error("Please select Session, Class, and Subject");
       return;
     }
 
-    const entries = classStudents.map((student) => {
+    const entries: GridEntry[] = scopedStudents.map((student) => {
       const existingResult = existingResults.find((r) => r.student_id === student.id);
       return {
         student_id: student.id,
         full_name: student.full_name,
+        class_arm_name: armNameById[student.class_arm_id] ?? "",
         ca_score: existingResult?.ca_score ? String(existingResult.ca_score) : "",
         exam_score: existingResult?.exam_score ? String(existingResult.exam_score) : "",
         existing_result_id: existingResult?.id,
       };
     });
 
-    setGridEntries(entries);
+    // Restore any unsaved scores left behind from a previous visit to this
+    // exact session/term/class/arm/subject combination.
+    const key = draftKey(filters);
+    const draft = key ? readDraft(key) : null;
+    let restoredCount = 0;
+    const finalEntries = draft
+      ? entries.map((entry) => {
+          const d = draft.scores[entry.student_id];
+          if (!d) return entry;
+          if (d.ca_score === entry.ca_score && d.exam_score === entry.exam_score) return entry;
+          restoredCount++;
+          return { ...entry, ca_score: d.ca_score, exam_score: d.exam_score };
+        })
+      : entries;
+
+    setGridEntries(finalEntries);
     setHasLoadedStudents(true);
-    toast.success(`Loaded ${entries.length} pupils`);
-  }, [filters.sessionId, filters.subjectId, filters.classArmId, classStudents, existingResults]);
+    setStudentSearch("");
+    toast.success(`Loaded ${finalEntries.length} pupil${finalEntries.length !== 1 ? "s" : ""}`);
+    if (restoredCount > 0) {
+      toast.info(`Restored ${restoredCount} unsaved score${restoredCount !== 1 ? "s" : ""} from where you left off`);
+    }
+  }, [filters, scopedStudents, existingResults, armNameById]);
 
   // Handle score input changes
   const handleScoreChange = useCallback(
@@ -178,6 +285,30 @@ export function ResultsEntryGrid() {
     },
     []
   );
+
+  // Auto-save to draft: mirror any entered-but-unsaved scores into
+  // localStorage as they're typed, so navigating away (e.g. back to the
+  // dashboard) without clicking "Save" never loses them.
+  const currentDraftKey = draftKey(filters);
+  useEffect(() => {
+    if (!hasLoadedStudents || !currentDraftKey) return;
+    const scores: DraftPayload["scores"] = {};
+    gridEntries.forEach((entry) => {
+      if (entry.ca_score || entry.exam_score) {
+        scores[entry.student_id] = { ca_score: entry.ca_score, exam_score: entry.exam_score };
+      }
+    });
+    try {
+      if (Object.keys(scores).length === 0) {
+        localStorage.removeItem(currentDraftKey);
+      } else {
+        localStorage.setItem(currentDraftKey, JSON.stringify({ savedAt: Date.now(), scores } satisfies DraftPayload));
+      }
+    } catch {
+      // localStorage can fail (private browsing, quota) — the draft is a
+      // convenience, not the source of truth, so just skip it silently.
+    }
+  }, [gridEntries, hasLoadedStudents, currentDraftKey]);
 
   // Pressing Enter in a score field moves focus to the next field in
   // reading order — CA, then Exam, then the next row's CA — the same way
@@ -211,6 +342,15 @@ export function ResultsEntryGrid() {
     },
     [gridEntries]
   );
+
+  // Search box lets a teacher jump straight to one pupil in a long class
+  // list instead of scrolling — it only narrows what's displayed, so scores
+  // already entered for pupils that scroll out of view are untouched.
+  const filteredEntries = useMemo(() => {
+    const q = studentSearch.trim().toLowerCase();
+    if (!q) return gridEntries;
+    return gridEntries.filter((entry) => entry.full_name.toLowerCase().includes(q));
+  }, [gridEntries, studentSearch]);
 
   // Validate all entries
   const validationStatus = useMemo(() => {
@@ -305,13 +445,39 @@ export function ResultsEntryGrid() {
       qc.invalidateQueries({ queryKey: ["results"] });
       qc.invalidateQueries({ queryKey: ["history"] });
 
+      // These scores are safely in the database now — the local safety net
+      // for this scope is no longer needed.
+      const key = draftKey(filters);
+      if (key) {
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          // ignore
+        }
+      }
+
       setGridEntries([]);
       setHasLoadedStudents(false);
+      setStudentSearch("");
     },
     onError: (error: Error) => {
       toast.error(`Failed to save: ${error.message}`);
     },
   });
+
+  const handleClearGrid = useCallback(() => {
+    const key = draftKey(filters);
+    if (key) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    }
+    setGridEntries([]);
+    setHasLoadedStudents(false);
+    setStudentSearch("");
+  }, [filters]);
 
   return (
     <div className="space-y-6">
@@ -327,7 +493,7 @@ export function ResultsEntryGrid() {
         <CardHeader>
           <CardTitle className="text-base">Select Scope</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-5">
+        <CardContent className="grid gap-3 md:grid-cols-6">
           {/* Session Filter */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Session</Label>
@@ -371,17 +537,17 @@ export function ResultsEntryGrid() {
           {/* Class Filter */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Class</Label>
-            <Select value={filters.classArmId} onValueChange={(value) => handleFilterChange("classArmId", value)}>
+            <Select value={filters.departmentId} onValueChange={(value) => handleFilterChange("departmentId", value)}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Class" />
               </SelectTrigger>
               <SelectContent>
-                {classArms.length === 0 ? (
+                {departments.length === 0 ? (
                   <div className="px-2 py-2 text-xs text-muted-foreground">No classes found</div>
                 ) : (
-                  classArms.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.departments?.name ? `${c.departments.name} ${c.name}` : c.name}
+                  departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
                     </SelectItem>
                   ))
                 )}
@@ -389,17 +555,41 @@ export function ResultsEntryGrid() {
             </Select>
           </div>
 
+          {/* Class Arm Filter */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Class Arm</Label>
+            <Select
+              value={filters.classArmId || ALL_ARMS}
+              onValueChange={(value) => handleFilterChange("classArmId", value === ALL_ARMS ? "" : value)}
+              disabled={!filters.departmentId}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Class Arm" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_ARMS}>
+                  {armsInDepartment.length > 1 ? "All arms (whole class)" : "All arms"}
+                </SelectItem>
+                {armsInDepartment.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Subject Filter */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Subject</Label>
-            <Select value={filters.subjectId} onValueChange={(value) => handleFilterChange("subjectId", value)} disabled={!filters.classArmId}>
+            <Select value={filters.subjectId} onValueChange={(value) => handleFilterChange("subjectId", value)} disabled={!filters.departmentId}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Subject" />
               </SelectTrigger>
               <SelectContent>
                 {subjects.length === 0 ? (
                   <div className="px-2 py-2 text-xs text-muted-foreground">
-                    {filters.classArmId ? "No subjects assigned to this class yet" : "Pick a class first"}
+                    {filters.departmentId ? "No subjects assigned to this class yet" : "Pick a class first"}
                   </div>
                 ) : (
                   subjects.map((c) => (
@@ -437,7 +627,7 @@ export function ResultsEntryGrid() {
       {selectedSubject && hasLoadedStudents && (
         <Card className="tsu-shadow bg-secondary/30 border-border">
           <CardContent className="pt-4 text-sm">
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-6">
               <div>
                 <span className="font-medium">Subject:</span>
                 <span className="ml-2">{selectedSubject.code} — {selectedSubject.title}</span>
@@ -446,6 +636,12 @@ export function ResultsEntryGrid() {
                 <span className="font-medium">Pupils Loaded:</span>
                 <span className="ml-2 font-mono">{gridEntries.length}</span>
               </div>
+              {isWholeClassView && (
+                <div>
+                  <span className="font-medium">Scope:</span>
+                  <span className="ml-2">Whole class — every arm</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -454,11 +650,24 @@ export function ResultsEntryGrid() {
       {/* Grid Entry Table */}
       {hasLoadedStudents && gridEntries.length > 0 && (
         <Card className="tsu-shadow">
-          <CardHeader>
-            <CardTitle className="text-base">Enter Scores</CardTitle>
-            <p className="text-xs text-muted-foreground mt-2">
-              Enter CA (0-40) and Exam (0-70) scores. Leave blank to skip a pupil.
-            </p>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base">Enter Scores</CardTitle>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Enter CA (0-40) and Exam (0-70) scores. Leave blank to skip a pupil.
+                </p>
+              </div>
+              <div className="relative sm:w-64">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  placeholder="Search pupil by name..."
+                  className="h-9 pl-8"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -466,6 +675,7 @@ export function ResultsEntryGrid() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">Name</TableHead>
+                    {isWholeClassView && <TableHead className="text-xs">Arm</TableHead>}
                     <TableHead className="text-center text-xs">CA (0-40)</TableHead>
                     <TableHead className="text-center text-xs">Exam (0-70)</TableHead>
                     <TableHead className="text-center text-xs">Total</TableHead>
@@ -473,7 +683,14 @@ export function ResultsEntryGrid() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {gridEntries.map((entry) => {
+                  {filteredEntries.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={isWholeClassView ? 6 : 5} className="text-center text-sm text-muted-foreground py-8">
+                        No pupils match "{studentSearch}"
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredEntries.map((entry) => {
                     const ca = entry.ca_score ? Number(entry.ca_score) : 0;
                     const exam = entry.exam_score ? Number(entry.exam_score) : 0;
                     const total = entry.ca_score && entry.exam_score ? Math.min(ca + exam, 100) : null;
@@ -486,6 +703,9 @@ export function ResultsEntryGrid() {
                         className={entryErrors ? "bg-destructive/10" : ""}
                       >
                         <TableCell className="text-sm py-3">{entry.full_name}</TableCell>
+                        {isWholeClassView && (
+                          <TableCell className="text-xs text-muted-foreground py-3">{entry.class_arm_name}</TableCell>
+                        )}
                         <TableCell className="text-center py-3">
                           <Input
                             ref={registerInputRef(entry.student_id, "ca_score")}
@@ -599,14 +819,7 @@ export function ResultsEntryGrid() {
                   `Save All Scores (${validationStatus.validCount})`
                 )}
               </Button>
-              <Button
-                onClick={() => {
-                  setGridEntries([]);
-                  setHasLoadedStudents(false);
-                }}
-                variant="outline"
-                size="sm"
-              >
+              <Button onClick={handleClearGrid} variant="outline" size="sm">
                 Clear
               </Button>
             </div>
