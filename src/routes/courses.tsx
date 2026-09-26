@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2, Edit2 } from "lucide-react";
+import { Trash2, Edit2, ListPlus, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/courses")({
   head: () => ({ meta: [{ title: "Subjects — School Portal" }] }),
@@ -115,6 +116,82 @@ export function SubjectsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // --- Bulk add subjects --------------------------------------------------
+  // One subject per line. Unlike a pupil's name, a subject needs both a
+  // code and a title, so each line is "CODE - Subject Name" (a colon or
+  // comma works too, and pasting straight from a spreadsheet — which
+  // separates the two with a tab — works as well). Classes ticked below
+  // apply to every subject in the batch; if a subject needs a different
+  // set of classes, add or edit it individually afterward.
+  const [bulkText, setBulkText] = useState("");
+  const [bulkClassIds, setBulkClassIds] = useState<string[]>([]);
+  const [bulkReport, setBulkReport] = useState<{ added: string[]; skippedDuplicate: string[]; skippedInvalid: string[] } | null>(null);
+
+  const parsedBulkLines = useMemo(() => {
+    const existingCodes = new Set(subjects.map((s: any) => String(s.code).toUpperCase()));
+    const seenInBatch = new Set<string>();
+    const rows: { raw: string; code: string | null; title: string | null; status: "ok" | "invalid" | "duplicate" }[] = [];
+
+    for (const rawLine of bulkText.split("\n")) {
+      const raw = rawLine.trim();
+      if (!raw) continue;
+
+      // Try, in order: "CODE - Title", "CODE: Title", "CODE, Title",
+      // a tab (pasted from a spreadsheet), then finally "CODE Title"
+      // (first whitespace run splits code from title).
+      const separatorMatch = raw.match(/^(.+?)\s*[-:,\t]\s*(.+)$/) ?? raw.match(/^(\S+)\s+(.+)$/);
+      const code = separatorMatch?.[1]?.trim().toUpperCase() || null;
+      const title = separatorMatch?.[2]?.trim() || null;
+
+      if (!code || !title) {
+        rows.push({ raw, code: null, title: null, status: "invalid" });
+        continue;
+      }
+      if (existingCodes.has(code) || seenInBatch.has(code)) {
+        rows.push({ raw, code, title, status: "duplicate" });
+        continue;
+      }
+      seenInBatch.add(code);
+      rows.push({ raw, code, title, status: "ok" });
+    }
+    return rows;
+  }, [bulkText, subjects]);
+
+  const bulkValidRows = useMemo(() => parsedBulkLines.filter((r) => r.status === "ok"), [parsedBulkLines]);
+
+  const bulkAddMut = useMutation({
+    mutationFn: async () => {
+      if (bulkValidRows.length === 0) throw new Error("No new subjects to add — check the list below");
+      const { data: inserted, error } = await supabase
+        .from("courses")
+        .insert(bulkValidRows.map((r) => ({ code: r.code, title: r.title, unit: 1, level: null, semester: null })) as never)
+        .select("id, code");
+      if (error) throw error;
+      const ids = (inserted as { id: string; code: string }[]).map((r) => r.id);
+      if (bulkClassIds.length > 0 && ids.length > 0) {
+        const { error: linkErr } = await supabase
+          .from("class_subjects")
+          .insert(ids.flatMap((course_id) => bulkClassIds.map((class_arm_id) => ({ course_id, class_arm_id }))) as never);
+        if (linkErr) throw linkErr;
+      }
+      return inserted as { id: string; code: string }[];
+    },
+    onSuccess: (inserted) => {
+      toast.success(`${inserted.length} subject${inserted.length !== 1 ? "s" : ""} added`);
+      setBulkReport({
+        added: bulkValidRows.map((r) => `${r.code} — ${r.title}`),
+        skippedDuplicate: parsedBulkLines.filter((r) => r.status === "duplicate").map((r) => r.code as string),
+        skippedInvalid: parsedBulkLines.filter((r) => r.status === "invalid").map((r) => r.raw),
+      });
+      setBulkText("");
+      setBulkClassIds([]);
+      qc.invalidateQueries({ queryKey: ["subjects"] });
+      qc.invalidateQueries({ queryKey: ["class-subjects"] });
+      qc.invalidateQueries({ queryKey: ["count", "subjects"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const delMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("courses").delete().eq("id", id);
@@ -209,6 +286,60 @@ export function SubjectsPage() {
               <ClassCheckboxList selected={selectedClassIds} onToggle={(id) => toggleClass(selectedClassIds, setSelectedClassIds, id)} />
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="tsu-shadow">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><ListPlus className="h-4 w-4" /> Bulk add subjects</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            One subject per line, as <span className="font-mono">CODE - Subject Name</span> (a colon, comma, or pasting straight
+            from a spreadsheet works too). The classes ticked below apply to every subject in this batch.
+          </p>
+          <div className="space-y-1.5">
+            <Label>Subjects</Label>
+            <Textarea
+              className="min-h-[160px] font-mono text-sm"
+              placeholder={"MTH - Mathematics\nENG - English Language\nSCI - Basic Science"}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+            />
+            {bulkText.trim().length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {bulkValidRows.length} new subject{bulkValidRows.length !== 1 ? "s" : ""} detected
+                {parsedBulkLines.some((r) => r.status !== "ok") && (
+                  <> — {parsedBulkLines.filter((r) => r.status === "duplicate").length} already exist,{" "}
+                  {parsedBulkLines.filter((r) => r.status === "invalid").length} couldn't be read</>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Classes taking these subjects</Label>
+            <ClassCheckboxList selected={bulkClassIds} onToggle={(id) => toggleClass(bulkClassIds, setBulkClassIds, id)} />
+          </div>
+          <Button
+            disabled={bulkAddMut.isPending || bulkValidRows.length === 0}
+            onClick={() => bulkAddMut.mutate()}
+          >
+            {bulkAddMut.isPending ? "Adding…" : `Add ${bulkValidRows.length || ""} subject${bulkValidRows.length === 1 ? "" : "s"}`}
+          </Button>
+
+          {bulkReport && (
+            <div className="space-y-2 rounded-md border border-border p-3 text-sm">
+              {bulkReport.added.length > 0 && (
+                <p className="flex items-start gap-2 text-emerald-700"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> Added: {bulkReport.added.join(", ")}</p>
+              )}
+              {bulkReport.skippedDuplicate.length > 0 && (
+                <p className="flex items-start gap-2 text-amber-700"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> Skipped (already exist): {bulkReport.skippedDuplicate.join(", ")}</p>
+              )}
+              {bulkReport.skippedInvalid.length > 0 && (
+                <p className="flex items-start gap-2 text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> Couldn't be read — check the format: {bulkReport.skippedInvalid.join(" | ")}</p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
