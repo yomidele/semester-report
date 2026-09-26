@@ -20,7 +20,7 @@ function Page() {
     queryKey: ["teacher-assignments", teacher.data?.id], enabled: !!teacher.data,
     queryFn: async () => {
       const { data } = await supabase.from("course_assignments")
-               .select("id, semester, course_id, session_id, courses(code, title, level, unit), academic_sessions(name)")
+               .select("id, semester, course_id, session_id, department_id, class_arm_id, courses(code, title, level, unit), academic_sessions(name), departments:department_id(name), class_arms:class_arm_id(name)")
         .eq("lecturer_id", teacher.data!.id);
       return data ?? [];
     },
@@ -68,16 +68,29 @@ function Page() {
         </div>
       )}
       <div className="grid gap-3 md:grid-cols-2">
-        {(assignments.data ?? []).map((a: any) => (
-           <Link key={a.id} to="/lecturer/entry" search={{ assignment_id: a.id }}>
-            <Card className="tsu-shadow transition-colors hover:border-primary">
-              <CardHeader><CardTitle className="text-base">{a.courses?.code} — {a.courses?.title}</CardTitle></CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Level {a.courses?.level} · {a.semester} Term · {a.courses?.unit} units · {a.academic_sessions?.name}
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+        {(assignments.data ?? []).map((a: any) => {
+          // A null class_arm_id means the assignment covers every arm of the
+          // class (see lecturer.entry.tsx), so label it as such rather than
+          // implying a single arm.
+          const className = a.departments?.name
+            ? a.class_arms?.name
+              ? `${a.departments.name} ${a.class_arms.name}`
+              : `${a.departments.name} — All arms`
+            : null;
+          return (
+            <Link key={a.id} to="/lecturer/entry" search={{ assignment_id: a.id }}>
+              <Card className="tsu-shadow transition-colors hover:border-primary">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-base">{a.courses?.code} — {a.courses?.title}</CardTitle>
+                  {className && <p className="text-sm font-medium text-primary">{className}</p>}
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  {a.semester} Term · {a.academic_sessions?.name}
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
         {(assignments.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No subjects assigned yet. Contact the Super Admin.</p>}
       </div>
     </div>
