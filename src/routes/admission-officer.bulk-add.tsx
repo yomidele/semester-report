@@ -60,7 +60,7 @@ function Page() {
       lastResult.pupils.map((p) => ({
         admission_number: p.admission_number,
         full_name: p.full_name,
-        admission_date: new Date().toISOString(),
+        admission_date: p.admission_date,
         class_name: lastClassName || "the assigned class",
         school: lastResult.school,
       })),

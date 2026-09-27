@@ -307,6 +307,7 @@ export const enrollStudent = createServerFn({ method: "POST" })
     // Primary pupils don't have a "level" the way college students do
     // (100/200/300...); level is kept for schema compatibility with the
     // shared results/transcript code and is not shown to primary users.
+    const admissionDate = new Date().toISOString();
     const studentRow = {
       user_id: userId,
       matric_number: admissionNumber,
@@ -323,6 +324,7 @@ export const enrollStudent = createServerFn({ method: "POST" })
       guardian_name: data.guardian_name ?? null,
       guardian_phone: data.guardian_phone ?? null,
       passport_url: passportUrl,
+      admission_date: admissionDate,
     };
     const { error: studentErr } = await supabaseAdmin.from("students").insert(studentRow as never);
     if (studentErr) {
@@ -335,7 +337,7 @@ export const enrollStudent = createServerFn({ method: "POST" })
       ok: true as const,
       admission_number: admissionNumber,
       full_name: data.full_name,
-      admission_date: new Date().toISOString(),
+      admission_date: admissionDate,
       temporary_password: temporaryPassword,
       school: {
         name: settings?.college_name ?? "the school",
@@ -393,7 +395,7 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
     const yearCode = String(new Date().getFullYear()).slice(-2);
     const deptCode = (dept.code ?? "PRI").toUpperCase();
 
-    const results: { full_name: string; admission_number: string }[] = [];
+    const results: { full_name: string; admission_number: string; admission_date: string }[] = [];
 
     // Sequential, not parallel: next_matric_seq must be awaited one at a time
     // so each pupil gets a distinct, gap-free sequence number.
@@ -415,6 +417,7 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
         .replaceAll("{YY}", yearCode)
         .replaceAll("{SEQ}", sequence);
 
+      const admissionDate = new Date().toISOString();
       const { error: insertErr } = await supabaseAdmin.from("students").insert({
         user_id: null,
         matric_number: admissionNumber,
@@ -424,10 +427,11 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
         faculty_id: data.faculty_id,
         department_id: data.department_id,
         class_arm_id: data.class_arm_id ?? null,
+        admission_date: admissionDate,
       } as never);
       if (insertErr) throw new Error(`Failed to add ${full_name}: ${insertErr.message}`);
 
-      results.push({ full_name, admission_number: admissionNumber });
+      results.push({ full_name, admission_number: admissionNumber, admission_date: admissionDate });
     }
 
     const { data: schoolSettings } = await supabaseAdmin

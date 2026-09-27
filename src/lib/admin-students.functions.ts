@@ -57,6 +57,7 @@ export const adminEnrollStudent = createServerFn({ method: "POST" })
       class_arm_id: data.class_arm_id,
       department_id: arm.department_id,
       faculty_id,
+      admission_date: new Date().toISOString(),
     } as never);
     if (insErr) throw new Error(insErr.message);
 
