@@ -44,12 +44,17 @@ function Page() {
         data: { faculty_id: facultyId, department_id: departmentId, class_arm_id: armId || null, full_names: names },
       }),
     onSuccess: (result) => {
-      toast.success(`${result.count} pupils added`);
       const dept = departmentsQ.data?.find((d) => d.id === departmentId);
       const arm = armsQ.data?.find((a) => a.id === armId);
       setLastClassName([dept?.name, arm?.name].filter(Boolean).join(" — "));
       setLastResult(result);
-      setNamesText("");
+      if (result.failures.length === 0) {
+        toast.success(`${result.count} pupils added`);
+        setNamesText("");
+      } else {
+        toast.error(`${result.count} added, ${result.failures.length} failed — see details below`);
+        setNamesText(result.failures.map((f) => f.full_name).join("\n"));
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -91,7 +96,24 @@ function Page() {
                 <p className="text-xs text-muted-foreground">Admission numbers assigned automatically</p>
               </div>
             </div>
-            <Button size="sm" onClick={downloadLetters}><Download className="mr-2 h-4 w-4" /> Download all admission letters</Button>
+            <Button size="sm" onClick={downloadLetters} disabled={lastResult.count === 0}><Download className="mr-2 h-4 w-4" /> Download all admission letters</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {lastResult && lastResult.failures.length > 0 && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium text-destructive">{lastResult.failures.length} pupil(s) could not be added</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Their names have been put back in the box below so you can just click "Add" again — if it keeps
+              failing for the same name, there's likely already a pupil with that exact name/number in this class.
+            </p>
+            <ul className="mt-2 space-y-1 text-xs text-destructive">
+              {lastResult.failures.map((f, i) => (
+                <li key={i}>{f.full_name}: {f.reason}</li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}

@@ -35,31 +35,45 @@ export const adminEnrollStudent = createServerFn({ method: "POST" })
 
     const yearCode = String(new Date().getFullYear()).slice(-2);
     const deptCode = ((arm.departments as { code: string | null } | null)?.code ?? "CLS").toUpperCase();
-    const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
-      _department_id: arm.department_id,
-      _year_code: yearCode,
-    });
-    if (seqErr || typeof seq !== "number") throw new Error(seqErr?.message ?? "Could not allocate an admission number");
 
     const { data: settings } = await supabaseAdmin.from("college_settings").select("matric_format, matric_seq_padding").limit(1).maybeSingle();
     const matricFormat = settings?.matric_format ?? "{DEPT}/{YY}/{SEQ}";
-    const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
-    const admission_number = matricFormat
-      .replaceAll("{FAC}", deptCode)
-      .replaceAll("{DEPT}", deptCode)
-      .replaceAll("{CLASS}", deptCode)
-      .replaceAll("{YY}", yearCode)
-      .replaceAll("{SEQ}", sequence);
 
-    const { error: insErr } = await supabaseAdmin.from("students").insert({
-      matric_number: admission_number,
-      full_name: data.full_name,
-      class_arm_id: data.class_arm_id,
-      department_id: arm.department_id,
-      faculty_id,
-      admission_date: new Date().toISOString(),
-    } as never);
-    if (insErr) throw new Error(insErr.message);
+    // Retry on a duplicate admission number rather than fail outright — see
+    // the same handling in bulkEnrollStudents (src/lib/school-admin.functions.ts)
+    // for why a collision can happen even though next_matric_seq is awaited
+    // one call at a time.
+    let admission_number = "";
+    let lastError: string | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
+        _department_id: arm.department_id,
+        _year_code: yearCode,
+      });
+      if (seqErr || typeof seq !== "number") throw new Error(seqErr?.message ?? "Could not allocate an admission number");
+
+      const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
+      const candidate = matricFormat
+        .replaceAll("{FAC}", deptCode)
+        .replaceAll("{DEPT}", deptCode)
+        .replaceAll("{CLASS}", deptCode)
+        .replaceAll("{YY}", yearCode)
+        .replaceAll("{SEQ}", sequence);
+
+      const { error: insErr } = await supabaseAdmin.from("students").insert({
+        matric_number: candidate,
+        full_name: data.full_name,
+        class_arm_id: data.class_arm_id,
+        department_id: arm.department_id,
+        faculty_id,
+        admission_date: new Date().toISOString(),
+      } as never);
+
+      if (!insErr) { admission_number = candidate; break; }
+      if (insErr.message.includes("students_matric_number_key")) { lastError = insErr.message; continue; }
+      throw new Error(insErr.message);
+    }
+    if (!admission_number) throw new Error(lastError ?? "Could not allocate a unique admission number after several attempts");
 
     return { ok: true as const, admission_number };
   });
