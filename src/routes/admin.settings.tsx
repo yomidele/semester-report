@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Building2 } from "lucide-react";
 import { ProtectedAdmin } from "@/components/ProtectedAdmin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useRole } from "@/hooks/use-role";
 import { CollegeSettings, useCollegeSettings } from "@/lib/college-settings";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,12 +37,35 @@ function SettingsPage() {
   const [form, setForm] = useState<CollegeSettings>(settings);
   const [socials, setSocials] = useState(JSON.stringify(settings.socials, null, 2));
   const [gradingScale, setGradingScale] = useState(JSON.stringify(settings.grading_scale, null, 2));
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     setForm(settings);
     setSocials(JSON.stringify(settings.socials, null, 2));
     setGradingScale(JSON.stringify(settings.grading_scale, null, 2));
+    setLogoFile(null);
   }, [settings]);
+
+  const uploadLogo = async (file: File): Promise<string> => {
+    const ext = file.name.split(".").pop() || "png";
+    const path = `logo-${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("school-logo").upload(path, file, { upsert: true });
+    if (error) {
+      // Mirrors the same "bucket not created yet" situation documented for
+      // staff-photos: the bucket migration may not have been applied to
+      // this project yet.
+      if (/bucket not found/i.test(error.message)) {
+        throw new Error(
+          "Logo upload failed: the \"school-logo\" storage bucket doesn't exist yet in this Supabase project. " +
+            "Run the pending database migrations, or open the Supabase SQL Editor and run the storage.buckets insert " +
+            "from supabase/migrations/20260927150000_school_logo_and_passport_buckets.sql.",
+        );
+      }
+      throw new Error(`Logo upload failed: ${error.message}`);
+    }
+    return supabase.storage.from("school-logo").getPublicUrl(path).data.publicUrl;
+  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -53,9 +77,18 @@ function SettingsPage() {
       } catch {
         throw new Error("Socials and grading scale must contain valid JSON");
       }
+      let logo_url = form.logo_url;
+      if (logoFile) {
+        setUploadingLogo(true);
+        try {
+          logo_url = await uploadLogo(logoFile);
+        } finally {
+          setUploadingLogo(false);
+        }
+      }
       const values = {
         college_name: form.college_name.trim(), short_name: form.short_name.trim(), motto: form.motto,
-        logo_url: form.logo_url, address: form.address, city: form.city, state: form.state,
+        logo_url, address: form.address, city: form.city, state: form.state,
         phone: form.phone, email: form.email, website: form.website, socials: parsedSocials as unknown as Json,
         matric_format: form.matric_format.trim(), matric_seq_padding: form.matric_seq_padding,
         grading_scale: parsedScale as unknown as Json, pass_mark: form.pass_mark, use_gpa: form.use_gpa,
@@ -68,6 +101,7 @@ function SettingsPage() {
     },
     onSuccess: () => {
       toast.success("College settings saved");
+      setLogoFile(null);
       queryClient.invalidateQueries({ queryKey: ["college-settings"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -88,7 +122,16 @@ function SettingsPage() {
           <Field label="College name" value={form.college_name} onChange={(value) => set("college_name", value)} />
           <Field label="Short name" value={form.short_name} onChange={(value) => set("short_name", value)} />
           <Field label="Motto" value={form.motto ?? ""} onChange={(value) => set("motto", value)} />
-          <Field label="Logo URL" value={form.logo_url ?? ""} onChange={(value) => set("logo_url", value)} />
+          <label className="space-y-1.5 text-sm font-medium md:col-span-2">
+            <Label>School logo</Label>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 rounded-md border">
+                <AvatarImage src={logoFile ? URL.createObjectURL(logoFile) : form.logo_url || undefined} className="object-contain" />
+                <AvatarFallback className="rounded-md"><Building2 className="h-6 w-6 text-muted-foreground" /></AvatarFallback>
+              </Avatar>
+              <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} className="max-w-xs" />
+            </div>
+          </label>
           <Field label="Address" value={form.address ?? ""} onChange={(value) => set("address", value)} />
           <Field label="City" value={form.city ?? ""} onChange={(value) => set("city", value)} />
           <Field label="State" value={form.state ?? ""} onChange={(value) => set("state", value)} />
@@ -157,7 +200,7 @@ function SettingsPage() {
             </p>
           </CardContent>
         </Card>
-        <Button type="submit" disabled={save.isPending}>{save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save settings</Button>
+        <Button type="submit" disabled={save.isPending}>{save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{uploadingLogo ? "Uploading logo…" : "Save settings"}</Button>
       </form>
     </div>
   );

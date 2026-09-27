@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Loader2, Download, CheckCircle2 } from "lucide-react";
 import { enrollStudent } from "@/lib/school-admin.functions";
 import { generateAdmissionLetterPdf } from "@/lib/admission-letter";
+import { PhotoCaptureInput } from "@/components/PhotoCaptureInput";
 
 export const Route = createFileRoute("/admission-officer/enroll")({
   head: () => ({ meta: [{ title: "Enrol a Pupil — Admission Officer" }] }),
@@ -34,6 +35,7 @@ const emptyForm = {
 function Page() {
   const enroll = useServerFn(enrollStudent);
   const [form, setForm] = useState(emptyForm);
+  const [passportPhoto, setPassportPhoto] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
     admission_number: string;
     full_name: string;
@@ -81,6 +83,7 @@ function Page() {
           faculty_id: form.faculty_id,
           department_id: form.department_id,
           class_arm_id: form.class_arm_id || null,
+          passport_base64: passportPhoto!,
         },
       });
       return { result, className: dept ? (arm ? `${dept.name} — ${arm.name}` : dept.name) : "" };
@@ -96,6 +99,7 @@ function Page() {
         school: result.school,
       });
       setForm(emptyForm);
+      setPassportPhoto(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -138,9 +142,16 @@ function Page() {
             onSubmit={(e) => {
               e.preventDefault();
               if (!form.full_name || !form.email || !form.faculty_id || !form.department_id) return;
+              if (!passportPhoto) {
+                toast.error("Add the pupil's passport photograph — upload a file or capture one with the camera");
+                return;
+              }
               enrollMut.mutate();
             }}
           >
+            <div className="md:col-span-2">
+              <PhotoCaptureInput value={passportPhoto} onChange={setPassportPhoto} required disabled={enrollMut.isPending} />
+            </div>
             <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div>
             <div><Label>Email (for the pupil/parent login)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
             <div><Label>Gender</Label>
@@ -170,7 +181,7 @@ function Page() {
             </div>
 
             <div className="md:col-span-2">
-              <Button type="submit" disabled={enrollMut.isPending}>
+              <Button type="submit" disabled={enrollMut.isPending || !passportPhoto}>
                 {enrollMut.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Admitting…</> : "Admit pupil"}
               </Button>
             </div>

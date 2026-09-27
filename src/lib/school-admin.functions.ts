@@ -240,7 +240,13 @@ export const enrollStudent = createServerFn({ method: "POST" })
         faculty_id: z.string().uuid(),
         department_id: z.string().uuid(),
         class_arm_id: z.string().uuid().optional().nullable(),
-        passport_base64: z.string().optional().nullable(),
+        // Required: every pupil enrolled through this single-entry form must
+        // have a passport photograph on file (captured live via the device
+        // camera or uploaded from a file) — see PhotoCaptureInput on the
+        // enrol page. Bulk-add (a plain class-list import with no photos
+        // available at entry time) intentionally goes through a separate
+        // function and is not affected by this requirement.
+        passport_base64: z.string().min(1, "A passport photograph is required"),
       })
       .parse(input),
   )
@@ -291,17 +297,30 @@ export const enrollStudent = createServerFn({ method: "POST" })
     if (signUpErr || !created.user) throw new Error(signUpErr?.message ?? "Failed to create the pupil's account");
     const userId = created.user.id;
 
-    let passportUrl: string | null = null;
-    if (data.passport_base64) {
-      try {
-        const base64 = data.passport_base64.replace(/^data:image\/\w+;base64,/, "");
-        const buf = Buffer.from(base64, "base64");
-        const fileName = `${userId}/passport.jpg`;
-        const { error: uploadErr } = await supabaseAdmin.storage.from("passports").upload(fileName, buf, { contentType: "image/jpeg", upsert: true });
-        if (!uploadErr) passportUrl = supabaseAdmin.storage.from("passports").getPublicUrl(fileName).data.publicUrl;
-      } catch (e) {
-        console.error("Passport upload failed:", e);
+    // Passport photo is mandatory (validated above) — an upload failure here
+    // means the pupil would end up on record with no photograph at all, so
+    // this fails the whole enrolment (and rolls back the auth account just
+    // created) rather than silently continuing, like the students-insert
+    // failure path just below already does for the same reason.
+    let passportUrl: string;
+    try {
+      const base64 = data.passport_base64.replace(/^data:image\/\w+;base64,/, "");
+      const buf = Buffer.from(base64, "base64");
+      const fileName = `${userId}/passport.jpg`;
+      const { error: uploadErr } = await supabaseAdmin.storage.from("passports").upload(fileName, buf, { contentType: "image/jpeg", upsert: true });
+      if (uploadErr) throw new Error(uploadErr.message);
+      passportUrl = supabaseAdmin.storage.from("passports").getPublicUrl(fileName).data.publicUrl;
+    } catch (e) {
+      await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
+      const message = e instanceof Error ? e.message : String(e);
+      if (/bucket not found/i.test(message)) {
+        throw new Error(
+          "Passport photo upload failed: the \"passports\" storage bucket doesn't exist yet in this Supabase project. " +
+            "Run the pending database migrations, or open the Supabase SQL Editor and run the storage.buckets insert " +
+            "from supabase/migrations/20260927150000_school_logo_and_passport_buckets.sql.",
+        );
       }
+      throw new Error(`Passport photo upload failed: ${message}`);
     }
 
     // Primary pupils don't have a "level" the way college students do
