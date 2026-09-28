@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
+import { signInForRole } from "@/lib/login-role-guard";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -24,6 +24,9 @@ function TeacherLogin() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // This is the ONLY place that navigates to /lecturer/dashboard — see
+  // src/routes/login.tsx for why handleSignIn deliberately doesn't also
+  // navigate on its own.
   useEffect(() => {
     const allowed = roles.includes("teacher") || roles.includes("super_admin");
     if (!authLoading && !roleLoading && session && allowed) navigate({ to: "/lecturer/dashboard" });
@@ -33,10 +36,14 @@ function TeacherLogin() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { toast.error(error.message); return; }
+      const result = await signInForRole(email, password, ["teacher", "super_admin"], "Teacher");
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Welcome");
-       navigate({ to: "/lecturer/dashboard" });
+      // No navigate() here on purpose — the useEffect above handles it once
+      // the role is actually confirmed.
     } finally { setSubmitting(false); }
   };
 

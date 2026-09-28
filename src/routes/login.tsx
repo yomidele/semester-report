@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { ensureDemoAdmin } from "@/lib/seed-admin.functions";
+import { signInForRole } from "@/lib/login-role-guard";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
 import { toast } from "sonner";
@@ -49,9 +49,9 @@ function LoginPage() {
     try {
       // Attempt to seed (idempotent) before signing in to handle first-ever load
       await ensureDemoAdmin();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error(error.message);
+      const result = await signInForRole(email, password, "super_admin", "Super Admin");
+      if (!result.ok) {
+        toast.error(result.error);
         return;
       }
       toast.success("Signed in");

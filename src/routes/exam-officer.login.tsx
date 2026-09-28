@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
+import { signInForRole } from "@/lib/login-role-guard";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -24,6 +24,9 @@ function ExamOfficerLogin() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // This is the ONLY place that navigates to /exam-officer/dashboard — see
+  // src/routes/login.tsx for why handleSignIn deliberately doesn't also
+  // navigate on its own.
   useEffect(() => {
     if (!authLoading && !roleLoading && session && (isExamOfficer || isSuperAdmin)) {
       navigate({ to: "/exam-officer/dashboard" });
@@ -34,10 +37,14 @@ function ExamOfficerLogin() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { toast.error(error.message); return; }
+      const result = await signInForRole(email, password, ["exam_officer", "super_admin"], "Exam Officer");
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Welcome, Exam Officer");
-      navigate({ to: "/exam-officer/dashboard" });
+      // No navigate() here on purpose — the useEffect above handles it once
+      // the role is actually confirmed.
     } finally { setSubmitting(false); }
   };
 
