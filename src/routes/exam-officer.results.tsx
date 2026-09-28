@@ -32,7 +32,9 @@ function Page() {
       const data = { result_ids: [id] };
       if (kind === "approve") return approve({ data });
       if (kind === "publish") return publish({ data });
-      return returnResults({ data: { ...data, reason: "Returned by Exam Officer for correction" } });
+      const reason = window.prompt("Reason for returning this result to the teacher (they will see this):", "");
+      if (!reason || reason.trim().length < 5) throw new Error("A reason is required to return a result.");
+      return returnResults({ data: { ...data, reason: reason.trim() } });
     },
     onSuccess: () => { toast.success("Result status updated"); qc.invalidateQueries({ queryKey: ["exam-officer-results-review"] }); qc.invalidateQueries({ queryKey: ["eo-pending-count"] }); },
     onError: (error: Error) => toast.error(error.message),

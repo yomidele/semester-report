@@ -9,11 +9,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCollegeSettings } from "@/lib/college-settings";
-import { computeGrade, effectiveTotal } from "@/lib/grading";
+import { effectiveTotal } from "@/lib/grading";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { generateReportSheetPdf } from "@/lib/report-sheet";
 
 export const Route = createFileRoute("/transcripts")({
   head: () => ({ meta: [{ title: "Report Cards — School Portal" }] }),
@@ -81,7 +80,8 @@ export function ReportCardsPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("results")
         .select("id, semester, ca_score, exam_score, total_score, session_id, courses(code, title), academic_sessions(name)")
-        .eq("student_id", studentId!);
+        .eq("student_id", studentId!)
+        .eq("status", "published");
       if (error) throw error;
       return (data ?? []) as unknown as ResultRow[];
     },
@@ -137,64 +137,34 @@ export function ReportCardsPage() {
     if (err) { toast.error(err); return; }
     if (groups.length === 0) { toast.error("No results in selected range"); return; }
 
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    let y = 40;
+    // Every term is printed on the school's own sheet — the same layout
+    // and columns the Exam Officer and parents see — one page per term,
+    // in one downloadable PDF.
+    let doc: ReturnType<typeof generateReportSheetPdf> | undefined;
+    groups.forEach((g, i) => {
+      doc = generateReportSheetPdf(
+        {
+          student: { full_name: student.full_name, admission_number: student.matric_number },
+          className: classLabel,
+          sessionName: g.sessionName,
+          term: g.semester,
+          subjects: g.rows.map((r) => ({
+            code: r.courses?.code ?? "",
+            title: r.courses?.title ?? "",
+            ca: r.ca_score,
+            exam: r.exam_score,
+            total: effectiveTotal(r),
+          })),
+          position: null, // position needs the pupil's classmates for this term — not fetched by this multi-term view
+          classSize: null,
+          comments: {},
+          gradingScale: settings.grading_scale,
+        },
+        { doc, save: false },
+      );
+    });
 
-    // Header
-    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-    doc.text(settings.college_name.toUpperCase(), pageW / 2, y, { align: "center" }); y += 18;
-    doc.setFontSize(11); doc.setFont("helvetica", "normal");
-    doc.text("Report Card", pageW / 2, y, { align: "center" }); y += 22;
-
-    doc.setFontSize(10);
-    doc.text(`Pupil: ${student.full_name}`, 40, y);
-    doc.text(`Admission Number: ${student.matric_number}`, pageW - 40, y, { align: "right" }); y += 14;
-    doc.text(`Class: ${classLabel}`, 40, y);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageW - 40, y, { align: "right" }); y += 18;
-
-    for (const g of groups) {
-      const avg = averageOf(g.rows);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-      doc.text(`${g.sessionName}  \u00b7  ${g.semester} Term`, 40, y); y += 4;
-
-      autoTable(doc, {
-        startY: y + 4,
-        head: [["Code", "Subject", "CA", "Exam", "Total", "Grade"]],
-        body: g.rows
-          .sort((a, b) => (a.courses?.code ?? "").localeCompare(b.courses?.code ?? ""))
-          .map((r) => {
-            const total = effectiveTotal(r);
-            const gr = computeGrade(total);
-            return [
-              r.courses?.code ?? "",
-              r.courses?.title ?? "",
-              String(Number(r.ca_score)),
-              String(Number(r.exam_score)),
-              String(total),
-              gr.grade,
-            ];
-          }),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [5, 87, 56] },
-        margin: { left: 40, right: 40 },
-      });
-      // @ts-expect-error lastAutoTable injected by autotable
-      y = doc.lastAutoTable.finalY + 6;
-      doc.setFont("helvetica", "italic"); doc.setFontSize(9);
-      doc.text(`Term Average: ${avg.toFixed(1)}%   \u00b7   Subjects: ${g.rows.length}`, pageW - 40, y, { align: "right" });
-      y += 18;
-      if (y > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = 40; }
-    }
-
-    // Footer
-    if (y > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = 40; }
-    doc.setDrawColor(180); doc.line(40, y, pageW - 40, y); y += 16;
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-    doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 40, y);
-    doc.text(`Terms Covered: ${groups.length}`, pageW - 40, y, { align: "right" });
-
-    doc.save(`report-card_${student.matric_number.replace(/[\/\\]/g, "_")}.pdf`);
+    doc?.save(`report-card_${student.matric_number.replace(/[\/\\]/g, "_")}.pdf`);
     toast.success("Report Card downloaded");
   };
 

@@ -415,70 +415,42 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
     const deptCode = (dept.code ?? "PRI").toUpperCase();
 
     const results: { full_name: string; admission_number: string; admission_date: string }[] = [];
-    const failures: { full_name: string; reason: string }[] = [];
 
     // Sequential, not parallel: next_matric_seq must be awaited one at a time
-    // so each pupil gets a distinct, gap-free sequence number. Even so, a
-    // duplicate admission number can still happen — e.g. a pupil in this
-    // class was added through a different path before (manual single-add,
-    // a re-run of this same list, a seeded demo record) whose number isn't
-    // reflected in next_matric_seq's counter. Rather than let one collision
-    // abort the whole class list (previously: everyone after the colliding
-    // name silently never got added), retry that one name with a fresh
-    // number a few times, and only give up on that single pupil — the rest
-    // of the list still goes through.
+    // so each pupil gets a distinct, gap-free sequence number.
     for (const rawName of data.full_names) {
       const full_name = rawName.trim();
       if (!full_name) continue;
 
-      let lastError: string | null = null;
-      let added = false;
+      const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
+        _department_id: data.department_id,
+        _year_code: yearCode,
+      });
+      if (seqErr || typeof seq !== "number") throw new Error(seqErr?.message ?? `Could not allocate an admission number for ${full_name}`);
 
-      for (let attempt = 0; attempt < 5 && !added; attempt++) {
-        const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
-          _department_id: data.department_id,
-          _year_code: yearCode,
-        });
-        if (seqErr || typeof seq !== "number") {
-          lastError = seqErr?.message ?? "Could not allocate an admission number";
-          break;
-        }
+      const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
+      const admissionNumber = matricFormat
+        .replaceAll("{FAC}", "PRI")
+        .replaceAll("{DEPT}", deptCode)
+        .replaceAll("{CLASS}", deptCode)
+        .replaceAll("{YY}", yearCode)
+        .replaceAll("{SEQ}", sequence);
 
-        const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
-        const admissionNumber = matricFormat
-          .replaceAll("{FAC}", "PRI")
-          .replaceAll("{DEPT}", deptCode)
-          .replaceAll("{CLASS}", deptCode)
-          .replaceAll("{YY}", yearCode)
-          .replaceAll("{SEQ}", sequence);
+      const admissionDate = new Date().toISOString();
+      const { error: insertErr } = await supabaseAdmin.from("students").insert({
+        user_id: null,
+        matric_number: admissionNumber,
+        full_name,
+        email: null,
+        level: 1,
+        faculty_id: data.faculty_id,
+        department_id: data.department_id,
+        class_arm_id: data.class_arm_id ?? null,
+        admission_date: admissionDate,
+      } as never);
+      if (insertErr) throw new Error(`Failed to add ${full_name}: ${insertErr.message}`);
 
-        const admissionDate = new Date().toISOString();
-        const { error: insertErr } = await supabaseAdmin.from("students").insert({
-          user_id: null,
-          matric_number: admissionNumber,
-          full_name,
-          email: null,
-          level: 1,
-          faculty_id: data.faculty_id,
-          department_id: data.department_id,
-          class_arm_id: data.class_arm_id ?? null,
-          admission_date: admissionDate,
-        } as never);
-
-        if (!insertErr) {
-          results.push({ full_name, admission_number: admissionNumber, admission_date: admissionDate });
-          added = true;
-        } else if (insertErr.message.includes("students_matric_number_key")) {
-          // Collision — try again with a freshly allocated number.
-          lastError = insertErr.message;
-          continue;
-        } else {
-          lastError = insertErr.message;
-          break;
-        }
-      }
-
-      if (!added) failures.push({ full_name, reason: lastError ?? "Unknown error" });
+      results.push({ full_name, admission_number: admissionNumber, admission_date: admissionDate });
     }
 
     const { data: schoolSettings } = await supabaseAdmin
@@ -491,7 +463,6 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
       ok: true as const,
       count: results.length,
       pupils: results,
-      failures,
       school: {
         name: schoolSettings?.college_name ?? "the school",
         address: schoolSettings?.address ?? "",

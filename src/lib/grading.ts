@@ -20,54 +20,62 @@ export function computeGrade(total: number, scale?: GradeBand[]): GradeInfo {
   return gradeForScore(total, scale);
 }
 
-export interface ResultRow {
-  ca: number;
-  exam: number;
-  unit: number;
-  total?: number | null;
+/**
+ * Score limits for a terminal result. Total = CA + Exam, out of 100.
+ * These are enforced in the UI (ResultsEntryGrid, lecturer.entry), by the
+ * report sheet headings, and — as the source of truth — by the
+ * results_validate_write() trigger in the database
+ * (supabase/migrations/20260930100000_results_integrity_and_lock.sql).
+ * Keep all of them in sync if a school ever changes the CA/Exam split.
+ */
+export const RESULT_LIMITS = { ca: 40, exam: 60, total: 100 } as const;
+
+/** Total = CA + Exam. Missing parts count as 0 only for display of partial rows. */
+export function computeTotal(ca: number | string | null | undefined, exam: number | string | null | undefined): number {
+  return Number(ca ?? 0) + Number(exam ?? 0);
 }
 
-/** Returns the effective total score for a result: prefers explicit total_score, else ca+exam. */
+/** Returns an error message for an out-of-range CA/Exam pair, or null when valid. */
+export function validateScores(ca: number | null, exam: number | null): string | null {
+  if (ca === null || exam === null) return "Both CA and Exam scores are required";
+  if (!Number.isFinite(ca) || !Number.isFinite(exam)) return "Scores must be numbers";
+  if (ca < 0 || ca > RESULT_LIMITS.ca) return `CA must be between 0 and ${RESULT_LIMITS.ca}`;
+  if (exam < 0 || exam > RESULT_LIMITS.exam) return `Exam must be between 0 and ${RESULT_LIMITS.exam}`;
+  return null;
+}
+
+/**
+ * Returns the effective total for a result row: an explicit total_score if the
+ * database has one, otherwise CA + Exam.
+ */
 export function effectiveTotal(r: { ca_score?: number | string | null; exam_score?: number | string | null; total_score?: number | string | null }): number {
   if (r.total_score !== null && r.total_score !== undefined && r.total_score !== "") {
     return Number(r.total_score);
   }
-  return Number(r.ca_score ?? 0) + Number(r.exam_score ?? 0);
-}
-
-export function computeGPA(rows: ResultRow[], scale?: GradeBand[]): number {
-  if (rows.length === 0) return 0;
-  let totalPoints = 0;
-  let totalUnits = 0;
-  for (const r of rows) {
-    const total = Number(r.ca) + Number(r.exam);
-    const { point } = computeGrade(total, scale);
-    totalPoints += point * r.unit;
-    totalUnits += r.unit;
-  }
-  return totalUnits === 0 ? 0 : totalPoints / totalUnits;
-}
-
-/** Level number (100, 200, ...) shown as a College of Health year label. */
-export function yearLabel(level: number): string {
-  const year = Math.max(1, Math.round(level / 100));
-  return `Year ${year}`;
-}
-
-/** Levels available for a programme of a given duration. */
-export function levelsForDuration(durationYears: number): number[] {
-  return Array.from({ length: Math.max(1, durationYears) }, (_, i) => (i + 1) * 100);
+  return computeTotal(r.ca_score, r.exam_score);
 }
 
 /**
- * Academic standing for a CGPA on a 5-point scale.
- * College of Health awards use Distinction / Credit / Pass classes.
+ * Standard competition ranking ("1224"): pupils with equal averages share a
+ * position and the next position is skipped. Input order does not matter.
  */
-export function classOfDegree(cgpa: number): string {
-  if (cgpa >= 4.5) return "Distinction";
-  if (cgpa >= 3.5) return "Upper Credit";
-  if (cgpa >= 2.4) return "Lower Credit";
-  if (cgpa >= 1.5) return "Pass";
-  if (cgpa > 0) return "Fail";
-  return "—";
+export function rankByAverage(entries: { id: string; average: number }[]): Map<string, number> {
+  const sorted = [...entries].sort((a, b) => b.average - a.average);
+  const ranks = new Map<string, number>();
+  let lastAvg: number | null = null;
+  let lastRank = 0;
+  sorted.forEach((e, i) => {
+    // Compare at 2 d.p. so 71.4999999 and 71.5 do not split a tie by float noise.
+    const avg = Math.round(e.average * 100) / 100;
+    if (lastAvg === null || avg !== lastAvg) { lastRank = i + 1; lastAvg = avg; }
+    ranks.set(e.id, lastRank);
+  });
+  return ranks;
+}
+
+/** English ordinal for a position: 1st, 2nd, 3rd, 11th, 21st … */
+export function ordinal(n: number): string {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  switch (n % 10) { case 1: return `${n}st`; case 2: return `${n}nd`; case 3: return `${n}rd`; default: return `${n}th`; }
 }

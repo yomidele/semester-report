@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, CheckCircle2, Search } from "lucide-react";
-import { computeGrade } from "@/lib/grading";
+import { computeGrade, computeTotal, validateScores, RESULT_LIMITS } from "@/lib/grading";
 
 const TERMS = ["First", "Second", "Third"] as const;
 
@@ -53,6 +53,7 @@ interface GridEntry {
   class_arm_name: string;
   ca_score: string;
   exam_score: string;
+  existing_status?: string;
   existing_result_id?: string;
 }
 
@@ -67,6 +68,12 @@ const DRAFT_PREFIX = "resultEntryDraft:v1:";
 interface DraftPayload {
   savedAt: number;
   scores: Record<string, { ca_score: string; exam_score: string }>;
+}
+
+// A result the Exam Officer has approved or published is locked: it can only
+// be changed by first returning it for correction (see result-workflow).
+function isLockedStatus(status?: string): boolean {
+  return status === "approved" || status === "published";
 }
 
 function draftKey(f: { sessionId: string; semester: string; departmentId: string; classArmId: string; subjectId: string }): string | null {
@@ -198,7 +205,7 @@ export function ResultsEntryGrid() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
-        .select("id, student_id, ca_score, exam_score")
+        .select("id, student_id, ca_score, exam_score, status")
         .eq("session_id", filters.sessionId)
         .eq("course_id", filters.subjectId)
         .eq("semester", filters.semester);
@@ -246,9 +253,10 @@ export function ResultsEntryGrid() {
         student_id: student.id,
         full_name: student.full_name,
         class_arm_name: armNameById[student.class_arm_id] ?? "",
-        ca_score: existingResult?.ca_score ? String(existingResult.ca_score) : "",
-        exam_score: existingResult?.exam_score ? String(existingResult.exam_score) : "",
+        ca_score: existingResult?.ca_score != null ? String(existingResult.ca_score) : "",
+        exam_score: existingResult?.exam_score != null ? String(existingResult.exam_score) : "",
         existing_result_id: existingResult?.id,
+        existing_status: existingResult?.status,
       };
     });
 
@@ -361,32 +369,22 @@ export function ResultsEntryGrid() {
     let emptyCount = 0;
 
     gridEntries.forEach((entry) => {
-      const ca = entry.ca_score ? Number(entry.ca_score) : null;
-      const exam = entry.exam_score ? Number(entry.exam_score) : null;
+      // Locked rows (already approved/published) are never re-validated or saved.
+      if (isLockedStatus(entry.existing_status)) return;
+      const ca = entry.ca_score !== "" ? Number(entry.ca_score) : null;
+      const exam = entry.exam_score !== "" ? Number(entry.exam_score) : null;
 
       if (ca === null && exam === null) {
         emptyCount++;
         return;
       }
 
-      if (ca === null || exam === null) {
-        errors[entry.student_id] = ["Both CA and Exam scores required"];
+      const problem = validateScores(ca, exam);
+      if (problem) {
+        errors[entry.student_id] = [problem];
         return;
       }
-
-      if (ca < 0 || ca > 40) {
-        if (!errors[entry.student_id]) errors[entry.student_id] = [];
-        errors[entry.student_id].push("CA must be 0-40");
-      }
-
-      if (exam < 0 || exam > 70) {
-        if (!errors[entry.student_id]) errors[entry.student_id] = [];
-        errors[entry.student_id].push("Exam must be 0-70");
-      }
-
-      if (!errors[entry.student_id]) {
-        validCount++;
-      }
+      validCount++;
     });
 
     return { errors, validCount, emptyCount, hasAny: validCount > 0 };
@@ -397,10 +395,12 @@ export function ResultsEntryGrid() {
     mutationFn: async () => {
       const selectedDepartment = departments.find((d) => d.id === filters.departmentId);
       if (!selectedDepartment) throw new Error("Select a class first");
+      const now = new Date().toISOString();
       const payload = gridEntries
         .filter((entry) => {
-          const ca = entry.ca_score ? Number(entry.ca_score) : null;
-          const exam = entry.exam_score ? Number(entry.exam_score) : null;
+          if (isLockedStatus(entry.existing_status)) return false;
+          const ca = entry.ca_score !== "" ? Number(entry.ca_score) : null;
+          const exam = entry.exam_score !== "" ? Number(entry.exam_score) : null;
           return ca !== null && exam !== null && !validationStatus.errors[entry.student_id];
         })
         .map((entry) => ({
@@ -416,6 +416,12 @@ export function ResultsEntryGrid() {
         throw new Error("No valid scores to save");
       }
 
+      // Admin-entered scores go into the same review queue as teacher-entered
+      // ones: they are saved as "submitted" and must still be approved and
+      // then published by the Exam Officer. They were previously written
+      // straight to "published", which bypassed verification entirely and
+      // made unchecked scores instantly visible on report cards and to PIN
+      // holders.
       const results = await Promise.all(
         payload.map((item) =>
           supabase.from("results").upsert(
@@ -426,8 +432,8 @@ export function ResultsEntryGrid() {
               semester: item.semester,
               ca_score: item.ca_score,
               exam_score: item.exam_score,
-              status: "published",
-              published_at: new Date().toISOString(),
+              status: "submitted",
+              submitted_at: now,
               department_id: selectedDepartment.id,
               faculty_id: selectedDepartment.faculty_id,
             } as never,
@@ -445,7 +451,7 @@ export function ResultsEntryGrid() {
       return { savedCount: payload.length };
     },
     onSuccess: (data) => {
-      toast.success(`Saved ${data.savedCount} score${data.savedCount !== 1 ? "s" : ""} successfully`);
+      toast.success(`Saved ${data.savedCount} score${data.savedCount !== 1 ? "s" : ""} and sent to the Exam Officer for review`);
       qc.invalidateQueries({ queryKey: ["results-for-bulk"] });
       qc.invalidateQueries({ queryKey: ["results-entry"] });
       qc.invalidateQueries({ queryKey: ["results"] });
@@ -661,7 +667,7 @@ export function ResultsEntryGrid() {
               <div>
                 <CardTitle className="text-base">Enter Scores</CardTitle>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Enter CA (0-40) and Exam (0-70) scores. Leave blank to skip a pupil.
+                  Enter CA (0-{RESULT_LIMITS.ca}) and Exam (0-{RESULT_LIMITS.exam}) scores. Leave blank to skip a pupil. Saved scores go to the Exam Officer for approval before they are published.
                 </p>
               </div>
               <div className="relative sm:w-64">
@@ -682,8 +688,8 @@ export function ResultsEntryGrid() {
                   <TableRow>
                     <TableHead className="text-xs">Name</TableHead>
                     {isWholeClassView && <TableHead className="text-xs">Arm</TableHead>}
-                    <TableHead className="text-center text-xs">CA (0-40)</TableHead>
-                    <TableHead className="text-center text-xs">Exam (0-70)</TableHead>
+                    <TableHead className="text-center text-xs">CA (0-{RESULT_LIMITS.ca})</TableHead>
+                    <TableHead className="text-center text-xs">Exam (0-{RESULT_LIMITS.exam})</TableHead>
                     <TableHead className="text-center text-xs">Total</TableHead>
                     <TableHead className="text-center text-xs">Grade</TableHead>
                   </TableRow>
@@ -697,9 +703,8 @@ export function ResultsEntryGrid() {
                     </TableRow>
                   )}
                   {filteredEntries.map((entry) => {
-                    const ca = entry.ca_score ? Number(entry.ca_score) : 0;
-                    const exam = entry.exam_score ? Number(entry.exam_score) : 0;
-                    const total = entry.ca_score && entry.exam_score ? Math.min(ca + exam, 100) : null;
+                    const rowLocked = isLockedStatus(entry.existing_status);
+                    const total = entry.ca_score !== "" && entry.exam_score !== "" ? computeTotal(entry.ca_score, entry.exam_score) : null;
                     const grade = total !== null ? computeGrade(total) : null;
                     const entryErrors = validationStatus.errors[entry.student_id];
 
@@ -717,7 +722,9 @@ export function ResultsEntryGrid() {
                             ref={registerInputRef(entry.student_id, "ca_score")}
                             type="number"
                             min="0"
-                            max="40"
+                            max={RESULT_LIMITS.ca}
+                            disabled={rowLocked}
+                            title={rowLocked ? "Locked — return the result for correction to edit it" : undefined}
                             step="0.5"
                             value={entry.ca_score}
                             onChange={(e) => handleScoreChange(entry.student_id, "ca_score", e.target.value)}
@@ -731,7 +738,9 @@ export function ResultsEntryGrid() {
                             ref={registerInputRef(entry.student_id, "exam_score")}
                             type="number"
                             min="0"
-                            max="70"
+                            max={RESULT_LIMITS.exam}
+                            disabled={rowLocked}
+                            title={rowLocked ? "Locked — return the result for correction to edit it" : undefined}
                             step="0.5"
                             value={entry.exam_score}
                             onChange={(e) => handleScoreChange(entry.student_id, "exam_score", e.target.value)}

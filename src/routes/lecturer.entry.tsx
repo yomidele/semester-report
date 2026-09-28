@@ -11,6 +11,7 @@ import { Loader2, Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { teacherSubmitResults } from "@/lib/result-workflow.functions";
+import { RESULT_LIMITS, computeTotal, validateScores } from "@/lib/grading";
 
 const Search = z.object({ assignment_id: z.string().uuid().optional() });
 
@@ -113,7 +114,7 @@ function Page() {
     queryFn: async () => {
       const a = assignmentQ.data!;
       const { data } = await supabase.from("results")
-        .select("id, student_id, ca_score, exam_score, total_score, status")
+        .select("id, student_id, ca_score, exam_score, total_score, status, returned_reason")
         .eq("course_id", a.course_id).eq("session_id", a.session_id).eq("semester", a.semester);
       return data ?? [];
     },
@@ -165,17 +166,27 @@ function Page() {
       const a = assignmentQ.data!;
       const rows = Object.entries(draft)
         .filter(([_, v]) => v.ca !== "" || v.exam !== "")
-        .map(([student_id, v]) => ({
-          student_id,
-          course_id: a.course_id,
-          session_id: a.session_id,
-          semester: a.semester,
-          ca_score: Number(v.ca || 0),
-          exam_score: Number(v.exam || 0),
-          status: "draft",
-          faculty_id: a.faculty_id,
-          department_id: a.department_id,
-        }));
+        .map(([student_id, v]) => {
+          const ca = v.ca !== "" ? Number(v.ca) : null;
+          const exam = v.exam !== "" ? Number(v.exam) : null;
+          // Blank is not zero: a missing score must never be silently saved as 0.
+          const problem = validateScores(ca, exam);
+          if (problem) {
+            const name = students.find((s) => s.id === student_id)?.full_name ?? "a pupil";
+            throw new Error(`${name}: ${problem}`);
+          }
+          return {
+            student_id,
+            course_id: a.course_id,
+            session_id: a.session_id,
+            semester: a.semester,
+            ca_score: ca as number,
+            exam_score: exam as number,
+            status: "draft",
+            faculty_id: a.faculty_id,
+            department_id: a.department_id,
+          };
+        });
       if (!rows.length) throw new Error("Enter at least one score");
       const { error } = await supabase.from("results").upsert(rows as never, { onConflict: "student_id,course_id,session_id,semester" });
       if (error) throw error;
@@ -242,7 +253,7 @@ function Page() {
               {filteredStudents.map((s) => {
                 const existing = byStudent[s.id];
                 const d = draft[s.id] ?? { ca: existing?.ca_score?.toString() ?? "", exam: existing?.exam_score?.toString() ?? "" };
-                const total = (Number(d.ca || 0) + Number(d.exam || 0)) || existing?.total_score || 0;
+                const total = d.ca !== "" && d.exam !== "" ? computeTotal(d.ca, d.exam) : (existing?.total_score ?? "—");
                 const locked = existing && existing.status !== "draft";
                 return (
                   <tr key={s.id} className="border-b">
@@ -252,7 +263,7 @@ function Page() {
                         ref={registerInputRef(s.id, "ca")}
                         type="number"
                         min={0}
-                        max={40}
+                        max={RESULT_LIMITS.ca}
                         disabled={locked}
                         value={d.ca}
                         onChange={(e) => setDraft((p) => ({ ...p, [s.id]: { ca: e.target.value, exam: d.exam } }))}
@@ -264,7 +275,7 @@ function Page() {
                         ref={registerInputRef(s.id, "exam")}
                         type="number"
                         min={0}
-                        max={60}
+                        max={RESULT_LIMITS.exam}
                         disabled={locked}
                         value={d.exam}
                         onChange={(e) => setDraft((p) => ({ ...p, [s.id]: { ca: d.ca, exam: e.target.value } }))}
@@ -272,7 +283,12 @@ function Page() {
                       />
                     </td>
                     <td className="py-2 pr-3 font-medium">{total}</td>
-                    <td className="py-2 pr-3 text-xs uppercase">{existing?.status ?? "—"}</td>
+                    <td className="py-2 pr-3 text-xs">
+                      <span className="uppercase">{existing?.status ?? "—"}</span>
+                      {existing?.status === "draft" && (existing as any)?.returned_reason && (
+                        <span className="mt-1 block max-w-[220px] rounded bg-destructive/10 p-1 text-[11px] normal-case text-destructive">Returned: {(existing as any).returned_reason}</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

@@ -14,10 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { computeGrade, effectiveTotal } from "@/lib/grading";
 import { generateAdmissionLetterPdf } from "@/lib/admission-letter";
+import { generateReportSheetPdf } from "@/lib/report-sheet";
 import { FileDown, Download, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/admin/records")({
   head: () => ({ meta: [{ title: "Student Records — Admin" }] }),
@@ -275,83 +274,33 @@ function RecordsPage() {
       toast.error("No results to include in this report card");
       return;
     }
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    let y = 40;
+    // Same physical sheet as every other export in the system — one page
+    // per term, in one PDF when more than one term is included.
+    let doc: ReturnType<typeof generateReportSheetPdf> | undefined;
+    rowGroups.forEach((g) => {
+      doc = generateReportSheetPdf(
+        {
+          student: { full_name: student.full_name, admission_number: student.matric_number },
+          className: classLabel,
+          sessionName: g.sessionName,
+          term: g.semester,
+          subjects: g.rows.map((r) => ({
+            code: r.courses?.code ?? "",
+            title: r.courses?.title ?? "",
+            ca: Number(r.ca_score),
+            exam: Number(r.exam_score),
+            total: effectiveTotal(r),
+          })),
+          position: null, // position needs the pupil's classmates for this term — not fetched by this cumulative-records view
+          classSize: null,
+          comments: {},
+          gradingScale: settings.grading_scale,
+        },
+        { doc, save: false },
+      );
+    });
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(settings.college_name.toUpperCase(), pageW / 2, y, { align: "center" });
-    y += 18;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text("Report Card", pageW / 2, y, { align: "center" });
-    y += 22;
-
-    doc.setFontSize(10);
-    doc.text(`Pupil: ${student.full_name}`, 40, y);
-    doc.text(`Admission Number: ${student.matric_number}`, pageW - 40, y, { align: "right" });
-    y += 14;
-    doc.text(`Class: ${classLabel}`, 40, y);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageW - 40, y, { align: "right" });
-    y += 18;
-
-    for (const g of rowGroups) {
-      const avg = averageOf(g.rows);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(`${g.sessionName}  \u00b7  ${g.semester} Term`, 40, y);
-      y += 4;
-
-      autoTable(doc, {
-        startY: y + 4,
-        head: [["Code", "Subject", "CA", "Exam", "Total", "Grade"]],
-        body: g.rows
-          .sort((a, b) => (a.courses?.code ?? "").localeCompare(b.courses?.code ?? ""))
-          .map((r) => {
-            const total = effectiveTotal(r);
-            const gr = computeGrade(total);
-            return [
-              r.courses?.code ?? "",
-              r.courses?.title ?? "",
-              String(Number(r.ca_score)),
-              String(Number(r.exam_score)),
-              String(total),
-              gr.grade,
-            ];
-          }),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [5, 87, 56] },
-        margin: { left: 40, right: 40 },
-      });
-      // @ts-expect-error lastAutoTable injected by autotable
-      y = doc.lastAutoTable.finalY + 6;
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(9);
-      doc.text(`Term Average: ${avg.toFixed(1)}%   \u00b7   Subjects: ${g.rows.length}`, pageW - 40, y, { align: "right" });
-      y += 18;
-      if (y > doc.internal.pageSize.getHeight() - 80) {
-        doc.addPage();
-        y = 40;
-      }
-    }
-
-    if (rowGroups.length > 1) {
-      const overallAverage = averageOf(rowGroups.flatMap((g) => g.rows));
-      if (y > doc.internal.pageSize.getHeight() - 80) {
-        doc.addPage();
-        y = 40;
-      }
-      doc.setDrawColor(180);
-      doc.line(40, y, pageW - 40, y);
-      y += 16;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(`Overall Average: ${overallAverage.toFixed(1)}%`, 40, y);
-      doc.text(`Terms Covered: ${rowGroups.length}`, pageW - 40, y, { align: "right" });
-    }
-
-    doc.save(`report-card_${student.matric_number.replace(/[\/\\]/g, "_")}_${fileLabel}.pdf`);
+    doc?.save(`report-card_${student.matric_number.replace(/[\/\\]/g, "_")}_${fileLabel}.pdf`);
     toast.success("Report Card downloaded");
   };
 

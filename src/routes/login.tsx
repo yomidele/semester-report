@@ -17,15 +17,12 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-const DEMO_EMAIL = "admin@kazaure.demo";
-const DEMO_PASSWORD = "demo1234";
-
 function LoginPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuthSession();
   const { isSuperAdmin, loading: roleLoading } = useRole();
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // This is the ONLY place that navigates to /dashboard. It waits for auth
@@ -57,7 +54,7 @@ function LoginPage() {
         toast.error(error.message);
         return;
       }
-      toast.success("Welcome back, Admin");
+      toast.success("Signed in");
       // No navigate() here on purpose — the useEffect above handles the
       // redirect once session + role are both actually confirmed.
     } finally {
@@ -72,24 +69,21 @@ function LoginPage() {
         <Card className="w-full max-w-md tsu-shadow">
           <CardHeader>
             <CardTitle className="font-serif text-2xl">Super Admin Sign In</CardTitle>
-            <CardDescription>University-wide administrator portal. Demo credentials are pre-filled.</CardDescription>
+            <CardDescription>School administrator portal. Sign in with your Super Admin credentials.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}
               </Button>
-              <p className="rounded-md bg-secondary p-3 text-xs text-secondary-foreground">
-                <strong>Demo account:</strong> {DEMO_EMAIL} / {DEMO_PASSWORD}
-              </p>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <Link to="/lecturer/login" className="hover:underline">Teacher Portal →</Link>
                 <Link to="/exam-officer/login" className="hover:underline">Exam Officer →</Link>

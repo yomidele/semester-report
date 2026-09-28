@@ -10,10 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { effectiveTotal, computeGrade } from "@/lib/grading";
+import { generateReportSheetPdf } from "@/lib/report-sheet";
 import { checkResult, getPinPurchaseOptions } from "@/lib/result-pin.functions";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
 
 export const Route = createFileRoute("/check-result")({
@@ -62,86 +61,40 @@ function CheckResultPage() {
 
   async function downloadReportCard() {
     if (!result) return;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 40;
 
-    doc.setFillColor(5, 87, 56);
-    doc.rect(0, 0, pageWidth, 90, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.text(settings.college_name.toUpperCase(), margin, 38);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text([settings.address, settings.city, settings.state].filter(Boolean).join(", "), margin, 55);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("OFFICIAL STUDENT RESULT REPORT CARD", margin, 76);
-
-    doc.setTextColor(20, 20, 20);
-    let y = 115;
-    const line = (label: string, value: string, x: number) => {
-      doc.setFont("helvetica", "bold").setFontSize(8);
-      doc.text(label.toUpperCase(), x, y);
-      doc.setFont("helvetica", "normal").setFontSize(11);
-      doc.text(value || "\u2014", x, y + 14);
-    };
-    const col2 = pageWidth / 2 + 10;
-    line("Pupil Name", result.student.full_name, margin);
-    line("Admission Number", result.student.matric_number, col2);
-    y += 32;
-    line("Class", result.student.department_name ?? "\u2014", margin);
-    line("Session / Term", `${result.session_name} \u2014 ${result.semester} Term`, col2);
-    y += 40;
-
-    const rows = result.results.map((r) => {
-      const total = effectiveTotal(r);
-      const { grade, remark } = computeGrade(total, settings.grading_scale);
-      return [r.course_code, r.course_title, String(r.ca_score), String(r.exam_score), String(total), grade, remark ?? ""];
-    });
-
-    autoTable(doc, {
-      startY: y,
-      head: [["Code", "Subject Title", "CA", "Exam", "Total", "Grade", "Remark"]],
-      body: rows,
-      theme: "grid",
-      headStyles: { fillColor: [5, 87, 56], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 9, cellPadding: 5 },
-      margin: { left: margin, right: margin },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let finalY = (doc as any).lastAutoTable?.finalY ?? y + 40;
-    finalY += 30;
-
-    const totalSubjects = result.results.length;
-    const totalScore = result.results.reduce((s, r) => s + effectiveTotal(r), 0);
-    const average = totalSubjects ? (totalScore / totalSubjects).toFixed(1) : "0.0";
-
-    doc.setFont("helvetica", "bold").setFontSize(10);
-    doc.text(`Term Average: ${average}%`, margin, finalY);
-    doc.text(`Subjects: ${totalSubjects}`, margin + 180, finalY);
-    finalY += 30;
-
-    doc.setFont("helvetica", "normal").setFontSize(9);
-    doc.text("Authorized Signature: ________________________", margin, finalY + 40);
-    doc.text("School Stamp:", margin + 280, finalY + 40);
-    doc.rect(margin + 340, finalY + 15, 100, 40);
-
-    doc.setFontSize(8).setTextColor(100, 100, 100);
-    doc.text(`Verification No: ${result.verification_number}`, margin, finalY + 70);
-    doc.text("Scan the QR code to verify this document is authentic.", margin, finalY + 82);
-
+    let qrDataUrl: string | undefined;
     try {
       const verifyUrl = `${window.location.origin}/verify-result/${result.verification_number}`;
-      const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 0, width: 200 });
-      doc.addImage(qrDataUrl, "PNG", pageWidth - margin - 70, finalY + 5, 70, 70);
+      qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 0, width: 200 });
     } catch {
       // QR generation failing is non-fatal — the printed verification number still works.
     }
 
-    doc.save(`${result.student.matric_number}-${result.session_name}-${result.semester}-result.pdf`);
+    // Same physical sheet every other export uses — a pupil's result must
+    // look identical whether the Exam Officer, an admin, or a parent (here,
+    // via Result PIN) downloads it. Only the verification block is added,
+    // since a parent needs a way to prove a printed copy is genuine.
+    generateReportSheetPdf(
+      {
+        student: { full_name: result.student.full_name, admission_number: result.student.matric_number },
+        className: result.student.department_name ?? "\u2014",
+        sessionName: result.session_name,
+        term: result.semester,
+        subjects: result.results.map((r) => ({
+          code: r.course_code,
+          title: r.course_title,
+          ca: r.ca_score,
+          exam: r.exam_score,
+          total: effectiveTotal(r),
+        })),
+        position: null,
+        classSize: null,
+        comments: {},
+        gradingScale: settings.grading_scale,
+        verification: { number: result.verification_number, qrDataUrl },
+      },
+      { fileName: `${result.student.matric_number}-${result.session_name}-${result.semester}-result.pdf` },
+    );
   }
 
   return (
