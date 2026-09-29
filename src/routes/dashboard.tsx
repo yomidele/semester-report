@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, BookOpen, Users, ClipboardList } from "lucide-react";
+import { AdmissionsToggle } from "@/components/AdmissionsToggle";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — School Portal Result Portal" }] }),
@@ -55,6 +56,8 @@ function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      <AdmissionsToggle />
 
       <Card className="tsu-shadow">
         <CardHeader>

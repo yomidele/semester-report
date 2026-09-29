@@ -28,6 +28,8 @@ export interface CollegeSettings {
   use_gpa: boolean;
   pin_settings: PinSettings;
   payment_settings: PaymentSettings;
+  /** Public switch: whether the homepage /apply form accepts new applications. */
+  admissions_open: boolean;
 }
 
 export interface PinSettings {
@@ -84,6 +86,7 @@ export const FALLBACK_SETTINGS: CollegeSettings = {
   use_gpa: false,
   pin_settings: DEFAULT_PIN_SETTINGS,
   payment_settings: DEFAULT_PAYMENT_SETTINGS,
+  admissions_open: true,
 };
 
 function normalize(row: Record<string, unknown> | null): CollegeSettings {

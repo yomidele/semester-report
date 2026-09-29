@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, UserPlus } from "lucide-react";
+import { AdmissionsToggle } from "@/components/AdmissionsToggle";
 
 export const Route = createFileRoute("/admission-officer/dashboard")({
   head: () => ({ meta: [{ title: "Admission Officer Dashboard — School Portal" }] }),
@@ -23,6 +24,7 @@ function Page() {
         <h2 className="font-serif text-2xl font-bold">Admission Officer</h2>
         <p className="text-sm text-muted-foreground">Enrol new pupils and issue their admission letters.</p>
       </div>
+      <AdmissionsToggle />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Card className="tsu-shadow">
           <CardContent className="flex items-center justify-between p-4">

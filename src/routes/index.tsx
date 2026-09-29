@@ -48,7 +48,9 @@ function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary/15" />
         <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Admissions open for the new session</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+            {settings.admissions_open ? "Admissions open for the new session" : "Admissions currently closed"}
+          </p>
           <h1 className="mt-4 max-w-3xl font-serif text-3xl font-bold leading-tight text-primary-foreground md:text-5xl">
             {settings.college_name}
           </h1>
@@ -57,7 +59,7 @@ function Home() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link to="/admissions">
+              <Link to="/apply">
                 Apply Now <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

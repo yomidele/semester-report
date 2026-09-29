@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
 import { ProtectedAdmissionOfficer } from "@/components/ProtectedAdmissionOfficer";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -11,12 +12,20 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Download, CheckCircle2 } from "lucide-react";
 import { enrollStudent } from "@/lib/school-admin.functions";
+import { getApplicationForEnrolment, linkApplicationToStudent } from "@/lib/applicant.functions";
 import { generateAdmissionLetterPdf } from "@/lib/admission-letter";
 import { PhotoCaptureInput } from "@/components/PhotoCaptureInput";
 
+const Search = z.object({ application_id: z.string().uuid().optional() });
+
 export const Route = createFileRoute("/admission-officer/enroll")({
   head: () => ({ meta: [{ title: "Enrol a Pupil — Admission Officer" }] }),
-  component: () => <ProtectedAdmissionOfficer><Page /></ProtectedAdmissionOfficer>,
+  validateSearch: (s) => Search.parse(s),
+  component: () => (
+    <ProtectedAdmissionOfficer>
+      <Page />
+    </ProtectedAdmissionOfficer>
+  ),
 });
 
 const emptyForm = {
@@ -33,7 +42,10 @@ const emptyForm = {
 };
 
 function Page() {
+  const { application_id } = Route.useSearch();
   const enroll = useServerFn(enrollStudent);
+  const getApplication = useServerFn(getApplicationForEnrolment);
+  const linkApplication = useServerFn(linkApplicationToStudent);
   const [form, setForm] = useState(emptyForm);
   const [passportPhoto, setPassportPhoto] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
@@ -57,6 +69,39 @@ function Page() {
     queryKey: ["class-arms-all"],
     queryFn: async () => (await supabase.from("class_arms").select("id, name, department_id").order("name")).data ?? [],
   });
+
+  // Coming from an applicant's public submission (Admission Officer clicked
+  // "Admit" on the applications queue) — prefill everything we already know
+  // so the officer only has to add the passport photo, confirm/adjust the
+  // class arm, and submit. There is no separate "convert applicant" writer:
+  // this is the exact same enrolStudent call as a walk-in admission, just
+  // pre-populated, and linked back to the application afterwards.
+  const applicationQ = useQuery({
+    queryKey: ["application-for-enrolment", application_id],
+    enabled: !!application_id,
+    queryFn: () => getApplication({ data: { application_id: application_id! } }),
+  });
+
+  useEffect(() => {
+    if (!applicationQ.data || !departmentsQ.data) return;
+    const dept = departmentsQ.data.find((d) => d.id === applicationQ.data.department_id);
+    setForm((f) => ({
+      ...f,
+      full_name: applicationQ.data.full_name ?? "",
+      email: applicationQ.data.email ?? "",
+      gender: (applicationQ.data.gender as typeof f.gender) || "",
+      date_of_birth: applicationQ.data.date_of_birth ?? "",
+      address: applicationQ.data.address ?? "",
+      guardian_name: applicationQ.data.guardian_name ?? "",
+      guardian_phone: applicationQ.data.guardian_phone ?? "",
+      department_id: applicationQ.data.department_id ?? "",
+      faculty_id: dept?.faculty_id ?? "",
+    }));
+  }, [applicationQ.data, departmentsQ.data]);
+
+  useEffect(() => {
+    if (applicationQ.error) toast.error((applicationQ.error as Error).message);
+  }, [applicationQ.error]);
 
   const departmentsForFaculty = useMemo(
     () => (departmentsQ.data ?? []).filter((d) => d.faculty_id === form.faculty_id),
@@ -86,6 +131,17 @@ function Page() {
           passport_base64: passportPhoto!,
         },
       });
+      if (application_id) {
+        // Best-effort: the pupil is already enrolled either way. If this
+        // fails, the application just stays "submitted" and can be linked
+        // manually — it must never undo the enrolment that already succeeded.
+        try {
+          await linkApplication({ data: { application_id, student_id: result.student_id } });
+        } catch (e) {
+          console.error("Failed to link application to the new student record:", e);
+          toast.error("Pupil was enrolled, but the original application couldn't be marked admitted. You can ignore this — the pupil's record is complete.");
+        }
+      }
       return { result, className: dept ? (arm ? `${dept.name} — ${arm.name}` : dept.name) : "" };
     },
     onSuccess: ({ result, className }) => {
@@ -113,8 +169,18 @@ function Page() {
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Enrol a Pupil</h2>
-        <p className="text-sm text-muted-foreground">Enter the pupil's details. An admission number and login are created immediately, and you can download the admission letter right after.</p>
+        <p className="text-sm text-muted-foreground">
+          {application_id
+            ? "Details below came from the pupil's application — check them, add a passport photo, and confirm the class arm."
+            : "Enter the pupil's details. An admission number and login are created immediately, and you can download the admission letter right after."}
+        </p>
       </div>
+
+      {applicationQ.isLoading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading application…
+        </div>
+      )}
 
       {lastResult && (
         <Card className="border-primary/40 bg-primary/5">
@@ -134,7 +200,7 @@ function Page() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pupil details</CardTitle>
-          <CardDescription>The pupil's account is created automatically — no separate application/review step.</CardDescription>
+          <CardDescription>The pupil's account is created automatically.</CardDescription>
         </CardHeader>
         <CardContent>
           <form

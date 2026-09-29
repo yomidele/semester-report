@@ -3,81 +3,183 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+async function assertAdmissionAccess(userId: string) {
+  const { data: roles, error } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  if (!(roles ?? []).some((r) => r.role === "super_admin" || r.role === "admission_officer")) {
+    throw new Error("Forbidden: admission officer access required");
+  }
+}
+
 const applicationSchema = z.object({
-  full_name: z.string().min(2).max(120), email: z.string().email(), phone: z.string().max(30).optional(),
-  gender: z.string().max(20).optional(), date_of_birth: z.string().optional(), address: z.string().max(300).optional(),
-  state_of_origin: z.string().max(80).optional(), qualification: z.string().max(200).optional(), programme_id: z.string().uuid(),
+  full_name: z.string().min(2).max(120),
+  email: z.string().email(),
+  phone: z.string().max(30).optional(),
+  gender: z.string().max(20).optional(),
+  date_of_birth: z.string().optional(),
+  address: z.string().max(300).optional(),
+  state_of_origin: z.string().max(80).optional(),
+  guardian_name: z.string().max(120).optional(),
+  guardian_phone: z.string().max(40).optional(),
+  previous_school: z.string().max(200).optional(),
+  department_id: z.string().uuid(),
 });
 
+/** Public: anyone can submit an application for a class from the homepage
+ *  /apply form — no account required. This only ever writes `applicants` /
+ *  `applications`; it never touches `students` or creates a login. */
 export const submitApplication = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => applicationSchema.parse(input))
   .handler(async ({ data }) => {
-    const { data: programme, error: programmeError } = await supabaseAdmin.from("programmes").select("id, is_active").eq("id", data.programme_id).maybeSingle();
-    if (programmeError) throw new Error(programmeError.message);
-    if (!programme?.is_active) throw new Error("That programme is not currently accepting applications");
-    const { data: applicant, error: applicantError } = await supabaseAdmin.from("applicants").insert({
-      full_name: data.full_name.trim(), email: data.email.trim().toLowerCase(), phone: data.phone || null, gender: data.gender || null,
-      date_of_birth: data.date_of_birth || null, address: data.address || null, state_of_origin: data.state_of_origin || null,
-      qualification: data.qualification || null,
-    }).select("id, applicant_number").single();
-    if (applicantError || !applicant) throw new Error(applicantError?.message ?? "Could not save application");
-    const { error: applicationError } = await supabaseAdmin.from("applications").insert({ applicant_id: applicant.id, programme_id: data.programme_id });
-    if (applicationError) throw new Error(applicationError.message);
-    return { applicant_number: applicant.applicant_number };
-  });
+    const { data: settings, error: settingsError } = await supabaseAdmin
+      .from("college_settings")
+      .select("admissions_open")
+      .limit(1)
+      .maybeSingle();
+    if (settingsError) throw new Error(settingsError.message);
+    // No settings row yet defaults to open (matches the client's FALLBACK_SETTINGS).
+    if (settings && settings.admissions_open === false) {
+      throw new Error("Admissions are currently closed. Please check back later or contact the school office.");
+    }
 
-export const convertApplicationToStudent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ application_id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId);
-    if (roleError) throw new Error(roleError.message);
-    if (!(roles ?? []).some((role) => role.role === "super_admin" || role.role === "admission_officer")) throw new Error("Forbidden: admission officer access required");
-    const { data: application, error: applicationError } = await supabaseAdmin
-      .from("applications").select("id, applicant_id, programme_id, converted_student_id").eq("id", data.application_id).maybeSingle();
-    if (applicationError || !application) throw new Error(applicationError?.message ?? "Application not found");
-    if (application.converted_student_id) throw new Error("This application has already been converted");
-    const [{ data: applicant, error: applicantError }, { data: programme, error: programmeError }] = await Promise.all([
-      supabaseAdmin.from("applicants").select("*").eq("id", application.applicant_id).single(),
-      supabaseAdmin.from("programmes").select("id, faculty_id, department_id").eq("id", application.programme_id).single(),
-    ]);
-    if (applicantError || !applicant) throw new Error(applicantError?.message ?? "Applicant not found");
-    if (programmeError || !programme) throw new Error(programmeError?.message ?? "Programme not found");
-    const [{ data: faculty }, { data: department }, { data: settings }] = await Promise.all([
-      supabaseAdmin.from("faculties").select("code").eq("id", programme.faculty_id).single(),
-      supabaseAdmin.from("departments").select("code").eq("id", programme.department_id).single(),
-      supabaseAdmin.from("college_settings").select("matric_format, matric_seq_padding").limit(1).maybeSingle(),
-    ]);
-    const yearCode = String(new Date().getFullYear()).slice(-2);
-    const { data: sequence, error: sequenceError } = await supabaseAdmin.rpc("next_matric_seq", { _department_id: programme.department_id, _year_code: yearCode });
-    if (sequenceError || typeof sequence !== "number") throw new Error(sequenceError?.message ?? "Could not allocate matric number");
-    const sequenceText = String(sequence).padStart(settings?.matric_seq_padding ?? 4, "0");
-    const matricNumber = (settings?.matric_format ?? "{DEPT}/{YY}/{SEQ}")
-      .replaceAll("{FAC}", (faculty?.code ?? "FAC").toUpperCase()).replaceAll("{DEPT}", (department?.code ?? "DEPT").toUpperCase())
-      .replaceAll("{CLASS}", (department?.code ?? "DEPT").toUpperCase())
-      .replaceAll("{YY}", yearCode).replaceAll("{SEQ}", sequenceText);
-    const temporaryPassword = `Kz${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}!`;
-    const { data: created, error: userError } = await supabaseAdmin.auth.admin.createUser({ email: applicant.email, password: temporaryPassword, email_confirm: true, user_metadata: { full_name: applicant.full_name, matric_number: matricNumber } });
-    if (userError || !created.user) throw new Error(userError?.message ?? "Could not create student account");
-    const studentRow = { user_id: created.user.id, matric_number: matricNumber, full_name: applicant.full_name, email: applicant.email, phone: applicant.phone, faculty_id: programme.faculty_id, department_id: programme.department_id, programme_id: programme.id, gender: applicant.gender, date_of_birth: applicant.date_of_birth, address: applicant.address, state_of_origin: applicant.state_of_origin };
-    const { data: student, error: studentError } = await supabaseAdmin.from("students").insert(studentRow as never).select("id").single();
-    if (studentError || !student) { await supabaseAdmin.auth.admin.deleteUser(created.user.id); throw new Error(studentError?.message ?? "Could not create student record"); }
-    const { error: linkError } = await supabaseAdmin.from("applications").update({ status: "admitted", converted_student_id: student.id, reviewed_at: new Date().toISOString() }).eq("id", application.id);
-    if (linkError) throw new Error(linkError.message);
-    return { matric_number: matricNumber, temporary_password: temporaryPassword };
+    const { data: dept, error: deptError } = await supabaseAdmin
+      .from("departments")
+      .select("id, is_active")
+      .eq("id", data.department_id)
+      .maybeSingle();
+    if (deptError) throw new Error(deptError.message);
+    if (!dept?.is_active) throw new Error("That class is not currently accepting applications");
+
+    const { data: applicant, error: applicantError } = await supabaseAdmin
+      .from("applicants")
+      .insert({
+        full_name: data.full_name.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone || null,
+        gender: data.gender || null,
+        date_of_birth: data.date_of_birth || null,
+        address: data.address || null,
+        state_of_origin: data.state_of_origin || null,
+        qualification: data.previous_school || null,
+        guardian_name: data.guardian_name || null,
+        guardian_phone: data.guardian_phone || null,
+      })
+      .select("id, applicant_number")
+      .single();
+    if (applicantError || !applicant) throw new Error(applicantError?.message ?? "Could not save application");
+
+    const { error: applicationError } = await supabaseAdmin
+      .from("applications")
+      .insert({ applicant_id: applicant.id, department_id: data.department_id });
+    if (applicationError) throw new Error(applicationError.message);
+
+    return { applicant_number: applicant.applicant_number };
   });
 
 export const updateApplicationStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({
-    application_id: z.string().uuid(),
-    status: z.enum(["under_review", "accepted", "rejected"]),
-  }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ application_id: z.string().uuid(), status: z.enum(["under_review", "rejected"]) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
-    const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId);
-    if (roleError) throw new Error(roleError.message);
-    if (!(roles ?? []).some((role) => role.role === "super_admin" || role.role === "admission_officer")) throw new Error("Forbidden: admission officer access required");
-    const { error } = await supabaseAdmin.from("applications").update({ status: data.status, reviewed_at: new Date().toISOString() }).eq("id", data.application_id);
+    await assertAdmissionAccess(context.userId);
+    const { data: current, error: currentError } = await supabaseAdmin
+      .from("applications")
+      .select("status")
+      .eq("id", data.application_id)
+      .maybeSingle();
+    if (currentError || !current) throw new Error(currentError?.message ?? "Application not found");
+    if (current.status === "admitted") throw new Error("This applicant has already been admitted — nothing to change.");
+
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({ status: data.status, reviewed_by: context.userId, reviewed_at: new Date().toISOString() })
+      .eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Admission Officer only: fetches an application's details to prefill the
+ * enrolment form at /admission-officer/enrol?application_id=… There is
+ * deliberately no separate "convert applicant to student" function —
+ * enrolStudent (src/lib/school-admin.functions.ts) is the ONE place a
+ * students row and login get created, for every enrolment whether it started
+ * from a public application or was entered directly by the officer. This
+ * avoids two divergent code paths (and two different admission-number /
+ * account-creation implementations) for what is really the same operation.
+ */
+export const getApplicationForEnrolment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ application_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmissionAccess(context.userId);
+    const { data: application, error } = await supabaseAdmin
+      .from("applications")
+      .select(
+        "id, status, converted_student_id, department_id, applicants(full_name, email, phone, gender, date_of_birth, address, guardian_name, guardian_phone)",
+      )
+      .eq("id", data.application_id)
+      .maybeSingle();
+    if (error || !application) throw new Error(error?.message ?? "Application not found");
+    if (application.converted_student_id) throw new Error("This applicant has already been admitted.");
+    const applicant = Array.isArray(application.applicants) ? application.applicants[0] : application.applicants;
+    if (!applicant) throw new Error("Applicant details are missing for this application.");
+    return {
+      application_id: application.id,
+      department_id: application.department_id as string | null,
+      full_name: applicant.full_name as string,
+      email: applicant.email as string,
+      phone: applicant.phone as string | null,
+      gender: applicant.gender as string | null,
+      date_of_birth: applicant.date_of_birth as string | null,
+      address: applicant.address as string | null,
+      guardian_name: applicant.guardian_name as string | null,
+      guardian_phone: applicant.guardian_phone as string | null,
+    };
+  });
+
+/** Super Admin OR Admission Officer: the only two roles allowed to flip
+ *  public admissions on/off. Writes just this one column via the service
+ *  role — see the migration comment for why this isn't a plain RLS grant. */
+export const setAdmissionsOpen = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ open: z.boolean() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmissionAccess(context.userId);
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("college_settings")
+      .select("id")
+      .limit(1)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+
+    const response = existing
+      ? await supabaseAdmin.from("college_settings").update({ admissions_open: data.open }).eq("id", existing.id)
+      : await supabaseAdmin.from("college_settings").insert({ admissions_open: data.open } as never);
+    if (response.error) throw new Error(response.error.message);
+    return { ok: true, open: data.open };
+  });
+
+/** Admission Officer only: marks the application admitted and links it to
+ *  the students row enrolStudent just created. Called right after a
+ *  successful enrolment that started from an application — never on its own. */
+export const linkApplicationToStudent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ application_id: z.string().uuid(), student_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmissionAccess(context.userId);
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({
+        status: "admitted",
+        converted_student_id: data.student_id,
+        reviewed_by: context.userId,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", data.application_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

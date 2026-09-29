@@ -345,7 +345,11 @@ export const enrollStudent = createServerFn({ method: "POST" })
       passport_url: passportUrl,
       admission_date: admissionDate,
     };
-    const { error: studentErr } = await supabaseAdmin.from("students").insert(studentRow as never);
+    const { data: insertedStudent, error: studentErr } = await supabaseAdmin
+      .from("students")
+      .insert(studentRow as never)
+      .select("id")
+      .single();
     if (studentErr) {
       await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
       throw new Error(studentErr.message);
@@ -354,6 +358,7 @@ export const enrollStudent = createServerFn({ method: "POST" })
 
     return {
       ok: true as const,
+      student_id: insertedStudent.id as string,
       admission_number: admissionNumber,
       full_name: data.full_name,
       admission_date: admissionDate,
