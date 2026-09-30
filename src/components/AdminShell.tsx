@@ -59,7 +59,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <TSUHeader subtitle="Admin Console — Demo Environment" />
+      <TSUHeader subtitle="Admin Console" />
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-2 py-4 md:flex-row md:px-6">
         <aside className="md:w-60 md:shrink-0">
           <nav className="tsu-shadow flex flex-row gap-1 overflow-x-auto rounded-md border border-border bg-card p-2 md:flex-col md:overflow-visible">

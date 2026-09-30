@@ -70,6 +70,63 @@ export interface GenerateReportSheetOptions {
   fileName?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Shared letterhead: the double-line frame + authority/school-line heading
+// block, used verbatim by both the Report Sheet (below) and the Admission
+// Letter (src/lib/admission-letter.ts), so the two documents are guaranteed
+// to share the exact same header rather than two separately hand-tuned
+// lookalikes that can drift apart.
+// ---------------------------------------------------------------------------
+
+/** Double-line page frame matching the school's printed sheet. */
+export function drawFrame(doc: jsPDF) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setDrawColor(0);
+  doc.setLineDashPattern([], 0);
+  doc.setLineWidth(1.4);
+  doc.rect(28, 28, pageW - 56, pageH - 56);
+  doc.setLineWidth(0.6);
+  doc.rect(33, 33, pageW - 66, pageH - 66);
+}
+
+/**
+ * Authority line / school line / title line, centered, Times bold — the
+ * same heading block on every document this school issues. Returns the y
+ * position right after the heading, so the caller's own content continues
+ * from there.
+ */
+export function drawLetterheadHeader(doc: jsPDF, titleLine: string, header?: { authorityLine?: string; schoolLine?: string }): number {
+  const pageW = doc.internal.pageSize.getWidth();
+  const L = 55;
+  const R = pageW - 55;
+
+  const fit = (text: string, maxW: number, size: number) => {
+    let s = size;
+    doc.setFontSize(s);
+    while (s > 6 && doc.getTextWidth(text) > maxW) {
+      s -= 0.5;
+      doc.setFontSize(s);
+    }
+  };
+
+  const authority = (header?.authorityLine || DEFAULT_REPORT_HEADER.authorityLine).toUpperCase();
+  const schoolLine = (header?.schoolLine || DEFAULT_REPORT_HEADER.schoolLine).toUpperCase();
+  doc.setFont("times", "bold");
+  doc.setTextColor(0);
+  let y = 78;
+  fit(authority, R - L, 13);
+  doc.text(authority, pageW / 2, y, { align: "center" });
+  y += 26;
+  fit(schoolLine, R - L, 13);
+  doc.text(schoolLine, pageW / 2, y, { align: "center" });
+  y += 28;
+  doc.setFontSize(12);
+  doc.text(titleLine, pageW / 2, y, { align: "center" });
+
+  return y;
+}
+
 // Subjects are printed in the same order as the school's paper sheet; any
 // subject not recognised here follows alphabetically.
 const SUBJECT_ORDER: RegExp[] = [
@@ -119,14 +176,8 @@ export function generateReportSheetPdf(data: ReportSheetData, opts: GenerateRepo
   const L = 55; // left content edge
   const R = pageW - 55; // right content edge
 
-  const drawFrame = () => {
-    doc.setDrawColor(0);
-    doc.setLineDashPattern([], 0);
-    doc.setLineWidth(1.4);
-    doc.rect(28, 28, pageW - 56, pageH - 56);
-    doc.setLineWidth(0.6);
-    doc.rect(33, 33, pageW - 66, pageH - 66);
-  };
+  drawFrame(doc);
+  let y = drawLetterheadHeader(doc, "(REPORT SHEET)", data.header);
 
   /** Dashed fill-in line, like the "-----" rules on the paper sheet. */
   const fillLine = (x1: number, x2: number, y: number) => {
@@ -145,23 +196,6 @@ export function generateReportSheetPdf(data: ReportSheetData, opts: GenerateRepo
       doc.setFontSize(s);
     }
   };
-
-  drawFrame();
-
-  // ---- Heading ----------------------------------------------------------
-  const authority = (data.header?.authorityLine || DEFAULT_REPORT_HEADER.authorityLine).toUpperCase();
-  const schoolLine = (data.header?.schoolLine || DEFAULT_REPORT_HEADER.schoolLine).toUpperCase();
-  doc.setFont("times", "bold");
-  doc.setTextColor(0);
-  let y = 78;
-  fit(authority, R - L, 13);
-  doc.text(authority, pageW / 2, y, { align: "center" });
-  y += 26;
-  fit(schoolLine, R - L, 13);
-  doc.text(schoolLine, pageW / 2, y, { align: "center" });
-  y += 28;
-  doc.setFontSize(12);
-  doc.text("(REPORT SHEET)", pageW / 2, y, { align: "center" });
 
   // ---- Pupil details ----------------------------------------------------
   y += 34;

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { drawFrame, drawLetterheadHeader } from "./report-sheet";
 
 export type AdmissionLetterData = {
   admission_number: string;
@@ -13,67 +14,50 @@ export type AdmissionLetterData = {
     state?: string;
     motto?: string;
   };
+  /** Same override shape as ReportSheetData.header — when omitted, this
+   *  falls back to DEFAULT_REPORT_HEADER, exactly like the Report Sheet
+   *  does, so the two documents' letterheads never drift apart. */
+  header?: { authorityLine?: string; schoolLine?: string };
 };
 
+// Same physical letterhead as the Report Sheet (src/lib/report-sheet.ts):
+// the double-line frame, authority line, and school line are drawn by the
+// exact same shared functions, just with this document's own title line.
 function drawAdmissionLetter(doc: jsPDF, data: AdmissionLetterData) {
   const pageW = doc.internal.pageSize.getWidth();
-  let y = 56;
+  const L = 55;
+  const R = pageW - 55;
 
-  const schoolAddressLine = [data.school.address, data.school.city, data.school.state].filter(Boolean).join(", ");
+  drawFrame(doc);
+  let y = drawLetterheadHeader(doc, "(LETTER OF ADMISSION)", data.header);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text(data.school.name.toUpperCase(), pageW / 2, y, { align: "center" });
-  y += 18;
-
-  if (schoolAddressLine) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(schoolAddressLine, pageW / 2, y, { align: "center" });
-    y += 14;
-  }
-  if (data.school.motto) {
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(9);
-    doc.text(`"${data.school.motto}"`, pageW / 2, y, { align: "center" });
-    y += 14;
-  }
-
-  doc.setDrawColor(40);
-  doc.line(56, y, pageW - 56, y);
-  y += 28;
-
-  doc.setFont("helvetica", "normal");
+  y += 40;
+  doc.setFont("times", "normal");
   doc.setFontSize(11);
-  doc.text(new Date(data.admission_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }), pageW - 56, y, { align: "right" });
+  doc.text(new Date(data.admission_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }), R, y, { align: "right" });
   y += 30;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.text("LETTER OF ADMISSION", pageW / 2, y, { align: "center" });
-  y += 30;
-
-  doc.setFont("helvetica", "normal");
+  doc.setFont("times", "normal");
   doc.setFontSize(11);
   const bodyLines = doc.splitTextToSize(
     `Dear Parent/Guardian,\n\n` +
       `We are pleased to inform you that ${data.full_name} has been offered admission into ${data.class_name} of ${data.school.name} for the current academic session.\n\n` +
       `The pupil's admission number is ${data.admission_number}. Kindly quote this number in all future correspondence with the school, and ensure the pupil resumes on the official first day of term with the required uniform and materials.\n\n` +
       `We look forward to a fruitful partnership with you in the pupil's education.`,
-    pageW - 112,
+    R - L,
   );
-  doc.text(bodyLines, 56, y);
+  doc.text(bodyLines, L, y);
   y += bodyLines.length * 15 + 40;
 
-  doc.setFont("helvetica", "bold");
-  doc.text("_____________________________", 56, y);
+  doc.setFont("times", "bold");
+  doc.text("_____________________________", L, y);
   y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.text("Head Teacher / Admission Officer", 56, y);
+  doc.setFont("times", "normal");
+  doc.text("Head Teacher / Admission Officer", L, y);
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont("times", "bold");
   doc.setFontSize(10);
-  doc.text(`Admission No: ${data.admission_number}`, pageW - 56, 56 + (schoolAddressLine ? 14 : 0) + (data.school.motto ? 14 : 0), { align: "right" });
+  doc.text(`Admission No: ${data.admission_number}`, R, 78, { align: "right" });
 }
 
 export function generateAdmissionLetterPdf(data: AdmissionLetterData) {

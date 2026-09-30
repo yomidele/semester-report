@@ -11,7 +11,7 @@ import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { generateReportSheetPdf, orderSubjects } from "@/lib/report-sheet";
-import { effectiveTotal, rankByAverage } from "@/lib/grading";
+import { effectiveTotal, rankByAverage, autoRemark } from "@/lib/grading";
 
 export const Route = createFileRoute("/exam-officer/report-sheets")({
   head: () => ({ meta: [{ title: "Report Sheets — Exam Officer" }] }),
@@ -86,6 +86,12 @@ function Page() {
         avg: totals.reduce((a, b) => a + b, 0) / (totals.length || 1),
       })).sort((a, b) => b.avg - a.avg);
       const rank = rankByAverage(averages.map((a) => ({ id: a.id, average: a.avg }))).get(studentId) ?? 0;
+      const pupilAverage = averages.find((a) => a.id === studentId)?.avg ?? 0;
+      const firstName = student.full_name.trim().split(/\s+/)[0];
+      // A remark the class teacher actually typed always wins; otherwise the
+      // sheet still leaves the school's own remark section filled in rather
+      // than blank, generated from this term's actual average.
+      const autoClassTeacherRemark = autoRemark(pupilAverage, settings.grading_scale, firstName);
 
       // Rows = every subject taught to this pupil's class arm (blank when no
       // published score yet, like the printed sheet) plus any scored subject.
@@ -121,7 +127,7 @@ function Page() {
         position: rank > 0 ? rank : null,
         classSize: (studentsQ.data ?? []).length || null,
         comments: {
-          classTeacher: comments?.class_teacher_comment ?? null,
+          classTeacher: comments?.class_teacher_comment ?? autoClassTeacherRemark,
           headTeacher: comments?.head_teacher_comment ?? null,
         },
         header: { authorityLine: rs.authority_line, schoolLine: rs.school_line },

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCollegeSettings } from "@/lib/college-settings";
-import { effectiveTotal, computeGrade } from "@/lib/grading";
+import { effectiveTotal, computeGrade, autoRemark } from "@/lib/grading";
 import { generateReportSheetPdf } from "@/lib/report-sheet";
 import { checkResult, getPinPurchaseOptions } from "@/lib/result-pin.functions";
 import { toast } from "sonner";
@@ -74,6 +74,10 @@ function CheckResultPage() {
     // look identical whether the Exam Officer, an admin, or a parent (here,
     // via Result PIN) downloads it. Only the verification block is added,
     // since a parent needs a way to prove a printed copy is genuine.
+    const pupilAverage = result.results.length
+      ? result.results.reduce((s, r) => s + effectiveTotal(r), 0) / result.results.length
+      : 0;
+    const firstName = result.student.full_name.trim().split(/\s+/)[0];
     generateReportSheetPdf(
       {
         student: { full_name: result.student.full_name, admission_number: result.student.matric_number },
@@ -89,7 +93,10 @@ function CheckResultPage() {
         })),
         position: null,
         classSize: null,
-        comments: {},
+        // The PIN checker has no access to a manually-typed comment (that
+        // lives behind Form Master / Admin auth), so it always shows the
+        // auto-generated remark for this term's average.
+        comments: { classTeacher: autoRemark(pupilAverage, settings.grading_scale, firstName), headTeacher: null },
         gradingScale: settings.grading_scale,
         verification: { number: result.verification_number, qrDataUrl },
       },

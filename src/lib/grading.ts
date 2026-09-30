@@ -79,3 +79,37 @@ export function ordinal(n: number): string {
   if (v >= 11 && v <= 13) return `${n}th`;
   switch (n % 10) { case 1: return `${n}st`; case 2: return `${n}nd`; case 3: return `${n}rd`; default: return `${n}th`; }
 }
+
+/**
+ * Generates a teacher's remark from a pupil's average score for the term —
+ * used as the Form Master / Head Master remark on the report sheet whenever
+ * no one has typed a comment for that pupil into report_card_comments.
+ *
+ * This is schema-driven rather than hard-coded to A–F: it works against
+ * whatever grading_scale the school has configured (useCollegeSettings),
+ * bucketing bands into thirds (top/middle/bottom of however many bands
+ * exist) rather than assuming a fixed number of grades.
+ */
+export function autoRemark(average: number, scale: GradeBand[] = DEFAULT_GRADING_SCALE, firstName?: string): string {
+  const bands = [...(scale.length ? scale : DEFAULT_GRADING_SCALE)].sort((a, b) => b.min - a.min);
+  const index = bands.findIndex((b) => average >= b.min);
+  const bandIndex = index === -1 ? bands.length - 1 : index;
+  const band = bands[bandIndex];
+  const who = firstName?.trim() || "The pupil";
+
+  const tier = bandIndex / Math.max(bands.length - 1, 1); // 0 = top band, 1 = bottom band
+  let encouragement: string;
+  if (tier <= 0.25) {
+    encouragement = "An excellent result this term — keep up the hard work!";
+  } else if (tier <= 0.5) {
+    encouragement = "A very good result. Continue putting in this effort.";
+  } else if (tier <= 0.75) {
+    encouragement = "A fair result, but there's clearly room to do better next term.";
+  } else {
+    encouragement = "This result needs serious improvement — more effort and support at home will help.";
+  }
+
+  const avgLabel = Number.isFinite(average) ? average.toFixed(1) : "0.0";
+  const gradeLabel = band.remark ? `${band.grade} — ${band.remark}` : band.grade;
+  return `${who} had an average score of ${avgLabel}% this term, graded ${gradeLabel}. ${encouragement}`;
+}

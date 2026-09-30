@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCollegeSettings } from "@/lib/college-settings";
-import { effectiveTotal } from "@/lib/grading";
+import { effectiveTotal, autoRemark } from "@/lib/grading";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { generateReportSheetPdf } from "@/lib/report-sheet";
@@ -38,6 +38,14 @@ interface StudentRow {
   full_name: string;
   matric_number: string;
   class_arm_id: string | null;
+}
+
+interface CommentRow {
+  session_id: string;
+  term: string;
+  class_teacher_comment: string | null;
+  head_teacher_comment: string | null;
+  academic_sessions: { name: string } | null;
 }
 
 export function ReportCardsPage() {
@@ -88,6 +96,19 @@ export function ReportCardsPage() {
   });
 
   const sessionRank = (id: string) => sessions.find((s) => s.id === id)?.name ?? ""; // names like "2026/2027" sort lexically
+
+  const { data: comments = [] } = useQuery<CommentRow[]>({
+    queryKey: ["transcript-comments", studentId],
+    enabled: !!studentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("report_card_comments")
+        .select("session_id, term, class_teacher_comment, head_teacher_comment, academic_sessions(name)")
+        .eq("student_id", studentId!);
+      if (error) throw error;
+      return (data ?? []) as unknown as CommentRow[];
+    },
+  });
 
   const inRange = (r: ResultRow): boolean => {
     if (!startSession || !endSession) return true;
@@ -142,6 +163,9 @@ export function ReportCardsPage() {
     // in one downloadable PDF.
     let doc: ReturnType<typeof generateReportSheetPdf> | undefined;
     groups.forEach((g, i) => {
+      const matchingComment = comments.find((c) => (c.academic_sessions?.name ?? "—") === g.sessionName && c.term === g.semester);
+      const average = averageOf(g.rows);
+      const firstName = student.full_name.trim().split(/\s+/)[0];
       doc = generateReportSheetPdf(
         {
           student: { full_name: student.full_name, admission_number: student.matric_number },
@@ -157,7 +181,10 @@ export function ReportCardsPage() {
           })),
           position: null, // position needs the pupil's classmates for this term — not fetched by this multi-term view
           classSize: null,
-          comments: {},
+          comments: {
+            classTeacher: matchingComment?.class_teacher_comment ?? autoRemark(average, settings.grading_scale, firstName),
+            headTeacher: matchingComment?.head_teacher_comment ?? null,
+          },
           gradingScale: settings.grading_scale,
         },
         { doc, save: false },

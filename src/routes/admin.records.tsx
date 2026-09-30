@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
-import { computeGrade, effectiveTotal } from "@/lib/grading";
+import { computeGrade, effectiveTotal, autoRemark } from "@/lib/grading";
 import { generateAdmissionLetterPdf } from "@/lib/admission-letter";
 import { generateReportSheetPdf } from "@/lib/report-sheet";
 import { FileDown, Download, Search, UserRound } from "lucide-react";
@@ -51,6 +52,7 @@ type StudentDetail = {
   status_date: string | null;
   admission_date: string;
   class_arm_id: string | null;
+  passport_url: string | null;
 };
 
 interface ResultRow {
@@ -138,7 +140,7 @@ function RecordsPage() {
       const { data, error } = await supabase
         .from("students")
         .select(
-          "id, full_name, matric_number, email, gender, date_of_birth, address, guardian_name, guardian_phone, status, status_reason, status_date, admission_date, class_arm_id",
+          "id, full_name, matric_number, email, gender, date_of_birth, address, guardian_name, guardian_phone, status, status_reason, status_date, admission_date, class_arm_id, passport_url",
         )
         .eq("id", studentId!)
         .maybeSingle();
@@ -278,6 +280,9 @@ function RecordsPage() {
     // per term, in one PDF when more than one term is included.
     let doc: ReturnType<typeof generateReportSheetPdf> | undefined;
     rowGroups.forEach((g) => {
+      const matchingComment = comments.find((c) => (c.academic_sessions?.name ?? "—") === g.sessionName && c.term === g.semester);
+      const average = averageOf(g.rows);
+      const firstName = student.full_name.trim().split(/\s+/)[0];
       doc = generateReportSheetPdf(
         {
           student: { full_name: student.full_name, admission_number: student.matric_number },
@@ -293,7 +298,10 @@ function RecordsPage() {
           })),
           position: null, // position needs the pupil's classmates for this term — not fetched by this cumulative-records view
           classSize: null,
-          comments: {},
+          comments: {
+            classTeacher: matchingComment?.class_teacher_comment ?? autoRemark(average, settings.grading_scale, firstName),
+            headTeacher: matchingComment?.head_teacher_comment ?? null,
+          },
           gradingScale: settings.grading_scale,
         },
         { doc, save: false },
@@ -375,17 +383,23 @@ function RecordsPage() {
         <>
           <Card className="tsu-shadow">
             <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-lg font-semibold">{student.full_name}</p>
-                  <Badge variant={STATUS_BADGE_VARIANT[student.status] ?? "outline"}>
-                    {STATUS_LABEL[student.status] ?? student.status}
-                  </Badge>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 rounded-md border border-border">
+                  <AvatarImage src={student.passport_url ?? undefined} alt={student.full_name} className="object-cover" />
+                  <AvatarFallback className="rounded-md bg-secondary"><UserRound className="h-5 w-5 text-muted-foreground" /></AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-semibold">{student.full_name}</p>
+                    <Badge variant={STATUS_BADGE_VARIANT[student.status] ?? "outline"}>
+                      {STATUS_LABEL[student.status] ?? student.status}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Admission No: {student.matric_number} · Class: {classLabel}
+                    {facultyName ? ` · ${facultyName}` : ""}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Admission No: {student.matric_number} · Class: {classLabel}
-                  {facultyName ? ` · ${facultyName}` : ""}
-                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={downloadAdmissionLetter}>
@@ -411,23 +425,34 @@ function RecordsPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Personal &amp; Admission Details</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-x-6 gap-y-3 text-sm md:grid-cols-2">
-                  <Field label="Full name" value={student.full_name} />
-                  <Field label="Admission number" value={student.matric_number} />
-                  <Field label="Admission date" value={new Date(student.admission_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })} />
-                  <Field label="Current class" value={classLabel} />
-                  <Field label="Gender" value={student.gender ?? "—"} />
-                  <Field label="Date of birth" value={student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : "—"} />
-                  <Field label="Email" value={student.email ?? "—"} />
-                  <Field label="Home address" value={student.address ?? "—"} />
-                  <Field label="Guardian name" value={student.guardian_name ?? "—"} />
-                  <Field label="Guardian phone" value={student.guardian_phone ?? "—"} />
-                  {student.status !== "active" && (
-                    <>
-                      <Field label="Status reason" value={student.status_reason ?? "—"} />
-                      <Field label="Status date" value={student.status_date ? new Date(student.status_date).toLocaleDateString() : "—"} />
-                    </>
-                  )}
+                <CardContent className="flex flex-col gap-6 md:flex-row">
+                  <div className="flex shrink-0 flex-col items-center gap-2 md:items-start">
+                    <Avatar className="h-32 w-32 rounded-md border border-border">
+                      <AvatarImage src={student.passport_url ?? undefined} alt={student.full_name} className="object-cover" />
+                      <AvatarFallback className="rounded-md bg-secondary">
+                        <UserRound className="h-12 w-12 text-muted-foreground" />
+                      </AvatarFallback>
+                    </Avatar>
+                    {!student.passport_url && <p className="text-xs text-muted-foreground">No photo on file</p>}
+                  </div>
+                  <div className="grid flex-1 gap-x-6 gap-y-3 text-sm md:grid-cols-2">
+                    <Field label="Full name" value={student.full_name} />
+                    <Field label="Admission number" value={student.matric_number} />
+                    <Field label="Admission date" value={new Date(student.admission_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })} />
+                    <Field label="Current class" value={classLabel} />
+                    <Field label="Gender" value={student.gender ?? "—"} />
+                    <Field label="Date of birth" value={student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : "—"} />
+                    <Field label="Email" value={student.email ?? "—"} />
+                    <Field label="Home address" value={student.address ?? "—"} />
+                    <Field label="Guardian name" value={student.guardian_name ?? "—"} />
+                    <Field label="Guardian phone" value={student.guardian_phone ?? "—"} />
+                    {student.status !== "active" && (
+                      <>
+                        <Field label="Status reason" value={student.status_reason ?? "—"} />
+                        <Field label="Status date" value={student.status_date ? new Date(student.status_date).toLocaleDateString() : "—"} />
+                      </>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
