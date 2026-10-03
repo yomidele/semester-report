@@ -302,7 +302,7 @@ export function generateReportSheetPdf(data: ReportSheetData, opts: GenerateRepo
       if (h.section === "body" && h.row.index >= subjectRowCount) h.cell.styles.fontStyle = "bold";
       if (h.section === "head" && h.column.index === 0) h.cell.styles.halign = "center";
     },
-    didDrawPage: () => drawFrame(),
+    didDrawPage: () => drawFrame(doc),
   });
 
   const last = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
@@ -311,7 +311,7 @@ export function generateReportSheetPdf(data: ReportSheetData, opts: GenerateRepo
   // ---- Remarks / next term / stamp -------------------------------------
   if (y + 170 > pageH - 50) {
     doc.addPage();
-    drawFrame();
+    drawFrame(doc);
     y = 80;
   }
 
