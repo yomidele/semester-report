@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { examOfficerApproveResults, examOfficerPublishResults, examOfficerReturnResults } from "@/lib/result-workflow.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, RotateCcw, Send } from "lucide-react";
+import { Loader2, Check, RotateCcw, Send, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/exam-officer/results")({
@@ -40,10 +40,47 @@ function Page() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const submittedIds = (results.data ?? []).filter((r: any) => r.status === "submitted").map((r: any) => r.id);
+  const approvedIds = (results.data ?? []).filter((r: any) => r.status === "approved").map((r: any) => r.id);
+
+  const bulkTransition = useMutation({
+    mutationFn: async ({ kind, ids }: { kind: "approve" | "publish"; ids: string[] }) => {
+      const data = { result_ids: ids };
+      return kind === "approve" ? approve({ data }) : publish({ data });
+    },
+    onSuccess: (_data, { kind, ids }) => {
+      toast.success(`${ids.length} result${ids.length === 1 ? "" : "s"} ${kind === "approve" ? "approved" : "published"}`);
+      qc.invalidateQueries({ queryKey: ["exam-officer-results-review"] });
+      qc.invalidateQueries({ queryKey: ["eo-pending-count"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const handleBulk = (kind: "approve" | "publish", ids: string[]) => {
+    if (ids.length === 0) return;
+    const verb = kind === "approve" ? "approve" : "publish";
+    if (!window.confirm(`${verb === "approve" ? "Approve" : "Publish"} all ${ids.length} ${verb === "publish" ? "approved " : ""}result${ids.length === 1 ? "" : "s"}${verb === "publish" ? "? They will immediately become visible on report cards and to PIN holders." : "?"}`)) return;
+    bulkTransition.mutate({ kind, ids });
+  };
+
+  const bulkBusy = bulkTransition.isPending || transition.isPending;
+
   return <div className="space-y-6">
     <div><h1 className="font-serif text-2xl font-bold">Review Results</h1><p className="text-sm text-muted-foreground">Check submitted scores, approve results, return corrections, and finalize approved results for publication.</p></div>
-    <Card><CardHeader><CardTitle className="text-base">Submitted and approved results</CardTitle></CardHeader><CardContent className="overflow-x-auto">
-      {results.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <table className="w-full min-w-[850px] text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Pupil</th><th className="pr-3">Subject</th><th className="pr-3">Session / Term</th><th className="pr-3">CA</th><th className="pr-3">Exam</th><th className="pr-3">Total</th><th className="pr-3">Status</th><th>Actions</th></tr></thead><tbody>{(results.data ?? []).map((result: any) => <tr key={result.id} className="border-b"><td className="py-3 pr-3">{result.students?.full_name}<span className="block text-xs text-muted-foreground">{result.students?.matric_number}</span></td><td className="pr-3">{result.courses?.title ?? result.courses?.code}</td><td className="pr-3">{result.academic_sessions?.name} / {result.semester}</td><td className="pr-3">{result.ca_score}</td><td className="pr-3">{result.exam_score}</td><td className="pr-3">{result.total_score ?? Number(result.ca_score) + Number(result.exam_score)}</td><td className="pr-3 capitalize">{result.status}</td><td><div className="flex gap-1">{result.status === "submitted" && <><Button size="sm" disabled={transition.isPending} onClick={() => transition.mutate({ kind: "approve", id: result.id })}><Check className="mr-1 h-4 w-4" />Approve</Button><Button size="sm" variant="outline" disabled={transition.isPending} onClick={() => transition.mutate({ kind: "return", id: result.id })}><RotateCcw className="mr-1 h-4 w-4" />Return</Button></>}{result.status === "approved" && <Button size="sm" disabled={transition.isPending} onClick={() => transition.mutate({ kind: "publish", id: result.id })}><Send className="mr-1 h-4 w-4" />Publish</Button>}</div></td></tr>)}</tbody></table>}
+    <Card><CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+      <CardTitle className="text-base">Submitted and approved results</CardTitle>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" disabled={bulkBusy || submittedIds.length === 0} onClick={() => handleBulk("approve", submittedIds)}>
+          {bulkTransition.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1 h-4 w-4" />}
+          Approve all{submittedIds.length > 0 ? ` (${submittedIds.length})` : ""}
+        </Button>
+        <Button size="sm" disabled={bulkBusy || approvedIds.length === 0} onClick={() => handleBulk("publish", approvedIds)}>
+          {bulkTransition.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}
+          Publish all{approvedIds.length > 0 ? ` (${approvedIds.length})` : ""}
+        </Button>
+      </div>
+    </CardHeader><CardContent className="overflow-x-auto">
+      {results.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <table className="w-full min-w-[850px] text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Pupil</th><th className="pr-3">Subject</th><th className="pr-3">Session / Term</th><th className="pr-3">CA</th><th className="pr-3">Exam</th><th className="pr-3">Total</th><th className="pr-3">Status</th><th>Actions</th></tr></thead><tbody>{(results.data ?? []).map((result: any) => <tr key={result.id} className="border-b"><td className="py-3 pr-3">{result.students?.full_name}<span className="block text-xs text-muted-foreground">{result.students?.matric_number}</span></td><td className="pr-3">{result.courses?.title ?? result.courses?.code}</td><td className="pr-3">{result.academic_sessions?.name} / {result.semester}</td><td className="pr-3">{result.ca_score}</td><td className="pr-3">{result.exam_score}</td><td className="pr-3">{result.total_score ?? Number(result.ca_score) + Number(result.exam_score)}</td><td className="pr-3 capitalize">{result.status}</td><td><div className="flex gap-1">{result.status === "submitted" && <><Button size="sm" disabled={bulkBusy} onClick={() => transition.mutate({ kind: "approve", id: result.id })}><Check className="mr-1 h-4 w-4" />Approve</Button><Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => transition.mutate({ kind: "return", id: result.id })}><RotateCcw className="mr-1 h-4 w-4" />Return</Button></>}{result.status === "approved" && <Button size="sm" disabled={bulkBusy} onClick={() => transition.mutate({ kind: "publish", id: result.id })}><Send className="mr-1 h-4 w-4" />Publish</Button>}</div></td></tr>)}</tbody></table>}
       {!results.isLoading && results.data?.length === 0 && <p className="py-5 text-sm text-muted-foreground">No results are awaiting review or publication.</p>}
     </CardContent></Card>
   </div>;
