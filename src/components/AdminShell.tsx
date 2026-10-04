@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog, Search } from "lucide-react";
+import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog, Search, Printer, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,7 +18,9 @@ const NAV = [
   { to: "/students", label: "Pupils / Admission", icon: Users, roles: ["super_admin", "exam_officer", "admission_officer"] },
   { to: "/result-entry", label: "Result Entry", icon: ClipboardEdit, roles: ["super_admin", "exam_officer"] },
   { to: "/results", label: "View / Export Results", icon: FileSpreadsheet, roles: ["super_admin", "exam_officer"] },
-  { to: "/transcripts", label: "Report Sheets", icon: FileText, roles: ["super_admin", "exam_officer"] },
+  { to: "/exam-officer/results", label: "Review Results", icon: ClipboardCheck, roles: ["super_admin", "exam_officer"] },
+  { to: "/exam-officer/report-sheets", label: "Report Sheets", icon: Printer, roles: ["super_admin", "exam_officer"] },
+  { to: "/transcripts", label: "Transcripts", icon: FileText, roles: ["super_admin", "exam_officer"] },
   { to: "/audit-logs", label: "Audit Logs", icon: ScrollText, roles: ["super_admin"] },
   { to: "/validation-audit", label: "Validation Audit", icon: ShieldCheck, roles: ["super_admin"] },
 ] as const;

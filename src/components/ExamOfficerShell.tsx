@@ -10,7 +10,7 @@ const NAV = [
   { to: "/sessions", label: "Sessions & Terms", icon: CalendarDays },
   { to: "/exam-officer/results", label: "Review Results", icon: ClipboardCheck },
   { to: "/exam-officer/report-sheets", label: "Report Sheets", icon: ClipboardCheck },
-  { to: "/transcripts", label: "Result Sheets", icon: FileText },
+  { to: "/transcripts", label: "Transcripts", icon: FileText },
 ] as const;
 
 export function ExamOfficerShell({ children }: { children: React.ReactNode }) {

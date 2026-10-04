@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { generateReportSheetPdf } from "@/lib/report-sheet";
 
 export const Route = createFileRoute("/transcripts")({
-  head: () => ({ meta: [{ title: "Report Cards — School Portal" }] }),
+  head: () => ({ meta: [{ title: "Transcripts — School Portal" }] }),
   component: () => <ProtectedAdmin><ReportCardsPage /></ProtectedAdmin>,
 });
 
@@ -198,8 +198,12 @@ export function ReportCardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold">Report Cards</h2>
-        <p className="text-sm text-muted-foreground">Generate a PDF report card for any pupil across a chosen term range.</p>
+        <h2 className="font-serif text-2xl font-bold">Transcripts</h2>
+        <p className="text-sm text-muted-foreground">
+          Print a pupil's full academic record across several terms at once — useful for a leaving certificate or
+          transfer request. For the normal single-term report card (with class position), use <strong>Report Sheets</strong> instead.
+          Only <strong>published</strong> results appear here — a result must be reviewed and published first (see <strong>Review Results</strong>).
+        </p>
       </div>
 
       <Card className="tsu-shadow">
@@ -254,7 +258,12 @@ export function ReportCardsPage() {
         </CardHeader>
         <CardContent>
           {!student && <p className="text-sm text-muted-foreground">Select a pupil to preview.</p>}
-          {student && groups.length === 0 && <p className="text-sm text-muted-foreground">No results found in the selected range.</p>}
+          {student && groups.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No published results found in the selected range. Results only appear here once they've been reviewed and
+              published — check <strong>Review Results</strong> to see if this pupil's results are still waiting on that step.
+            </p>
+          )}
           {student && groups.length > 0 && (
             <ul className="space-y-1 text-sm">
               {groups.map((g, i) => {

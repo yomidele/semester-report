@@ -20,6 +20,14 @@ export const Route = createFileRoute("/results")({
 
 const TERMS = ["First", "Second", "Third"] as const;
 
+// Sentinel for the Class Arm select meaning "every arm in this class" —
+// matches the same ALL_ARMS pattern Result Entry uses, and critically,
+// querying students the same way Result Entry does is what makes this page
+// able to find results that were entered department-wide rather than for
+// one specific arm (a common shortcut for quickly entering demo/test data
+// without assigning every pupil to a specific arm first).
+const ALL_ARMS = "all";
+
 interface ResultJoined {
   id: string;
   student_id: string;
@@ -36,30 +44,40 @@ interface ResultJoined {
 export function ResultsViewPage() {
   const [sessionId, setSessionId] = useState("");
   const [semester, setTerm] = useState("First");
-  const [classArmId, setClassArmId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [classArmId, setClassArmId] = useState(ALL_ARMS);
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["sessions"],
     queryFn: async () => (await supabase.from("academic_sessions").select("*").order("name", { ascending: false })).data ?? [],
   });
 
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments-for-results"],
+    queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data ?? [],
+  });
+
   const { data: classArms = [] } = useQuery({
-    queryKey: ["class-arms-for-results"],
+    queryKey: ["class-arms-for-results", departmentId],
+    enabled: !!departmentId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("class_arms")
-        .select("id, name, departments:department_id(name)")
-        .order("name");
+      const { data, error } = await supabase.from("class_arms").select("id, name").eq("department_id", departmentId).order("name");
       if (error) throw error;
-      return data as { id: string; name: string; departments: { name: string } | null }[];
+      return data as { id: string; name: string }[];
     },
   });
 
   const { data: results = [], isLoading } = useQuery<ResultJoined[]>({
-    queryKey: ["results", sessionId, semester, classArmId],
-    enabled: !!sessionId && !!classArmId,
+    queryKey: ["results", sessionId, semester, departmentId, classArmId],
+    enabled: !!sessionId && !!departmentId,
     queryFn: async () => {
-      const { data: classStudents, error: sErr } = await supabase.from("students").select("id").eq("class_arm_id", classArmId).eq("status", "active");
+      // Same roster query Result Entry itself uses to load pupils: every
+      // active pupil in the department, optionally narrowed to one arm.
+      // Matching that logic exactly is what guarantees anything entered
+      // there — whether for one arm or department-wide — shows up here too.
+      let q = supabase.from("students").select("id").eq("department_id", departmentId).eq("status", "active");
+      if (classArmId !== ALL_ARMS) q = q.eq("class_arm_id", classArmId);
+      const { data: classStudents, error: sErr } = await q;
       if (sErr) throw sErr;
       const studentIds = (classStudents ?? []).map((s) => s.id);
       if (studentIds.length === 0) return [];
@@ -94,8 +112,9 @@ export function ResultsViewPage() {
   const handleExport = () => {
     if (grouped.length === 0) { toast.error("Nothing to export"); return; }
     const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? "session";
-    const className = classArms.find((c) => c.id === classArmId);
-    const classLabel = className ? (className.departments?.name ? `${className.departments.name} ${className.name}` : className.name) : "Class";
+    const deptName = departments.find((d) => d.id === departmentId)?.name ?? "Class";
+    const armName = classArmId !== ALL_ARMS ? classArms.find((a) => a.id === classArmId)?.name : undefined;
+    const classLabel = armName ? `${deptName} ${armName}` : deptName;
 
     const detailRows = results.map((r) => {
       const total = effectiveTotal(r);
@@ -129,9 +148,11 @@ export function ResultsViewPage() {
 
   const sessionName = sessions.find((s) => s.id === sessionId)?.name;
   const classLabel = useMemo(() => {
-    const c = classArms.find((a) => a.id === classArmId);
-    return c ? (c.departments?.name ? `${c.departments.name} ${c.name}` : c.name) : "";
-  }, [classArms, classArmId]);
+    const dept = departments.find((d) => d.id === departmentId);
+    if (!dept) return "";
+    const arm = classArmId !== ALL_ARMS ? classArms.find((a) => a.id === classArmId) : undefined;
+    return arm ? `${dept.name} ${arm.name}` : `${dept.name} (all arms)`;
+  }, [departments, departmentId, classArms, classArmId]);
 
   return (
     <div className="space-y-6">
@@ -143,7 +164,7 @@ export function ResultsViewPage() {
       <Card className="tsu-shadow">
         <CardHeader><CardTitle className="text-base">Filters</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <Label>Session</Label>
               <Select value={sessionId} onValueChange={setSessionId}>
@@ -160,9 +181,19 @@ export function ResultsViewPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Class</Label>
-              <Select value={classArmId} onValueChange={setClassArmId}>
-                <SelectTrigger><SelectValue placeholder={classArms.length ? "Select class" : "Set up classes first"} /></SelectTrigger>
-                <SelectContent>{classArms.map((c) => <SelectItem key={c.id} value={c.id}>{c.departments?.name ? `${c.departments.name} ${c.name}` : c.name}</SelectItem>)}</SelectContent>
+              <Select value={departmentId} onValueChange={(v) => { setDepartmentId(v); setClassArmId(ALL_ARMS); }}>
+                <SelectTrigger><SelectValue placeholder={departments.length ? "Select class" : "Set up classes first"} /></SelectTrigger>
+                <SelectContent>{departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Arm</Label>
+              <Select value={classArmId} onValueChange={setClassArmId} disabled={!departmentId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_ARMS}>All arms</SelectItem>
+                  {classArms.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
           </div>
@@ -172,15 +203,15 @@ export function ResultsViewPage() {
         </CardContent>
       </Card>
 
-      {(!sessionId || !classArmId) && (
+      {(!sessionId || !departmentId) && (
         <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">Select a session and class to load results.</CardContent></Card>
       )}
 
-      {sessionId && classArmId && isLoading && (
+      {sessionId && departmentId && isLoading && (
         <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">Loading…</CardContent></Card>
       )}
 
-      {sessionId && classArmId && !isLoading && grouped.length === 0 && (
+      {sessionId && departmentId && !isLoading && grouped.length === 0 && (
         <Card className="tsu-shadow"><CardContent className="py-10 text-center text-muted-foreground">No results recorded for this scope.</CardContent></Card>
       )}
 
