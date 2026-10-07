@@ -17,6 +17,7 @@ const NAV = [
   { to: "/news", label: "News" },
   { to: "/check-result", label: "Check Result" },
   { to: "/contact", label: "Contact" },
+  { to: "/cds-project", label: "CDS Project" },
 ] as const;
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -171,6 +172,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="border-t border-sidebar-foreground/15 py-3 text-center text-xs text-sidebar-foreground/70">
           © {new Date().getFullYear()} {settings.college_name}. All rights reserved.
+          <br className="sm:hidden" />
+          <span className="sm:ml-1">
+            ·{" "}
+            <Link to="/cds-project" className="hover:text-accent">
+              NYSC Personal CDS Project
+            </Link>{" "}
+            — School Management System developed by Garba Sadiq Suleman (JG/26A/2107), 2026A Batch.
+          </span>
         </div>
       </footer>
     </div>
