@@ -24,10 +24,9 @@ const PROJECT_INFO = [
   { label: "Project", value: "School Management System" },
   { label: "Project Type", value: "NYSC Personal CDS" },
   { label: "Developer", value: "Garba Sadiq Suleman" },
-  { label: "NYSC State Code", value: "JG/26A/2107" },
   { label: "PPA", value: "Model Day Primary School Kazaure" },
   { label: "Location", value: "Sha'iskawa, Kazaure, Jigawa State" },
-  { label: "Service Year", value: "2026A Batch" },
+  { label: "Service Year", value: "Batch A2 2026" },
 ] as const;
 
 function CdsProject() {
@@ -70,7 +69,7 @@ function CdsProject() {
                 { icon: IdCard, label: "NYSC State Code", value: "JG/26A/2107" },
                 { icon: School, label: "PPA", value: "Model Day Primary School Kazaure" },
                 { icon: MapPin, label: "Location", value: "Sha'iskawa, Kazaure, Jigawa State" },
-                { icon: CalendarDays, label: "Service Year", value: "2026A Batch" },
+                { icon: CalendarDays, label: "Service Year", value: "Batch A2 2026" },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-start gap-3">
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -92,7 +91,7 @@ function CdsProject() {
             <p>
               This School Management System was designed and developed for Model Day Primary School Kazaure as a
               Personal Community Development Service (CDS) project by Garba Sadiq Suleman, an NYSC Corps Member
-              serving at the school during the 2026A Batch service year.
+              serving at the school as part of Batch A2 2026.
             </p>
             <p>
               The project was developed to support the school's academic and administrative activities through
@@ -130,7 +129,7 @@ function CdsProject() {
               <Code2 className="h-7 w-7 shrink-0 text-primary" />
               <div>
                 <h3 className="font-serif text-lg font-bold text-foreground">Garba Sadiq Suleman</h3>
-                <p className="text-sm text-muted-foreground">NYSC Corps Member — 2026A Batch · State Code: JG/26A/2107</p>
+                <p className="text-sm text-muted-foreground">NYSC Corps Member — Batch A2 2026</p>
                 <p className="mt-3 text-sm italic leading-relaxed text-muted-foreground">
                   "Designed and developed by Garba Sadiq Suleman as an NYSC Personal CDS project in service to
                   education and community development."

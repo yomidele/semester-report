@@ -8,6 +8,7 @@ import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
 import { useManagementBoard, categoryLabel } from "@/lib/staff";
 import heroImg from "@/assets/pupils-hero.jpg";
+import developerPortrait from "@/assets/nysc-developer-portrait.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -201,6 +202,29 @@ function Home() {
             ))}
           </ul>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
+        <Link to="/cds-project" className="block">
+          <Card className="tsu-shadow border-border transition-colors hover:border-primary/40">
+            <CardContent className="flex flex-col items-center gap-5 p-5 sm:flex-row">
+              <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:h-28 sm:w-28">
+                <img src={developerPortrait} alt="" className="h-full w-full object-cover object-top" />
+              </div>
+              <div className="min-w-0 flex-1 text-center sm:text-left">
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent-foreground">NYSC Personal CDS Project</p>
+                <h3 className="mt-1 font-serif text-lg font-bold text-foreground">
+                  The story behind this School Management System
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Designed and developed for our school by Garba Sadiq Suleman, an NYSC Corps Member, as a Personal
+                  Community Development Service project.
+                </p>
+              </div>
+              <ArrowRight className="hidden h-5 w-5 shrink-0 text-primary sm:block" />
+            </CardContent>
+          </Card>
+        </Link>
       </section>
     </PublicLayout>
   );

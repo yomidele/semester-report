@@ -178,7 +178,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <Link to="/cds-project" className="hover:text-accent">
               NYSC Personal CDS Project
             </Link>{" "}
-            — School Management System developed by Garba Sadiq Suleman (JG/26A/2107), 2026A Batch.
+            — School Management System developed by Garba Sadiq Suleman (JG/26A/2107), Batch A2 2026.
           </span>
         </div>
       </footer>
