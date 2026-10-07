@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
 import { useManagementBoard, categoryLabel } from "@/lib/staff";
+import { useT } from "@/lib/i18n";
 import heroImg from "@/assets/pupils-hero.jpg";
 import developerPortrait from "@/assets/nysc-developer-portrait.png";
 
@@ -29,17 +30,20 @@ export const Route = createFileRoute("/")({
 });
 
 const FEATURES = [
-  { icon: BookOpen, title: "Creative Learning", body: "Engaging lessons that help pupils build strong foundations in every subject." },
-  { icon: Users, title: "Caring Teachers", body: "Teachers work closely with pupils and families to support steady progress." },
-  { icon: GraduationCap, title: "Strong Foundations", body: "A clear Primary 1–6 learning journey with age-appropriate assessment." },
-  { icon: HeartHandshake, title: "Character Development", body: "A welcoming school culture that nurtures confidence, respect and responsibility." },
-];
+  { icon: BookOpen, titleKey: "home.features.creativeLearning.title", bodyKey: "home.features.creativeLearning.body" },
+  { icon: Users, titleKey: "home.features.caringTeachers.title", bodyKey: "home.features.caringTeachers.body" },
+  { icon: GraduationCap, titleKey: "home.features.strongFoundations.title", bodyKey: "home.features.strongFoundations.body" },
+  { icon: HeartHandshake, titleKey: "home.features.characterDevelopment.title", bodyKey: "home.features.characterDevelopment.body" },
+] as const;
+
+const ADMISSION_REQUIREMENTS = ["home.admissionReq.item1", "home.admissionReq.item2", "home.admissionReq.item3", "home.admissionReq.item4"] as const;
 
 function Home() {
   const { settings } = useCollegeSettings();
   const { data: schools = [] } = useSchools();
   const { data: programmes = [] } = useProgrammes();
   const { data: staff = [] } = useManagementBoard();
+  const t = useT();
   const activeProgrammes = programmes.filter((p) => p.is_active).slice(0, 6);
 
   return (
@@ -50,22 +54,22 @@ function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">
-            {settings.admissions_open ? "Admissions open for the new session" : "Admissions currently closed"}
+            {settings.admissions_open ? t("home.hero.admissionsOpen") : t("home.hero.admissionsClosed")}
           </p>
           <h1 className="mt-4 max-w-3xl font-serif text-3xl font-bold leading-tight text-primary-foreground md:text-5xl">
             {settings.college_name}
           </h1>
           <p className="mt-4 max-w-2xl text-base text-primary-foreground/85 md:text-lg">
-            A safe and encouraging place for children to learn, grow in character and build the skills they need for the future.
+            {t("home.hero.tagline")}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
               <Link to="/apply">
-                Apply Now <ArrowRight className="ml-2 h-4 w-4" />
+                {t("home.hero.applyNow")} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-accent bg-transparent text-accent hover:bg-accent hover:text-accent-foreground">
-              <Link to="/programmes">Explore Programmes</Link>
+              <Link to="/programmes">{t("home.hero.explorerProgrammes")}</Link>
             </Button>
           </div>
         </div>
@@ -73,12 +77,12 @@ function Home() {
 
       <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <Card key={title} className="tsu-shadow border-border">
+          {FEATURES.map(({ icon: Icon, titleKey, bodyKey }) => (
+            <Card key={titleKey} className="tsu-shadow border-border">
               <CardContent className="p-5">
                 <Icon className="h-7 w-7 text-primary" />
-                <h3 className="mt-3 font-serif text-base font-bold text-foreground">{title}</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
+                <h3 className="mt-3 font-serif text-base font-bold text-foreground">{t(titleKey)}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{t(bodyKey)}</p>
               </CardContent>
             </Card>
           ))}
@@ -88,17 +92,15 @@ function Home() {
       <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div className="order-2 md:order-1">
-            <p className="text-sm font-semibold uppercase tracking-[0.15em] text-accent-foreground">Life at school</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.15em] text-accent-foreground">{t("home.lifeAtSchool.kicker")}</p>
             <h2 className="mt-3 font-serif text-2xl font-bold text-foreground md:text-3xl">
-              Every morning, a fresh start
+              {t("home.lifeAtSchool.heading")}
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
-              Our pupils arrive each day to a school that knows them by name, small class arms, attentive form
-              masters, and teachers who track every child's progress closely enough to catch it when they need help,
-              and celebrate it when they excel.
+              {t("home.lifeAtSchool.body")}
             </p>
             <Button asChild variant="outline" className="mt-6">
-              <Link to="/about">More about our school</Link>
+              <Link to="/about">{t("home.lifeAtSchool.cta")}</Link>
             </Button>
           </div>
           <div className="order-1 md:order-2">
@@ -115,9 +117,9 @@ function Home() {
 
       <section className="bg-secondary/60 py-14">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Our Schools</h2>
+          <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">{t("home.schoolsSection.heading")}</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Explore our learning sections, primary classes and the subjects that shape each pupil's school journey.
+                {t("home.schoolsSection.body")}
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {schools.filter((s) => s.is_active).map((s) => (
@@ -125,19 +127,19 @@ function Home() {
                 <CardContent className="p-5">
                   <p className="text-xs font-semibold uppercase tracking-wider text-accent-foreground">{s.code}</p>
                   <h3 className="mt-1 font-serif text-lg font-bold text-primary">{s.name}</h3>
-                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{s.description ?? "Accredited school section."}</p>
+                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{s.description ?? t("home.schoolDefaultDescription")}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
           <Button asChild variant="outline" className="mt-6">
-            <Link to="/schools">View all schools</Link>
+            <Link to="/schools">{t("home.schoolsSection.viewAll")}</Link>
           </Button>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
-          <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Learning Programmes</h2>
+          <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">{t("home.programmesSection.heading")}</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {activeProgrammes.map((p) => (
             <Card key={p.id} className="tsu-shadow border-border">
@@ -146,22 +148,22 @@ function Home() {
                 <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
                   {p.award} · {durationLabel(p.duration_years)}
                 </p>
-                <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{p.description ?? "Programme details available on request."}</p>
+                <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{p.description ?? t("home.programmeDefaultDescription")}</p>
               </CardContent>
             </Card>
           ))}
         </div>
         <Button asChild className="mt-6">
-          <Link to="/programmes">See all programmes</Link>
+          <Link to="/programmes">{t("home.programmesSection.seeAll")}</Link>
         </Button>
       </section>
 
       {staff.length > 0 && (
         <section className="bg-secondary/60 py-14">
           <div className="mx-auto max-w-7xl px-4 md:px-6">
-            <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">School Management Board</h2>
+            <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">{t("home.managementBoard.heading")}</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Meet the team leading our school, from the Head Teacher down to our Exams and Admission Officers.
+              {t("home.managementBoard.body")}
             </p>
             <div className="mt-6 -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden px-4 pb-2 [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [touch-action:pan-x] sm:gap-6 [&::-webkit-scrollbar]:hidden">
               {staff.map((member) => (
@@ -184,20 +186,15 @@ function Home() {
       <section className="tsu-header-grad py-14 text-sidebar-foreground">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 md:grid-cols-2 md:px-6">
           <div>
-            <h2 className="font-serif text-2xl font-bold md:text-3xl">Admission Requirements</h2>
+            <h2 className="font-serif text-2xl font-bold md:text-3xl">{t("home.admissionReq.heading")}</h2>
             <p className="mt-2 text-sm text-sidebar-foreground/80">
-              Enrolment is open for children entering the appropriate primary class, subject to available places.
+              {t("home.admissionReq.body")}
             </p>
           </div>
           <ul className="space-y-3 text-sm">
-            {[
-              "Birth certificate or other identification document",
-              "Recent passport photograph",
-              "Completed application and admission screening",
-              "Parent or guardian contact information",
-            ].map((r) => (
+            {ADMISSION_REQUIREMENTS.map((r) => (
               <li key={r} className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {r}
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {t(r)}
               </li>
             ))}
           </ul>
@@ -205,23 +202,27 @@ function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-14 md:px-6">
-        <Link to="/cds-project" className="block">
-          <Card className="tsu-shadow border-border transition-colors hover:border-primary/40">
+        <Link to="/cds-project" className="group block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t("home.cds.ariaLabel")}>
+          <Card className="tsu-shadow border-border transition-all group-hover:-translate-y-0.5 group-hover:border-primary/50 group-hover:shadow-md">
             <CardContent className="flex flex-col items-center gap-5 p-5 sm:flex-row">
               <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:h-28 sm:w-28">
                 <img src={developerPortrait} alt="" className="h-full w-full object-cover object-top" />
               </div>
               <div className="min-w-0 flex-1 text-center sm:text-left">
-                <p className="text-xs font-semibold uppercase tracking-wider text-accent-foreground">NYSC Personal CDS Project</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent-foreground">{t("home.cds.kicker")}</p>
                 <h3 className="mt-1 font-serif text-lg font-bold text-foreground">
-                  The story behind this School Management System
+                  {t("home.cds.heading")}
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Designed and developed for our school by Garba Sadiq Suleman, an NYSC Corps Member, as a Personal
-                  Community Development Service project.
+                  {t("home.cds.body")}
                 </p>
+                {/* Visible on every screen size (the old arrow icon was hidden on phones), so
+                    visitors can tell the whole card is clickable. */}
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
+                  {t("home.cds.cta")}
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
               </div>
-              <ArrowRight className="hidden h-5 w-5 shrink-0 text-primary sm:block" />
             </CardContent>
           </Card>
         </Link>

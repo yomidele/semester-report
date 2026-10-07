@@ -12,6 +12,7 @@ import { useCollegeSettings } from "@/lib/college-settings";
 import { effectiveTotal, computeGrade, autoRemark } from "@/lib/grading";
 import { generateReportSheetPdf } from "@/lib/report-sheet";
 import { checkResult, getPinPurchaseOptions } from "@/lib/result-pin.functions";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 import QRCode from "qrcode";
 
@@ -29,6 +30,7 @@ type ResultData = Awaited<ReturnType<typeof checkResult>>;
 
 function CheckResultPage() {
   const { settings } = useCollegeSettings();
+  const t = useT();
   const check = useServerFn(checkResult);
   const [matric, setAdmissionNumber] = useState("");
   const [pin, setPin] = useState("");
@@ -38,12 +40,18 @@ function CheckResultPage() {
   const [result, setResult] = useState<ResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const termName = (term: string) =>
+    term === "First" ? t("checkResult.firstTerm")
+    : term === "Second" ? t("checkResult.secondTerm")
+    : term === "Third" ? t("checkResult.thirdTerm")
+    : `${term} Term`;
+
   const { data: options } = useQuery({ queryKey: ["pin-purchase-options"], queryFn: () => getPinPurchaseOptions() });
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!sessionId || !semester) {
-      toast.error("Select the academic session and term.");
+      toast.error(t("checkResult.selectSessionTermError"));
       return;
     }
     setLoading(true);
@@ -108,9 +116,9 @@ function CheckResultPage() {
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Check Your Result</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("checkResult.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Enter your details and Result PIN below to view your published result.
+            {t("checkResult.hero.tagline")}
           </p>
         </div>
       </div>
@@ -119,33 +127,33 @@ function CheckResultPage() {
         <Card className="tsu-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-serif text-xl">
-              <KeyRound className="h-5 w-5 text-primary" /> Check Result
+              <KeyRound className="h-5 w-5 text-primary" /> {t("checkResult.cardTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Pupil / Admission No.</Label>
+                <Label>{t("checkResult.admissionNo")}</Label>
                 <Input value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} required />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Result PIN</Label>
+                <Label>{t("checkResult.resultPin")}</Label>
                 <Input value={pin} onChange={(e) => setPin(e.target.value.toUpperCase())} placeholder="XXXX-XXXX-XXXX" required />
               </div>
               <label className="space-y-1.5 text-sm font-medium">
-                <Label>Academic Session</Label>
+                <Label>{t("checkResult.academicSession")}</Label>
                 <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Select session</option>
+                  <option value="">{t("checkResult.selectSession")}</option>
                   {options?.sessions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </label>
               <label className="space-y-1.5 text-sm font-medium">
-                <Label>Term</Label>
+                <Label>{t("checkResult.term")}</Label>
                 <select value={semester} onChange={(e) => setTerm(e.target.value as "First" | "Second" | "Third")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Select term</option>
-                  <option value="First">First Term</option>
-                  <option value="Second">Second Term</option>
-                  <option value="Third">Third Term</option>
+                  <option value="">{t("checkResult.selectTerm")}</option>
+                  <option value="First">{t("checkResult.firstTerm")}</option>
+                  <option value="Second">{t("checkResult.secondTerm")}</option>
+                  <option value="Third">{t("checkResult.thirdTerm")}</option>
                 </select>
               </label>
 
@@ -153,12 +161,12 @@ function CheckResultPage() {
 
               <Button type="submit" disabled={loading} className="sm:col-span-2">
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Check Result
+                {t("checkResult.submit")}
               </Button>
             </form>
             <p className="mt-4 text-center text-sm text-muted-foreground">
-              Don't have a PIN?{" "}
-              <Link to="/result-pin/buy" className="font-medium text-primary hover:underline">Buy Result PIN</Link>
+              {t("checkResult.noPin")}{" "}
+              <Link to="/result-pin/buy" className="font-medium text-primary hover:underline">{t("checkResult.buyPin")}</Link>
             </p>
           </CardContent>
         </Card>
@@ -169,19 +177,19 @@ function CheckResultPage() {
               <div>
                 <h2 className="font-serif text-xl font-bold text-foreground">{result.student.full_name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {result.student.matric_number} &middot; {result.student.department_name ?? "\u2014"} &middot; {result.session_name} &middot; {result.semester} Term
+                  {result.student.matric_number} &middot; {result.student.department_name ?? "\u2014"} &middot; {result.session_name} &middot; {termName(result.semester)}
                 </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-border text-xs uppercase text-muted-foreground">
-                      <th className="py-2 pr-3">Code</th>
-                      <th className="py-2 pr-3">Subject Title</th>
-                      <th className="py-2 pr-3">CA</th>
-                      <th className="py-2 pr-3">Exam</th>
-                      <th className="py-2 pr-3">Total</th>
-                      <th className="py-2 pr-3">Grade</th>
+                      <th className="py-2 pr-3">{t("checkResult.table.code")}</th>
+                      <th className="py-2 pr-3">{t("checkResult.table.subjectTitle")}</th>
+                      <th className="py-2 pr-3">{t("checkResult.table.ca")}</th>
+                      <th className="py-2 pr-3">{t("checkResult.table.exam")}</th>
+                      <th className="py-2 pr-3">{t("checkResult.table.total")}</th>
+                      <th className="py-2 pr-3">{t("checkResult.table.grade")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -203,10 +211,10 @@ function CheckResultPage() {
                 </table>
               </div>
               <p className="text-xs text-muted-foreground">
-                PIN usage: {result.pin_usage.views_used}/{result.pin_usage.max_views} views &middot; Verification No. {result.verification_number}
+                {t("checkResult.pinUsage")} {result.pin_usage.views_used}/{result.pin_usage.max_views} {t("checkResult.views")} &middot; {t("checkResult.verificationNo")} {result.verification_number}
               </p>
               <Button onClick={downloadReportCard}>
-                <FileDown className="mr-2 h-4 w-4" /> Download Official Report Card
+                <FileDown className="mr-2 h-4 w-4" /> {t("checkResult.downloadReportCard")}
               </Button>
             </CardContent>
           </Card>

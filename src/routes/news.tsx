@@ -5,6 +5,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePublishedPosts, formatPostDate } from "@/lib/news";
+import { useT, type DictKey } from "@/lib/i18n";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -16,13 +17,14 @@ export const Route = createFileRoute("/news")({
   component: NewsPage,
 });
 
-const CATEGORY_LABEL: Record<string, string> = {
-  news: "News",
-  event: "Event",
-  announcement: "Announcement",
+const CATEGORY_LABEL: Record<string, DictKey> = {
+  news: "news.category.news",
+  event: "news.category.event",
+  announcement: "news.category.announcement",
 };
 
 function NewsPage() {
+  const t = useT();
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePublishedPosts(page);
   const posts = data?.posts ?? [];
@@ -32,9 +34,9 @@ function NewsPage() {
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">News &amp; Events</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("news.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Admission notices, campus updates and events from across the college.
+            {t("news.hero.tagline")}
           </p>
         </div>
       </div>
@@ -48,9 +50,9 @@ function NewsPage() {
           <Card className="tsu-shadow border-dashed">
             <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
               <Newspaper className="h-10 w-10 text-muted-foreground" />
-              <p className="font-serif text-xl font-semibold text-foreground">No posts yet</p>
+              <p className="font-serif text-xl font-semibold text-foreground">{t("news.empty.title")}</p>
               <p className="max-w-sm text-sm text-muted-foreground">
-                Check back soon — admissions notices and campus news will appear here as they're published.
+                {t("news.empty.body")}
               </p>
             </CardContent>
           </Card>
@@ -65,7 +67,7 @@ function NewsPage() {
                 )}
                 <CardContent className="space-y-3 p-6">
                   <span className="inline-block rounded-full bg-accent px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-foreground">
-                    {CATEGORY_LABEL[post.category] ?? post.category}
+                    {CATEGORY_LABEL[post.category] ? t(CATEGORY_LABEL[post.category]) : post.category}
                   </span>
                   <Link to="/news/$slug" params={{ slug: post.slug }}>
                     <h2 className="font-serif text-2xl font-bold leading-tight text-foreground hover:text-primary">
@@ -79,7 +81,7 @@ function NewsPage() {
                   {post.excerpt && <p className="text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p>}
                   <Button asChild size="sm" className="mt-2">
                     <Link to="/news/$slug" params={{ slug: post.slug }}>
-                      Read More
+                      {t("news.readMore")}
                     </Link>
                   </Button>
                 </CardContent>

@@ -23,6 +23,10 @@ const applicationSchema = z.object({
   guardian_phone: z.string().max(40).optional(),
   previous_school: z.string().max(200).optional(),
   department_id: z.string().uuid(),
+  // Required: see PhotoCaptureInput, which already rejects anything that
+  // isn't roughly passport-shaped (close, head-and-shoulders) client-side
+  // before this ever reaches the server.
+  photo_base64: z.string().min(1, "A passport photograph is required"),
 });
 
 /** Public: anyone can submit an application for a class from the homepage
@@ -63,10 +67,35 @@ export const submitApplication = createServerFn({ method: "POST" })
         qualification: data.previous_school || null,
         guardian_name: data.guardian_name || null,
         guardian_phone: data.guardian_phone || null,
-      })
+      } as never)
       .select("id, applicant_number")
       .single();
     if (applicantError || !applicant) throw new Error(applicantError?.message ?? "Could not save application");
+
+    // Same upload pattern as enrollStudent (school-admin.functions.ts): the
+    // service-role client bypasses storage RLS entirely, which is required
+    // here since this function is reachable by anonymous visitors. A failed
+    // upload fails the whole application rather than leaving an applicant
+    // on record with no photo — see that function's comment for why.
+    try {
+      const base64 = data.photo_base64.replace(/^data:image\/\w+;base64,/, "");
+      const buf = Buffer.from(base64, "base64");
+      const fileName = `applicants/${applicant.id}.jpg`;
+      const { error: uploadErr } = await supabaseAdmin.storage.from("passports").upload(fileName, buf, { contentType: "image/jpeg", upsert: true });
+      if (uploadErr) throw new Error(uploadErr.message);
+      const photoUrl = supabaseAdmin.storage.from("passports").getPublicUrl(fileName).data.publicUrl;
+      await supabaseAdmin.from("applicants").update({ photo_url: photoUrl } as never).eq("id", applicant.id);
+    } catch (e) {
+      await supabaseAdmin.from("applicants").delete().eq("id", applicant.id);
+      const message = e instanceof Error ? e.message : String(e);
+      if (/bucket not found/i.test(message)) {
+        throw new Error(
+          "Photo upload failed: the \"passports\" storage bucket doesn't exist yet in this Supabase project. " +
+            "Run the pending database migrations, then try again.",
+        );
+      }
+      throw new Error(`Photo upload failed: ${message}`);
+    }
 
     const { error: applicationError } = await supabaseAdmin
       .from("applications")

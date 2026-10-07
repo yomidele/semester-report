@@ -3,6 +3,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSchools, useClasss } from "@/lib/public-catalog";
 import { Building2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/schools")({
   head: () => ({
@@ -19,20 +20,21 @@ export const Route = createFileRoute("/schools")({
 function Schools() {
   const { data: schools = [], isLoading } = useSchools();
   const { data: departments = [] } = useClasss();
+  const t = useT();
 
   return (
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Our Schools</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("schools.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Each school groups related departments and programmes under one academic leadership.
+            {t("schools.hero.tagline")}
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading schools…</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">{t("schools.loading")}</p>}
         <div className="grid gap-4 md:grid-cols-2">
           {schools.filter((s) => s.is_active).map((s) => {
             const depts = departments.filter((d) => d.faculty_id === s.id && d.is_active);
@@ -46,10 +48,10 @@ function Schools() {
                       <h2 className="font-serif text-xl font-bold text-primary">{s.name}</h2>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">{s.description ?? "Accredited school of the college."}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">{s.description ?? t("schools.defaultDescription")}</p>
                   {depts.length > 0 && (
                     <>
-                      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">Classes</h3>
+                      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">{t("schools.classesHeading")}</h3>
                       <ul className="mt-2 space-y-1 text-sm text-foreground">
                         {depts.map((d) => (
                           <li key={d.id}>• {d.name}</li>

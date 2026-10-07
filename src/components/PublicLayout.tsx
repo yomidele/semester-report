@@ -1,29 +1,55 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HeartPulse, Menu, X, Phone, Mail, MapPin } from "lucide-react";
+import { HeartPulse, Menu, X, Phone, Mail, MapPin, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCollegeSettings, formatAddress } from "@/lib/college-settings";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
+import { LanguageProvider, useLanguage, useT, type DictKey } from "@/lib/i18n";
 
 const NAV = [
-  { to: "/", label: "Home" },
-  { to: "/about", label: "About" },
-  { to: "/schools", label: "Schools" },
-  { to: "/departments", label: "Classes" },
-  { to: "/programmes", label: "Subjects" },
-  { to: "/admissions", label: "Admissions" },
-  { to: "/news", label: "News" },
-  { to: "/check-result", label: "Check Result" },
-  { to: "/contact", label: "Contact" },
-  { to: "/cds-project", label: "CDS Project" },
-] as const;
+  { to: "/", labelKey: "layout.nav.home" },
+  { to: "/about", labelKey: "layout.nav.about" },
+  { to: "/schools", labelKey: "layout.nav.schools" },
+  { to: "/departments", labelKey: "layout.nav.classes" },
+  { to: "/programmes", labelKey: "layout.nav.subjects" },
+  { to: "/admissions", labelKey: "layout.nav.admissions" },
+  { to: "/news", labelKey: "layout.nav.news" },
+  { to: "/check-result", labelKey: "layout.nav.checkResult" },
+  { to: "/contact", labelKey: "layout.nav.contact" },
+  { to: "/cds-project", labelKey: "layout.nav.cdsProject" },
+] as const satisfies readonly { to: string; labelKey: DictKey }[];
+
+function LanguageToggle({ className = "" }: { className?: string }) {
+  const { lang, setLang } = useLanguage();
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={() => setLang(lang === "en" ? "ha" : "en")}
+      className={`inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary ${className}`}
+      aria-label="Switch language"
+    >
+      <Languages className="h-3.5 w-3.5" />
+      {lang === "en" ? t("layout.lang.switchToHausa") : t("layout.lang.switchToEnglish")}
+    </button>
+  );
+}
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <LanguageProvider>
+      <PublicLayoutInner>{children}</PublicLayoutInner>
+    </LanguageProvider>
+  );
+}
+
+function PublicLayoutInner({ children }: { children: React.ReactNode }) {
   const { settings } = useCollegeSettings();
   const { session } = useAuthSession();
   const { roles } = useRole();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const address = formatAddress(settings);
   const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
@@ -84,17 +110,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 activeProps={{ className: "bg-secondary text-primary" }}
                 className="rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
               >
-                {n.label}
+                {t(n.labelKey)}
               </Link>
             ))}
           </nav>
 
           <div className="ml-auto flex items-center gap-2 lg:ml-2">
+            <LanguageToggle className="hidden sm:inline-flex" />
             <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
-              <Link to="/check-result">Check Result</Link>
+              <Link to="/check-result">{t("layout.header.checkResult")}</Link>
             </Button>
             <Button asChild size="sm" className="hidden sm:inline-flex">
-              <Link to="/admissions">Apply Now</Link>
+              <Link to="/admissions">{t("layout.header.applyNow")}</Link>
             </Button>
             {session && (
               <Link
@@ -128,9 +155,12 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 onClick={() => setOpen(false)}
                 className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
               >
-                {n.label}
+                {t(n.labelKey)}
               </Link>
             ))}
+            <div className="mt-2 px-3">
+              <LanguageToggle />
+            </div>
           </nav>
         )}
       </header>
@@ -149,36 +179,36 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Quick Links</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">{t("layout.footer.quickLinks")}</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-sidebar-foreground/80">
               {NAV.slice(1).map((n) => (
                 <li key={n.to}>
                   <Link to={n.to} className="hover:text-accent">
-                    {n.label}
+                    {t(n.labelKey)}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">Portals</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-accent">{t("layout.footer.portals")}</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-sidebar-foreground/80">
-               <li><Link to="/lecturer/login" className="hover:text-accent">Teacher Portal</Link></li>
-              <li><Link to="/exam-officer/login" className="hover:text-accent">Exam Officer Portal</Link></li>
-              <li><Link to="/admission-officer/login" className="hover:text-accent">Admission Officer Portal</Link></li>
-              <li><Link to="/login" className="hover:text-accent">Super Admin Portal</Link></li>
+               <li><Link to="/lecturer/login" className="hover:text-accent">{t("layout.footer.teacherPortal")}</Link></li>
+              <li><Link to="/exam-officer/login" className="hover:text-accent">{t("layout.footer.examOfficerPortal")}</Link></li>
+              <li><Link to="/admission-officer/login" className="hover:text-accent">{t("layout.footer.admissionOfficerPortal")}</Link></li>
+              <li><Link to="/login" className="hover:text-accent">{t("layout.footer.superAdminPortal")}</Link></li>
             </ul>
           </div>
         </div>
         <div className="border-t border-sidebar-foreground/15 py-3 text-center text-xs text-sidebar-foreground/70">
-          © {new Date().getFullYear()} {settings.college_name}. All rights reserved.
+          © {new Date().getFullYear()} {settings.college_name}. {t("layout.footer.rights")}
           <br className="sm:hidden" />
           <span className="sm:ml-1">
             ·{" "}
             <Link to="/cds-project" className="hover:text-accent">
-              NYSC Personal CDS Project
+              {t("layout.footer.cdsLink")}
             </Link>{" "}
-            — School Management System developed by Garba Sadiq Suleman (JG/26A/2107), Batch A2 2026.
+            — {t("layout.footer.cdsCredit")}
           </span>
         </div>
       </footer>

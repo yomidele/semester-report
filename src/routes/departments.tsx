@@ -3,6 +3,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/public-catalog";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/departments")({
   head: () => ({
@@ -20,20 +21,21 @@ function Classes() {
   const { data: schools = [] } = useSchools();
   const { data: departments = [], isLoading } = useClasss();
   const { data: programmes = [] } = useProgrammes();
+  const t = useT();
 
   return (
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Classes</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("departments.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Classes provide a supportive learning environment for every child.
+            {t("departments.hero.tagline")}
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading departments…</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">{t("departments.loading")}</p>}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {departments.filter((d) => d.is_active).map((d) => {
             const school = schools.find((s) => s.id === d.faculty_id);
@@ -41,9 +43,9 @@ function Classes() {
             return (
               <Card key={d.id} className="tsu-shadow border-border">
                 <CardContent className="p-5">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">{school?.name ?? "College"}</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">{school?.name ?? t("departments.defaultSchool")}</p>
                   <h2 className="mt-1 font-serif text-lg font-bold text-primary">{d.name}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">{d.description ?? "Class of the college."}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{d.description ?? t("departments.defaultDescription")}</p>
                   {progs.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {progs.map((p) => (

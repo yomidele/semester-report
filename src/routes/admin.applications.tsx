@@ -35,7 +35,7 @@ function ApplicationsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("id, status, created_at, notes, applicants(applicant_number, full_name, email, phone, guardian_name), departments(name)")
+        .select("id, status, created_at, notes, applicants(applicant_number, full_name, email, phone, guardian_name, photo_url), departments(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -90,8 +90,17 @@ function ApplicationsPage() {
                     return (
                       <tr key={application.id} className="border-b">
                         <td className="py-3 pr-3">
-                          <div className="font-medium">{applicant?.full_name ?? "-"}</div>
-                          <div className="text-xs text-muted-foreground">{applicant?.applicant_number}</div>
+                          <div className="flex items-center gap-2">
+                            {applicant?.photo_url ? (
+                              <img src={applicant.photo_url} alt="" className="h-9 w-9 shrink-0 rounded-md border border-border object-cover" />
+                            ) : (
+                              <div className="h-9 w-9 shrink-0 rounded-md border border-dashed border-border" />
+                            )}
+                            <div>
+                              <div className="font-medium">{applicant?.full_name ?? "-"}</div>
+                              <div className="text-xs text-muted-foreground">{applicant?.applicant_number}</div>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-3 pr-3">
                           <div>{applicant?.guardian_name ?? "-"}</div>

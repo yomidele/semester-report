@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSchools, useDepartments } from "@/lib/public-catalog";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { submitApplication } from "@/lib/applicant.functions";
+import { PhotoCaptureInput } from "@/components/PhotoCaptureInput";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
 const Search = z.object({ class: z.string().uuid().optional() });
@@ -40,15 +42,15 @@ function ApplyPage() {
   const { class: classParam } = Route.useSearch();
   const navigate = useNavigate({ from: "/apply" });
   const { settings, isLoading: settingsLoading } = useCollegeSettings();
+  const t = useT();
 
   return (
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Apply for Admission</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("apply.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Choose the class you're applying for, then complete the applicant form below.
-            An Admission Officer will review your application and contact you.
+            {t("apply.hero.tagline")}
           </p>
         </div>
       </div>
@@ -61,13 +63,12 @@ function ApplyPage() {
         <div className="mx-auto max-w-2xl px-4 py-12 md:px-6">
           <Card className="tsu-shadow border-dashed">
             <CardContent className="space-y-2 py-12 text-center">
-              <h2 className="font-serif text-xl font-bold">Admissions are currently closed</h2>
+              <h2 className="font-serif text-xl font-bold">{t("apply.closed.title")}</h2>
               <p className="text-sm text-muted-foreground">
-                We aren't accepting new applications right now. Please check back later, or contact
-                the school office for enquiries.
+                {t("apply.closed.body")}
               </p>
               <Button asChild variant="outline" className="mt-2">
-                <Link to="/">Return home</Link>
+                <Link to="/">{t("apply.returnHome")}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -86,12 +87,12 @@ function ClassChooser({ onSelect }: { onSelect: (departmentId: string) => void }
   const { data: classes = [], isLoading: classesLoading } = useDepartments();
   const isLoading = sectionsLoading || classesLoading;
   const activeSections = sections.filter((s) => s.is_active);
+  const t = useT();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
       <p className="text-sm text-muted-foreground">
-        Select the section and class you're applying to. Admission requirements can vary
-        slightly by section, so pick carefully.
+        {t("apply.chooser.tagline")}
       </p>
 
       {isLoading ? (
@@ -128,11 +129,11 @@ function ClassChooser({ onSelect }: { onSelect: (departmentId: string) => void }
           {activeSections.every((s) => classes.filter((c) => c.faculty_id === s.id && c.is_active).length === 0) && (
             <Card className="tsu-shadow border-dashed">
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                Admissions aren't open for any class right now. Check the{" "}
+                {t("apply.chooser.noneOpen")}{" "}
                 <Link to="/news" className="font-medium text-primary hover:underline">
-                  News &amp; Events
+                  {t("apply.chooser.newsAndEvents")}
                 </Link>{" "}
-                page for the next intake announcement.
+                {t("apply.chooser.forIntake")}
               </CardContent>
             </Card>
           )}
@@ -154,9 +155,15 @@ function ApplicationForm({
   const submit = useServerFn(submitApplication);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const t = useT();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!photo) {
+      toast.error("Please add the pupil's passport photograph before submitting.");
+      return;
+    }
     const form = new FormData(event.currentTarget);
     setSubmitting(true);
     try {
@@ -173,10 +180,12 @@ function ApplicationForm({
           guardian_phone: String(form.get("guardian_phone") || ""),
           previous_school: String(form.get("previous_school") || ""),
           department_id: departmentId,
+          photo_base64: photo,
         },
       });
       setSuccess(result.applicant_number);
       event.currentTarget.reset();
+      setPhoto(null);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -190,17 +199,16 @@ function ApplicationForm({
         <Card className="tsu-shadow">
           <CardContent className="space-y-4 p-8 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
-            <h2 className="font-serif text-2xl font-bold">Application received</h2>
+            <h2 className="font-serif text-2xl font-bold">{t("apply.success.title")}</h2>
             <p className="text-sm text-muted-foreground">
-              Your applicant number is <strong className="text-foreground">{success}</strong>.
-              Keep it for future enquiries — an Admission Officer will review your application
-              and reach out using the contact details you provided.
+              {t("apply.success.bodyStart")} <strong className="text-foreground">{success}</strong>.{" "}
+              {t("apply.success.bodyEnd")}
             </p>
             <div className="flex justify-center gap-3">
               <Button asChild variant="outline">
-                <Link to="/">Return home</Link>
+                <Link to="/">{t("apply.returnHome")}</Link>
               </Button>
-              <Button onClick={onChangeClass}>Apply for another class</Button>
+              <Button onClick={onChangeClass}>{t("apply.success.applyAnother")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -210,42 +218,45 @@ function ApplicationForm({
             onClick={onChangeClass}
             className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
-            <ChevronLeft className="h-4 w-4" /> Choose a different class
+            <ChevronLeft className="h-4 w-4" /> {t("apply.form.chooseDifferent")}
           </button>
           <Card className="tsu-shadow">
             <CardHeader>
-              <CardTitle className="font-serif text-2xl">Pupil &amp; guardian details</CardTitle>
+              <CardTitle className="font-serif text-2xl">{t("apply.form.heading")}</CardTitle>
               {cls && (
                 <p className="text-sm text-muted-foreground">
-                  Applying for <strong className="text-foreground">{cls.name}</strong>
+                  {t("apply.form.applyingFor")} <strong className="text-foreground">{cls.name}</strong>
                 </p>
               )}
             </CardHeader>
             <CardContent>
               <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
-                <Field label="Pupil's full name" name="full_name" required />
-                <Field label="Date of birth" name="date_of_birth" type="date" />
+                <div className="md:col-span-2">
+                  <PhotoCaptureInput label={t("apply.form.pupilPhoto")} value={photo} onChange={setPhoto} required disabled={submitting} />
+                </div>
+                <Field label={t("apply.form.pupilFullName")} name="full_name" required />
+                <Field label={t("apply.form.dateOfBirth")} name="date_of_birth" type="date" />
                 <label className="space-y-1.5 text-sm font-medium">
-                  <Label>Gender</Label>
+                  <Label>{t("apply.form.gender")}</Label>
                   <select name="gender" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                    <option value="">Select gender</option>
-                    <option>Female</option>
-                    <option>Male</option>
+                    <option value="">{t("apply.form.selectGender")}</option>
+                    <option>{t("apply.form.female")}</option>
+                    <option>{t("apply.form.male")}</option>
                   </select>
                 </label>
-                <Field label="Previous school (if any)" name="previous_school" />
-                <Field label="Parent/Guardian name" name="guardian_name" required />
-                <Field label="Parent/Guardian phone" name="phone" type="tel" required />
-                <Field label="Parent/Guardian email" name="email" type="email" required />
-                <Field label="State of origin" name="state_of_origin" />
+                <Field label={t("apply.form.previousSchool")} name="previous_school" />
+                <Field label={t("apply.form.guardianName")} name="guardian_name" required />
+                <Field label={t("apply.form.guardianPhone")} name="phone" type="tel" required />
+                <Field label={t("apply.form.guardianEmail")} name="email" type="email" required />
+                <Field label={t("apply.form.stateOfOrigin")} name="state_of_origin" />
                 <label className="space-y-1.5 text-sm font-medium md:col-span-2">
-                  <Label>Home address</Label>
+                  <Label>{t("apply.form.homeAddress")}</Label>
                   <Textarea name="address" rows={3} />
                 </label>
                 <div className="md:col-span-2">
                   <Button type="submit" disabled={submitting}>
                     {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Submit application
+                    {t("apply.form.submit")}
                   </Button>
                 </div>
               </form>

@@ -5,6 +5,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { verifyResultDocument } from "@/lib/result-pin.functions";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/verify-result/$code")({
   head: () => ({ meta: [{ title: "Verify Result Document" }] }),
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/verify-result/$code")({
 // named student really did receive a published result for that period.
 function VerifyResultPage() {
   const { code } = Route.useParams();
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["verify-result", code],
     queryFn: () => verifyResultDocument({ data: { code } }),
@@ -30,38 +32,38 @@ function VerifyResultPage() {
             {isLoading ? (
               <>
                 <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-                <h1 className="font-serif text-xl font-bold text-foreground">Checking document&hellip;</h1>
+                <h1 className="font-serif text-xl font-bold text-foreground">{t("verifyResult.checking")}</h1>
               </>
             ) : data?.valid ? (
               <>
                 <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
-                <h1 className="font-serif text-2xl font-bold text-foreground">Document Verified</h1>
+                <h1 className="font-serif text-2xl font-bold text-foreground">{t("verifyResult.verified.title")}</h1>
                 <p className="text-sm text-muted-foreground">
-                  This is a genuine result report card issued by this institution.
+                  {t("verifyResult.verified.body")}
                 </p>
                 <dl className="mt-4 space-y-2 rounded-md border border-border bg-secondary/40 p-4 text-left text-sm">
-                  <Row label="Verification No." value={data.verification_number} />
-                  <Row label="Student Name" value={data.student_name} />
-                  <Row label="Programme" value={data.programme_name} />
-                  <Row label="Session" value={data.session_name} />
-                  <Row label="Term" value={`${data.semester} Term`} />
-                  <Row label="Issued" value={new Date(data.generated_at).toLocaleDateString()} />
+                  <Row label={t("verifyResult.verificationNo")} value={data.verification_number} />
+                  <Row label={t("verifyResult.studentName")} value={data.student_name} />
+                  <Row label={t("verifyResult.programme")} value={data.programme_name} />
+                  <Row label={t("verifyResult.session")} value={data.session_name} />
+                  <Row label={t("verifyResult.term")} value={data.semester === "First" ? t("checkResult.firstTerm") : data.semester === "Second" ? t("checkResult.secondTerm") : data.semester === "Third" ? t("checkResult.thirdTerm") : `${data.semester} Term`} />
+                  <Row label={t("verifyResult.issued")} value={new Date(data.generated_at).toLocaleDateString()} />
                 </dl>
                 <p className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Scores and grades are not shown here for the student's privacy.
+                  <ShieldCheck className="h-3.5 w-3.5" /> {t("verifyResult.privacyNote")}
                 </p>
               </>
             ) : (
               <>
                 <XCircle className="mx-auto h-12 w-12 text-destructive" />
-                <h1 className="font-serif text-2xl font-bold text-foreground">Not a Recognized Document</h1>
+                <h1 className="font-serif text-2xl font-bold text-foreground">{t("verifyResult.notRecognized.title")}</h1>
                 <p className="text-sm text-muted-foreground">
-                  This verification code doesn't match any result report card issued by this institution.
+                  {t("verifyResult.notRecognized.body")}
                 </p>
               </>
             )}
             <Button asChild variant="outline" className="mt-2">
-              <Link to="/">Return home</Link>
+              <Link to="/">{t("apply.returnHome")}</Link>
             </Button>
           </CardContent>
         </Card>

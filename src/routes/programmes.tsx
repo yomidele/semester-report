@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/public-catalog";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/programmes")({
   head: () => ({
@@ -28,6 +29,7 @@ function Programmes() {
   const { data: programmes = [], isLoading } = useProgrammes();
   const [q, setQ] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
+  const t = useT();
 
   const durations = [...new Set(programmes.map((p) => p.duration_years))].sort((a, b) => a - b);
   const filtered = programmes.filter((p) => {
@@ -41,18 +43,18 @@ function Programmes() {
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Programmes</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("programmes.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Programme lengths vary by award — no programme is fixed to a single duration.
+            {t("programmes.hero.tagline")}
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
         <div className="flex flex-wrap items-center gap-2">
-          <Input placeholder="Search programmes…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
+          <Input placeholder={t("programmes.searchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
           <Button variant={duration === null ? "default" : "outline"} size="sm" onClick={() => setDuration(null)}>
-            All durations
+            {t("programmes.allDurations")}
           </Button>
           {durations.map((d) => (
             <Button key={d} variant={duration === d ? "default" : "outline"} size="sm" onClick={() => setDuration(d)}>
@@ -61,8 +63,8 @@ function Programmes() {
           ))}
         </div>
 
-        {isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading programmes…</p>}
-        {!isLoading && filtered.length === 0 && <p className="mt-6 text-sm text-muted-foreground">No programmes match your search.</p>}
+        {isLoading && <p className="mt-6 text-sm text-muted-foreground">{t("programmes.loading")}</p>}
+        {!isLoading && filtered.length === 0 && <p className="mt-6 text-sm text-muted-foreground">{t("programmes.empty")}</p>}
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => {
@@ -78,15 +80,15 @@ function Programmes() {
                   <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
                     {p.award} · {p.code}
                   </p>
-                  <p className="mt-2 flex-1 text-sm text-muted-foreground">{p.description ?? "Programme details available on request."}</p>
+                  <p className="mt-2 flex-1 text-sm text-muted-foreground">{p.description ?? t("programmes.defaultDescription")}</p>
                   <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <div>School: <span className="text-foreground">{school?.name ?? "—"}</span></div>
-                    <div>Class: <span className="text-foreground">{dept?.name ?? "—"}</span></div>
-                    <div>Units per semester: <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
+                    <div>{t("programmes.school")} <span className="text-foreground">{school?.name ?? "—"}</span></div>
+                    <div>{t("programmes.class")} <span className="text-foreground">{dept?.name ?? "—"}</span></div>
+                    <div>{t("programmes.unitsPerSemester")} <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
                   </dl>
-                  {p.requirements && <p className="mt-3 text-xs text-muted-foreground"><strong className="text-foreground">Entry:</strong> {p.requirements}</p>}
+                  {p.requirements && <p className="mt-3 text-xs text-muted-foreground"><strong className="text-foreground">{t("programmes.entry")}</strong> {p.requirements}</p>}
                   <Button asChild size="sm" className="mt-4 w-full">
-                    <Link to="/admissions">Apply for this programme</Link>
+                    <Link to="/admissions">{t("programmes.applyForThis")}</Link>
                   </Button>
                 </CardContent>
               </Card>

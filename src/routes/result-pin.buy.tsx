@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { verifyStudentForPin, getPinPurchaseOptions, initializePinPurchase } from "@/lib/result-pin.functions";
+import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/result-pin/buy")({
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/result-pin/buy")({
 type VerifiedStudent = Awaited<ReturnType<typeof verifyStudentForPin>>;
 
 function BuyPinPage() {
+  const t = useT();
   const [step, setStep] = useState<1 | 2>(1);
   const [matric, setAdmissionNumber] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -51,7 +53,7 @@ function BuyPinPage() {
 
   async function handlePay() {
     if (!sessionId || !semester) {
-      toast.error("Select the academic session and semester.");
+      toast.error(t("resultPin.selectSessionSemesterError"));
       return;
     }
     setPaying(true);
@@ -71,9 +73,9 @@ function BuyPinPage() {
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
-          <h1 className="font-serif text-3xl font-bold md:text-4xl">Buy Result PIN</h1>
+          <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("resultPin.hero.title")}</h1>
           <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">
-            Purchase a secure PIN to check and download your result online.
+            {t("resultPin.hero.tagline")}
           </p>
         </div>
       </div>
@@ -81,25 +83,24 @@ function BuyPinPage() {
       <div className="mx-auto max-w-xl px-4 py-12 md:px-6">
         {options && !options.paystack_configured && (
           <div className="mb-6 rounded-md border border-accent bg-accent/25 p-4 text-sm text-foreground">
-            Online payment isn't configured yet on this server (missing <code>PAYSTACK_SECRET_KEY</code> /{" "}
-            <code>PAYSTACK_PUBLIC_KEY</code>). Visit the registry to request a PIN in person.
+            {t("resultPin.notConfigured")}
           </div>
         )}
 
         {step === 1 && (
           <Card className="tsu-shadow">
             <CardHeader>
-              <CardTitle className="font-serif text-xl">Step 1 &middot; Enter your details</CardTitle>
+              <CardTitle className="font-serif text-xl">{t("resultPin.step1.title")}</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleVerify} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label>Student / Admission Number</Label>
+                  <Label>{t("resultPin.step1.label")}</Label>
                   <Input value={matric} onChange={(e) => setAdmissionNumber(e.target.value)} placeholder="e.g. KCOHT/CH/26/0045" required />
                 </div>
                 <Button type="submit" disabled={verifying} className="w-full">
                   {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Verify Student
+                  {t("resultPin.step1.verify")}
                 </Button>
               </form>
             </CardContent>
@@ -110,25 +111,25 @@ function BuyPinPage() {
           <Card className="tsu-shadow">
             <CardHeader>
               <button onClick={() => setStep(1)} className="mb-2 inline-flex w-fit items-center gap-1 text-xs font-medium text-primary hover:underline">
-                <ChevronLeft className="h-3.5 w-3.5" /> Change student number
+                <ChevronLeft className="h-3.5 w-3.5" /> {t("resultPin.step2.changeNumber")}
               </button>
-              <CardTitle className="font-serif text-xl">Step 2 &middot; Confirm &amp; select result period</CardTitle>
+              <CardTitle className="font-serif text-xl">{t("resultPin.step2.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="rounded-md border border-border bg-secondary/40 p-4">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-                  <CheckCircle2 className="h-4 w-4" /> Student verified
+                  <CheckCircle2 className="h-4 w-4" /> {t("resultPin.step2.verified")}
                 </p>
                 <dl className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
-                  <dt className="text-muted-foreground">Name</dt>
+                  <dt className="text-muted-foreground">{t("resultPin.step2.name")}</dt>
                   <dd className="font-medium text-foreground">{student.full_name}</dd>
-                  <dt className="text-muted-foreground">Student ID</dt>
+                  <dt className="text-muted-foreground">{t("resultPin.step2.studentId")}</dt>
                   <dd className="font-medium text-foreground">{student.matric_number}</dd>
-                  <dt className="text-muted-foreground">Programme</dt>
+                  <dt className="text-muted-foreground">{t("resultPin.step2.programme")}</dt>
                   <dd className="font-medium text-foreground">{student.programme_name ?? "\u2014"}</dd>
-                  <dt className="text-muted-foreground">Class</dt>
+                  <dt className="text-muted-foreground">{t("resultPin.step2.class")}</dt>
                   <dd className="font-medium text-foreground">{student.department_name ?? "\u2014"}</dd>
-                  <dt className="text-muted-foreground">School/Section</dt>
+                  <dt className="text-muted-foreground">{t("resultPin.step2.schoolSection")}</dt>
                   <dd className="font-medium text-foreground">{student.faculty_name ?? "\u2014"}</dd>
                 </dl>
               </div>
@@ -138,18 +139,18 @@ function BuyPinPage() {
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="space-y-1.5 text-sm font-medium">
-                    <Label>Academic Session</Label>
+                    <Label>{t("resultPin.step2.academicSession")}</Label>
                     <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                      <option value="">Select session</option>
+                      <option value="">{t("resultPin.step2.selectSession")}</option>
                       {options?.sessions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </label>
                   <label className="space-y-1.5 text-sm font-medium">
-                    <Label>Term</Label>
+                    <Label>{t("resultPin.step2.term")}</Label>
                     <select value={semester} onChange={(e) => setTerm(e.target.value as "First" | "Second")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                      <option value="">Select semester</option>
-                      <option value="First">First Term</option>
-                      <option value="Second">Second Term</option>
+                      <option value="">{t("resultPin.step2.selectSemester")}</option>
+                      <option value="First">{t("resultPin.step2.firstTerm")}</option>
+                      <option value="Second">{t("resultPin.step2.secondTerm")}</option>
                     </select>
                   </label>
                 </div>
@@ -157,7 +158,7 @@ function BuyPinPage() {
 
               {options && (
                 <div className="flex items-center justify-between rounded-md border border-dashed border-border px-4 py-3">
-                  <span className="text-sm text-muted-foreground">Result Checking PIN</span>
+                  <span className="text-sm text-muted-foreground">{t("resultPin.step2.pinLabel")}</span>
                   <span className="font-serif text-xl font-bold text-foreground">
                     {"\u20a6"}{options.price.toLocaleString()}
                   </span>
@@ -166,18 +167,18 @@ function BuyPinPage() {
 
               <Button onClick={handlePay} disabled={paying || !options?.paystack_configured} className="w-full">
                 {paying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Proceed to Payment
+                {t("resultPin.step2.proceedToPayment")}
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5" /> Payments are processed securely via Paystack.
+                <ShieldCheck className="h-3.5 w-3.5" /> {t("resultPin.step2.securePayment")}
               </p>
             </CardContent>
           </Card>
         )}
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have a PIN?{" "}
-          <Link to="/check-result" className="font-medium text-primary hover:underline">Check your result</Link>
+          {t("resultPin.alreadyHavePin")}{" "}
+          <Link to="/check-result" className="font-medium text-primary hover:underline">{t("resultPin.checkYourResult")}</Link>
         </p>
       </div>
     </PublicLayout>

@@ -61,15 +61,44 @@ export function PhotoCaptureInput({ label = "Passport photograph", value, onChan
   const capture = () => {
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
+    // Most webcams/front cameras are wide (landscape) by default, so a raw
+    // capture is usually too wide to pass the passport-shape check below.
+    // Crop to a centered square first — this is what makes "point camera at
+    // your face, hit capture" reliably produce a passport-shaped photo
+    // without asking the person to rotate their device.
+    const side = Math.min(video.videoWidth, video.videoHeight);
+    const sx = (video.videoWidth - side) / 2;
+    const sy = (video.videoHeight - side) / 2;
+    const scale = Math.min(1, 900 / side);
     const canvas = document.createElement("canvas");
-    const scale = Math.min(1, 900 / Math.max(video.videoWidth, video.videoHeight));
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.width = Math.round(side * scale);
+    canvas.height = Math.round(side * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
+    if (!isPassportShaped(canvas.width, canvas.height)) {
+      toast.error("That capture was too small to use. Move closer and try again.");
+      return;
+    }
     onChange(canvas.toDataURL("image/jpeg", 0.85));
     stopCamera();
+  };
+
+  // A passport photo is a close, head-and-shoulders crop — roughly square to
+  // gently portrait. This rejects the two most common wrong uploads: a wide
+  // landscape scene/group photo (ratio well above 1), and a full-body phone
+  // photo shot in portrait, which is far taller than it is wide (typically
+  // ~0.56 for a 9:16 frame). It can't verify there's actually a face in the
+  // shot — that needs real image recognition — but shape alone catches the
+  // overwhelming majority of "wrong photo" submissions without extra cost.
+  const PASSPORT_MIN_RATIO = 0.6; // tallest acceptable (gently portrait)
+  const PASSPORT_MAX_RATIO = 1.2; // widest acceptable (near square)
+  const PASSPORT_MIN_DIMENSION = 150; // px, rejects tiny/low-quality images
+
+  const isPassportShaped = (width: number, height: number) => {
+    if (width < PASSPORT_MIN_DIMENSION || height < PASSPORT_MIN_DIMENSION) return false;
+    const ratio = width / height;
+    return ratio >= PASSPORT_MIN_RATIO && ratio <= PASSPORT_MAX_RATIO;
   };
 
   const handleFile = (file: File | undefined) => {
@@ -84,6 +113,12 @@ export function PhotoCaptureInput({ label = "Passport photograph", value, onChan
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
+        if (!isPassportShaped(img.width, img.height)) {
+          toast.error(
+            "That doesn't look like a passport photo — it's too wide or too tall. Upload a close, head-and-shoulders photo, not a full-body or group picture.",
+          );
+          return;
+        }
         const MAX = 900;
         const scale = Math.min(1, MAX / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
