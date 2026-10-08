@@ -24,6 +24,27 @@ export const Route = createFileRoute("/courses")({
 // Primary 6, so a subject itself carries no level, term, or unit-weight.
 // Those were leftover college concepts (100/200/300/400 level, credit
 // units) that don't apply here.
+// A subject still needs a short code internally (it shows on report cards
+// and result sheets), but typing one shouldn't be required — most people
+// just want to type "Mathematics" and move on. When no code is given, one is
+// derived from the subject's name and made unique against existing codes.
+function deriveCodeFromTitle(title: string): string {
+  const firstWord = title.replace(/[^a-zA-Z\s]/g, "").trim().split(/\s+/)[0] ?? "";
+  const base = firstWord.slice(0, 3).toUpperCase();
+  return base.length >= 2 ? base : "SUB";
+}
+
+function uniqueCodeFromTitle(title: string, used: Set<string>): string {
+  const base = deriveCodeFromTitle(title);
+  let candidate = base;
+  let suffix = 2;
+  while (used.has(candidate)) {
+    candidate = `${base}${suffix}`;
+    suffix++;
+  }
+  return candidate;
+}
+
 export function SubjectsPage() {
   const qc = useQueryClient();
   const [code, setCode] = useState("");
@@ -91,12 +112,16 @@ export function SubjectsPage() {
 
   const addMut = useMutation({
     mutationFn: async () => {
-      if (!code.trim() || !title.trim()) throw new Error("Enter a code and a subject name");
+      const trimmedTitle = title.trim();
+      if (!trimmedTitle) throw new Error("Enter a subject name");
+      const finalCode = code.trim()
+        ? code.trim().toUpperCase()
+        : uniqueCodeFromTitle(trimmedTitle, new Set(subjects.map((s: any) => String(s.code).toUpperCase())));
       const { data, error } = await supabase
         .from("courses")
         .insert({
-          code: code.trim().toUpperCase(),
-          title: title.trim(),
+          code: finalCode,
+          title: trimmedTitle,
           unit: 1,
           level: null,
           semester: null,
@@ -117,42 +142,55 @@ export function SubjectsPage() {
   });
 
   // --- Bulk add subjects --------------------------------------------------
-  // One subject per line. Unlike a pupil's name, a subject needs both a
-  // code and a title, so each line is "CODE - Subject Name" (a colon or
-  // comma works too, and pasting straight from a spreadsheet — which
-  // separates the two with a tab — works as well). Classes ticked below
-  // apply to every subject in the batch; if a subject needs a different
-  // set of classes, add or edit it individually afterward.
+  // One subject per line. Just the name is enough ("Mathematics") — a code
+  // is generated automatically. To choose your own code, write
+  // "CODE - Subject Name" (a colon, comma, or a tab pasted from a
+  // spreadsheet works too). Classes ticked below apply to every subject in
+  // the batch; if a subject needs a different set of classes, add or edit
+  // it individually afterward.
   const [bulkText, setBulkText] = useState("");
   const [bulkClassIds, setBulkClassIds] = useState<string[]>([]);
   const [bulkReport, setBulkReport] = useState<{ added: string[]; skippedDuplicate: string[]; skippedInvalid: string[] } | null>(null);
 
   const parsedBulkLines = useMemo(() => {
-    const existingCodes = new Set(subjects.map((s: any) => String(s.code).toUpperCase()));
-    const seenInBatch = new Set<string>();
+    const usedCodes = new Set(subjects.map((s: any) => String(s.code).toUpperCase()));
+    const existingTitles = new Set(subjects.map((s: any) => String(s.title).trim().toUpperCase()));
+    const seenTitles = new Set<string>();
     const rows: { raw: string; code: string | null; title: string | null; status: "ok" | "invalid" | "duplicate" }[] = [];
 
     for (const rawLine of bulkText.split("\n")) {
       const raw = rawLine.trim();
       if (!raw) continue;
 
-      // Try, in order: "CODE - Title", "CODE: Title", "CODE, Title",
-      // a tab (pasted from a spreadsheet), then finally "CODE Title"
-      // (first whitespace run splits code from title).
-      const separatorMatch = raw.match(/^(.+?)\s*[-:,\t]\s*(.+)$/) ?? raw.match(/^(\S+)\s+(.+)$/);
-      const code = separatorMatch?.[1]?.trim().toUpperCase() || null;
-      const title = separatorMatch?.[2]?.trim() || null;
+      // An explicit "CODE - Title" (or colon / comma / tab) wins. With no
+      // separator the whole line is the subject name and its code is
+      // generated, so nobody has to invent codes.
+      const separatorMatch = raw.match(/^(.+?)\s*[-:,\t]\s*(.+)$/);
 
-      if (!code || !title) {
-        rows.push({ raw, code: null, title: null, status: "invalid" });
-        continue;
+      if (separatorMatch) {
+        const code = separatorMatch[1]?.trim().toUpperCase() || null;
+        const title = separatorMatch[2]?.trim() || null;
+        if (!code || !title) {
+          rows.push({ raw, code: null, title: null, status: "invalid" });
+          continue;
+        }
+        if (usedCodes.has(code)) {
+          rows.push({ raw, code, title, status: "duplicate" });
+          continue;
+        }
+        usedCodes.add(code);
+        rows.push({ raw, code, title, status: "ok" });
+      } else {
+        const titleKey = raw.toUpperCase();
+        if (existingTitles.has(titleKey) || seenTitles.has(titleKey)) {
+          rows.push({ raw, code: null, title: raw, status: "duplicate" });
+          continue;
+        }
+        seenTitles.add(titleKey);
+        const code = uniqueCodeFromTitle(raw, usedCodes);
+        usedCodes.add(code);
+        rows.push({ raw, code, title: raw, status: "ok" });
       }
-      if (existingCodes.has(code) || seenInBatch.has(code)) {
-        rows.push({ raw, code, title, status: "duplicate" });
-        continue;
-      }
-      seenInBatch.add(code);
-      rows.push({ raw, code, title, status: "ok" });
     }
     return rows;
   }, [bulkText, subjects]);
@@ -180,7 +218,7 @@ export function SubjectsPage() {
       toast.success(`${inserted.length} subject${inserted.length !== 1 ? "s" : ""} added`);
       setBulkReport({
         added: bulkValidRows.map((r) => `${r.code} — ${r.title}`),
-        skippedDuplicate: parsedBulkLines.filter((r) => r.status === "duplicate").map((r) => r.code as string),
+        skippedDuplicate: parsedBulkLines.filter((r) => r.status === "duplicate").map((r) => (r.code ? `${r.code} — ${r.title}` : (r.title ?? r.raw))),
         skippedInvalid: parsedBulkLines.filter((r) => r.status === "invalid").map((r) => r.raw),
       });
       setBulkText("");
@@ -270,8 +308,8 @@ export function SubjectsPage() {
           <form onSubmit={(e) => { e.preventDefault(); addMut.mutate(); }} className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1.5">
-                <Label>Code</Label>
-                <Input placeholder="MTH" value={code} onChange={(e) => setCode(e.target.value)} required />
+                <Label>Code <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                <Input placeholder="Auto" value={code} onChange={(e) => setCode(e.target.value)} />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Subject name</Label>
@@ -295,14 +333,14 @@ export function SubjectsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            One subject per line, as <span className="font-mono">CODE - Subject Name</span> (a colon, comma, or pasting straight
-            from a spreadsheet works too). The classes ticked below apply to every subject in this batch.
+            One subject per line — just the name is enough, and a code is generated for you. To pick your own code, write{" "}
+            <span className="font-mono">CODE - Subject Name</span>. The classes ticked below apply to every subject in this batch.
           </p>
           <div className="space-y-1.5">
             <Label>Subjects</Label>
             <Textarea
               className="min-h-[160px] font-mono text-sm"
-              placeholder={"MTH - Mathematics\nENG - English Language\nSCI - Basic Science"}
+              placeholder={"Mathematics\nEnglish Language\nSCI - Basic Science (own code, optional)"}
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
             />

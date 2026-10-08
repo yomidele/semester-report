@@ -85,27 +85,27 @@ function Home() {
           aria-label={t("home.cds.ariaLabel")}
         >
           <Card className="overflow-hidden border-2 border-accent bg-card shadow-xl transition-all group-hover:-translate-y-0.5 group-hover:shadow-2xl">
-            <CardContent className="flex flex-col items-center gap-5 bg-gradient-to-r from-accent/15 via-card to-card p-5 sm:flex-row sm:p-6">
-              <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl border-2 border-accent/60 bg-muted shadow-md sm:h-32 sm:w-32">
+            <CardContent className="flex flex-row items-center gap-3 bg-gradient-to-r from-accent/15 via-card to-card p-3 sm:gap-5 sm:p-6">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 border-accent/60 bg-muted shadow-md sm:h-32 sm:w-32 sm:rounded-xl">
                 <img src={developerPortrait} alt="" className="h-full w-full object-cover object-top" />
               </div>
-              <div className="min-w-0 flex-1 text-center sm:text-left">
-                <p className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-foreground">
-                  <span className="relative flex h-2 w-2">
+              <div className="min-w-0 flex-1 text-left">
+                <p className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-foreground sm:gap-2 sm:px-3 sm:py-1 sm:text-[11px]">
+                  <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary sm:h-2 sm:w-2" />
                   </span>
                   {t("home.cds.kicker")}
                 </p>
-                <h3 className="mt-2 font-serif text-xl font-bold text-foreground md:text-2xl">
+                <h3 className="mt-1.5 font-serif text-sm font-bold leading-snug text-foreground sm:mt-2 sm:text-xl md:text-2xl">
                   {t("home.cds.heading")}
                 </h3>
-                <p className="mt-1.5 text-sm text-muted-foreground md:text-base">
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground sm:mt-1.5 sm:line-clamp-none sm:text-sm md:text-base">
                   {t("home.cds.body")}
                 </p>
-                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90 sm:mt-4 sm:gap-1.5 sm:px-4 sm:py-2 sm:text-sm">
                   {t("home.cds.cta")}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
                 </span>
               </div>
             </CardContent>
