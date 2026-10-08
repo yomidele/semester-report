@@ -34,6 +34,7 @@ interface Student {
   id: string;
   full_name: string;
   class_arm_id: string;
+  matric_number: string | null;
 }
 
 interface Subject {
@@ -50,7 +51,9 @@ interface AcademicSession {
 interface GridEntry {
   student_id: string;
   full_name: string;
+  class_arm_id: string;
   class_arm_name: string;
+  matric_number: string;
   ca_score: string;
   exam_score: string;
   existing_status?: string;
@@ -104,6 +107,7 @@ export function ResultsEntryGrid() {
   const [gridEntries, setGridEntries] = useState<GridEntry[]>([]);
   const [hasLoadedStudents, setHasLoadedStudents] = useState(false);
   const [studentSearch, setStudentSearch] = useState("");
+  const [gridArmFilter, setGridArmFilter] = useState("all");
 
   // Fetch sessions
   const { data: sessions = [], isLoading: isLoadingSessions } = useQuery({
@@ -189,7 +193,7 @@ export function ResultsEntryGrid() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, full_name, class_arm_id")
+        .select("id, full_name, class_arm_id, matric_number")
         .in("class_arm_id", scopedArmIds)
         .eq("status", "active")
         .order("full_name");
@@ -236,6 +240,7 @@ export function ResultsEntryGrid() {
       setGridEntries([]);
       setHasLoadedStudents(false);
       setStudentSearch("");
+      setGridArmFilter("all");
     },
     []
   );
@@ -252,6 +257,8 @@ export function ResultsEntryGrid() {
       return {
         student_id: student.id,
         full_name: student.full_name,
+        class_arm_id: student.class_arm_id,
+        matric_number: student.matric_number ?? "",
         class_arm_name: armNameById[student.class_arm_id] ?? "",
         ca_score: existingResult?.ca_score != null ? String(existingResult.ca_score) : "",
         exam_score: existingResult?.exam_score != null ? String(existingResult.exam_score) : "",
@@ -278,6 +285,7 @@ export function ResultsEntryGrid() {
     setGridEntries(finalEntries);
     setHasLoadedStudents(true);
     setStudentSearch("");
+      setGridArmFilter("all");
     toast.success(`Loaded ${finalEntries.length} pupil${finalEntries.length !== 1 ? "s" : ""}`);
     if (restoredCount > 0) {
       toast.info(`Restored ${restoredCount} unsaved score${restoredCount !== 1 ? "s" : ""} from where you left off`);
@@ -358,9 +366,12 @@ export function ResultsEntryGrid() {
   // already entered for pupils that scroll out of view are untouched.
   const filteredEntries = useMemo(() => {
     const q = studentSearch.trim().toLowerCase();
-    if (!q) return gridEntries;
-    return gridEntries.filter((entry) => entry.full_name.toLowerCase().includes(q));
-  }, [gridEntries, studentSearch]);
+    return gridEntries.filter((entry) => {
+      if (isWholeClassView && gridArmFilter !== "all" && entry.class_arm_id !== gridArmFilter) return false;
+      if (!q) return true;
+      return entry.full_name.toLowerCase().includes(q) || entry.matric_number.toLowerCase().includes(q);
+    });
+  }, [gridEntries, studentSearch, gridArmFilter, isWholeClassView]);
 
   // Validate all entries
   const validationStatus = useMemo(() => {
@@ -471,6 +482,7 @@ export function ResultsEntryGrid() {
       setGridEntries([]);
       setHasLoadedStudents(false);
       setStudentSearch("");
+      setGridArmFilter("all");
     },
     onError: (error: Error) => {
       toast.error(`Failed to save: ${error.message}`);
@@ -489,6 +501,7 @@ export function ResultsEntryGrid() {
     setGridEntries([]);
     setHasLoadedStudents(false);
     setStudentSearch("");
+      setGridArmFilter("all");
   }, [filters]);
 
   return (
@@ -670,14 +683,31 @@ export function ResultsEntryGrid() {
                   Enter CA (0-{RESULT_LIMITS.ca}) and Exam (0-{RESULT_LIMITS.exam}) scores. Leave blank to skip a pupil. Saved scores go to the Exam Officer for approval before they are published.
                 </p>
               </div>
-              <div className="relative sm:w-64">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                  placeholder="Search pupil by name..."
-                  className="h-9 pl-8"
-                />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {isWholeClassView && (
+                  <Select value={gridArmFilter} onValueChange={setGridArmFilter}>
+                    <SelectTrigger className="h-9 sm:w-44">
+                      <SelectValue placeholder="Class arm" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All arms</SelectItem>
+                      {armsInDepartment.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <div className="relative sm:w-64">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="Search by name or reg. number..."
+                    className="h-9 pl-8"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -688,6 +718,7 @@ export function ResultsEntryGrid() {
                   <TableRow>
                     <TableHead className="text-xs">Name</TableHead>
                     {isWholeClassView && <TableHead className="text-xs">Arm</TableHead>}
+                    <TableHead className="text-xs">Reg. No.</TableHead>
                     <TableHead className="text-center text-xs">CA (0-{RESULT_LIMITS.ca})</TableHead>
                     <TableHead className="text-center text-xs">Exam (0-{RESULT_LIMITS.exam})</TableHead>
                     <TableHead className="text-center text-xs">Total</TableHead>
@@ -697,8 +728,8 @@ export function ResultsEntryGrid() {
                 <TableBody>
                   {filteredEntries.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={isWholeClassView ? 6 : 5} className="text-center text-sm text-muted-foreground py-8">
-                        No pupils match "{studentSearch}"
+                      <TableCell colSpan={isWholeClassView ? 7 : 6} className="text-center text-sm text-muted-foreground py-8">
+                        No pupils match your filters
                       </TableCell>
                     </TableRow>
                   )}
@@ -717,6 +748,7 @@ export function ResultsEntryGrid() {
                         {isWholeClassView && (
                           <TableCell className="text-xs text-muted-foreground py-3">{entry.class_arm_name}</TableCell>
                         )}
+                        <TableCell className="font-mono text-xs text-muted-foreground py-3">{entry.matric_number || "—"}</TableCell>
                         <TableCell className="text-center py-3">
                           <Input
                             ref={registerInputRef(entry.student_id, "ca_score")}

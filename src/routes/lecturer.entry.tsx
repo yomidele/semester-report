@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -51,6 +52,7 @@ function Page() {
   const submit = useServerFn(teacherSubmitResults);
   const [draft, setDraft] = useState<Record<string, { ca: string; exam: string }>>({});
   const [studentSearch, setStudentSearch] = useState("");
+  const [armFilter, setArmFilter] = useState("all");
   const restoredForAssignment = useRef<string | undefined>(undefined);
 
   // Restore any unsaved scores left behind from a previous visit to this
@@ -59,6 +61,7 @@ function Page() {
     if (restoredForAssignment.current === assignment_id) return;
     restoredForAssignment.current = assignment_id;
     setStudentSearch("");
+    setArmFilter("all");
     const key = localDraftKey(assignment_id);
     const restored = key ? readLocalDraft(key) : null;
     if (restored && Object.keys(restored).length > 0) {
@@ -100,11 +103,25 @@ function Page() {
     queryFn: async () => {
       const a = assignmentQ.data!;
       let query = supabase.from("students")
-        .select("id, full_name")
+        .select("id, full_name, matric_number, class_arm_id")
         .eq("department_id", a.department_id)
         .eq("status", "active");
       if (a.class_arm_id) query = query.eq("class_arm_id", a.class_arm_id);
       const { data } = await query.order("full_name");
+      return data ?? [];
+    },
+  });
+
+  // When the teacher takes the whole class (no single arm on the assignment),
+  // load the class's arms so the list can be narrowed to one arm at a time.
+  const armsQ = useQuery({
+    queryKey: ["assignment-arms", assignmentQ.data?.department_id],
+    enabled: !!assignmentQ.data && !assignmentQ.data.class_arm_id,
+    queryFn: async () => {
+      const { data } = await supabase.from("class_arms")
+        .select("id, name")
+        .eq("department_id", assignmentQ.data!.department_id)
+        .order("name");
       return data ?? [];
     },
   });
@@ -135,23 +152,40 @@ function Page() {
   };
   const students = studentsQ.data ?? [];
   // Search only narrows what's displayed — it never touches typed scores for
-  // pupils that scroll out of view, and Enter still moves through the full
-  // class list in order below.
+  // pupils that are filtered out, and Enter moves through the visible rows.
+  const arms = armsQ.data ?? [];
+  const showArmFilter = !assignmentQ.data?.class_arm_id && arms.length > 1;
+  const armNameById = useMemo(() => Object.fromEntries(arms.map((x: any) => [x.id, x.name])), [arms]);
+  // Who a submit covers: every pupil of the chosen arm (or the whole assignment
+  // when no arm is chosen). Deliberately ignores the text search so typing in
+  // the search box never changes what gets sent for review.
+  const scopedStudentIds = useMemo(
+    () => new Set(
+      students
+        .filter((s: any) => !showArmFilter || armFilter === "all" || s.class_arm_id === armFilter)
+        .map((s: any) => s.id as string),
+    ),
+    [students, armFilter, showArmFilter],
+  );
+  const scopeLabel = showArmFilter && armFilter !== "all" ? (armNameById[armFilter] ?? "this arm") : null;
   const filteredStudents = useMemo(() => {
     const q = studentSearch.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((s) => s.full_name.toLowerCase().includes(q));
-  }, [students, studentSearch]);
+    return students.filter((s: any) => {
+      if (showArmFilter && armFilter !== "all" && s.class_arm_id !== armFilter) return false;
+      if (!q) return true;
+      return s.full_name.toLowerCase().includes(q) || String(s.matric_number ?? "").toLowerCase().includes(q);
+    });
+  }, [students, studentSearch, armFilter, showArmFilter]);
   const handleScoreKeyDown = (studentId: string, field: "ca" | "exam") => (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const idx = students.findIndex((s) => s.id === studentId);
+    const idx = filteredStudents.findIndex((s) => s.id === studentId);
     if (idx === -1) return;
     let nextKey: string | null = null;
     if (field === "ca") {
       nextKey = `${studentId}-exam`;
-    } else if (idx < students.length - 1) {
-      nextKey = `${students[idx + 1].id}-ca`;
+    } else if (idx < filteredStudents.length - 1) {
+      nextKey = `${filteredStudents[idx + 1].id}-ca`;
     }
     if (nextKey && inputRefs.current[nextKey]) {
       inputRefs.current[nextKey]!.focus();
@@ -205,11 +239,22 @@ function Page() {
 
   const submitMut = useMutation({
     mutationFn: async () => {
-      const ids = (existingQ.data ?? []).filter((r: any) => r.status === "draft").map((r: any) => r.id);
-      if (!ids.length) throw new Error("No draft results to submit. Save first.");
-      return submit({ data: { result_ids: ids } });
+      // Only this assignment's pupils, and only the chosen arm when one is
+      // selected — so a teacher can send one arm for review while still
+      // working on the others.
+      const ids = (existingQ.data ?? [])
+        .filter((r: any) => r.status === "draft" && scopedStudentIds.has(r.student_id))
+        .map((r: any) => r.id);
+      if (!ids.length) {
+        throw new Error(scopeLabel ? `No saved draft scores for ${scopeLabel}. Save them first.` : "No draft results to submit. Save first.");
+      }
+      await submit({ data: { result_ids: ids } });
+      return ids.length;
     },
-    onSuccess: () => { toast.success("Submitted to the Exam Officer for review"); qc.invalidateQueries({ queryKey: ["assignment-results"] }); },
+    onSuccess: (count: number) => {
+      toast.success(`Submitted ${count} result${count !== 1 ? "s" : ""}${scopeLabel ? ` for ${scopeLabel}` : ""} to the Exam Officer for review`);
+      qc.invalidateQueries({ queryKey: ["assignment-results"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -230,25 +275,36 @@ function Page() {
             <CardTitle className="text-base">Enter scores</CardTitle>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Save draft</Button>
-              <Button size="sm" variant="secondary" onClick={() => submitMut.mutate()} disabled={submitMut.isPending}>Submit for approval</Button>
+              <Button size="sm" variant="secondary" onClick={() => submitMut.mutate()} disabled={submitMut.isPending}>{scopeLabel ? `Submit ${scopeLabel} for approval` : "Submit for approval"}</Button>
             </div>
           </div>
-          <div className="relative sm:w-64">
-            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={studentSearch}
-              onChange={(e) => setStudentSearch(e.target.value)}
-              placeholder="Search pupil by name..."
-              className="h-9 pl-8"
-            />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {showArmFilter && (
+              <Select value={armFilter} onValueChange={setArmFilter}>
+                <SelectTrigger className="h-9 sm:w-44"><SelectValue placeholder="Class arm" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All arms</SelectItem>
+                  {arms.map((x: any) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="relative sm:w-64">
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Search by name or reg. number..."
+                className="h-9 pl-8"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Pupil</th><th className="py-2 pr-3 w-24">CA</th><th className="py-2 pr-3 w-24">Exam</th><th className="py-2 pr-3">Total</th><th className="py-2 pr-3">Status</th></tr></thead>
+            <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Pupil</th>{showArmFilter && <th className="py-2 pr-3">Arm</th>}<th className="py-2 pr-3">Reg. No.</th><th className="py-2 pr-3 w-24">CA</th><th className="py-2 pr-3 w-24">Exam</th><th className="py-2 pr-3">Total</th><th className="py-2 pr-3">Status</th></tr></thead>
             <tbody>
               {filteredStudents.length === 0 && students.length > 0 && (
-                <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No pupils match "{studentSearch}"</td></tr>
+                <tr><td colSpan={showArmFilter ? 7 : 6} className="py-4 text-center text-muted-foreground">No pupils match your filters</td></tr>
               )}
               {filteredStudents.map((s) => {
                 const existing = byStudent[s.id];
@@ -258,6 +314,8 @@ function Page() {
                 return (
                   <tr key={s.id} className="border-b">
                     <td className="py-2 pr-3">{s.full_name}</td>
+                    {showArmFilter && <td className="py-2 pr-3 text-xs text-muted-foreground">{armNameById[(s as any).class_arm_id] ?? "—"}</td>}
+                    <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{(s as any).matric_number ?? "—"}</td>
                     <td className="py-2 pr-3">
                       <Input
                         ref={registerInputRef(s.id, "ca")}
@@ -292,7 +350,7 @@ function Page() {
                   </tr>
                 );
               })}
-              {students.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">No pupils found in this class.</td></tr>}
+              {students.length === 0 && <tr><td colSpan={showArmFilter ? 7 : 6} className="py-4 text-center text-muted-foreground">No pupils found in this class.</td></tr>}
             </tbody>
           </table>
         </CardContent>
