@@ -1,10 +1,14 @@
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedAdmissionOfficer } from "@/components/ProtectedAdmissionOfficer";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Search, UserRound } from "lucide-react";
 import { AdmissionsToggle } from "@/components/AdmissionsToggle";
 
 export const Route = createFileRoute("/admission-officer/dashboard")({
@@ -12,17 +16,56 @@ export const Route = createFileRoute("/admission-officer/dashboard")({
   component: () => <ProtectedAdmissionOfficer><Page /></ProtectedAdmissionOfficer>,
 });
 
+type PupilRow = {
+  id: string;
+  full_name: string;
+  matric_number: string;
+  status: string;
+  passport_url: string | null;
+  admission_date: string;
+  class_arms: { name: string; departments: { name: string } | null } | null;
+};
+
+const PAGE_SIZE = 25;
+
 function Page() {
+  const [search, setSearch] = useState("");
+  const [shown, setShown] = useState(PAGE_SIZE);
+
+  const pupils = useQuery({
+    queryKey: ["ao-pupils-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, full_name, matric_number, status, passport_url, admission_date, class_arms:class_arm_id(name, departments:department_id(name))")
+        .order("admission_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as PupilRow[];
+    },
+  });
+
+  // Counted separately (not from the list) so the total stays exact even
+  // when the list itself is capped by the API's row limit.
   const totalStudents = useQuery({
     queryKey: ["ao-students-count"],
     queryFn: async () => (await supabase.from("students").select("*", { count: "exact", head: true })).count ?? 0,
   });
 
+  const all = pupils.data ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((p) => p.full_name.toLowerCase().includes(q) || p.matric_number.toLowerCase().includes(q));
+  }, [all, search]);
+
+  const classLabel = (p: PupilRow) =>
+    p.class_arms ? `${p.class_arms.departments?.name ?? ""} ${p.class_arms.name}`.trim() : "Not yet assigned";
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold">Admission Officer</h2>
-        <p className="text-sm text-muted-foreground">Enrol new pupils and issue their admission letters.</p>
+        <p className="text-sm text-muted-foreground">Enrol new pupils, issue their admission letters, and look up any pupil's record.</p>
       </div>
       <AdmissionsToggle />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -43,6 +86,57 @@ function Page() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="tsu-shadow">
+        <CardHeader className="space-y-3">
+          <CardTitle className="text-base">Pupil records</CardTitle>
+          <div className="relative sm:w-80">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setShown(PAGE_SIZE); }}
+              placeholder="Search by name or admission number..."
+              className="h-9 pl-8"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {pupils.isError && (
+            <p className="px-4 pb-4 text-sm text-destructive">Couldn't load pupil records: {(pupils.error as Error).message}</p>
+          )}
+          {!pupils.isError && !pupils.isLoading && filtered.length === 0 && (
+            <p className="px-4 pb-4 text-sm text-muted-foreground">{all.length === 0 ? "No pupils enrolled yet." : "No pupils match your search."}</p>
+          )}
+          <ul className="divide-y">
+            {filtered.slice(0, shown).map((p) => (
+              <li key={p.id}>
+                <Link
+                  to="/admission-officer/records"
+                  search={{ student: p.id }}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-secondary/40"
+                >
+                  <Avatar className="h-11 w-11 rounded-md border border-border">
+                    <AvatarImage src={p.passport_url ?? undefined} alt={p.full_name} className="object-cover" />
+                    <AvatarFallback className="rounded-md bg-secondary"><UserRound className="h-5 w-5 text-muted-foreground" /></AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{p.full_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{p.matric_number} · {classLabel(p)}</p>
+                  </div>
+                  {p.status !== "active" && <Badge variant="outline" className="capitalize">{p.status}</Badge>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {filtered.length > shown && (
+            <div className="border-t p-3 text-center">
+              <Button variant="outline" size="sm" onClick={() => setShown((n) => n + PAGE_SIZE)}>
+                Show more ({filtered.length - shown} remaining)
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -11,10 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { generateAdmissionLetterPdf } from "@/lib/admission-letter";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Download, Search, UserRound } from "lucide-react";
 
 export const Route = createFileRoute("/admission-officer/records")({
   head: () => ({ meta: [{ title: "Admission Records — Admission Officer" }] }),
+  // Lets the dashboard's pupil list open a specific pupil's record directly.
+  validateSearch: (s: Record<string, unknown>): { student?: string } => ({
+    student: typeof s.student === "string" ? s.student : undefined,
+  }),
   component: () => (
     <ProtectedAdmissionOfficer>
       <RecordsPage />
@@ -42,6 +47,7 @@ type StudentDetail = {
   status: string;
   admission_date: string;
   class_arm_id: string | null;
+  passport_url: string | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -61,7 +67,8 @@ const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "outline" |
 function RecordsPage() {
   const { settings } = useCollegeSettings();
   const [search, setSearch] = useState("");
-  const [studentId, setStudentId] = useState<string | undefined>();
+  const { student: studentFromLink } = Route.useSearch();
+  const [studentId, setStudentId] = useState<string | undefined>(studentFromLink);
 
   const { data: students = [] } = useQuery({
     queryKey: ["admission-records-students-list"],
@@ -72,11 +79,16 @@ function RecordsPage() {
 
   const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return students.slice(0, 20);
-    return students
-      .filter((s) => s.full_name.toLowerCase().includes(q) || s.matric_number.toLowerCase().includes(q))
-      .slice(0, 20);
-  }, [students, search]);
+    const matches = !q
+      ? students.slice(0, 20)
+      : students
+          .filter((s) => s.full_name.toLowerCase().includes(q) || s.matric_number.toLowerCase().includes(q))
+          .slice(0, 20);
+    // Keep the chosen pupil in the list (e.g. when arriving from the
+    // dashboard) so the dropdown can show their name.
+    const chosen = studentId ? students.find((s) => s.id === studentId) : undefined;
+    return chosen && !matches.some((s) => s.id === chosen.id) ? [chosen, ...matches] : matches;
+  }, [students, search, studentId]);
 
   const { data: student } = useQuery({
     queryKey: ["admission-records-student-detail", studentId],
@@ -85,7 +97,7 @@ function RecordsPage() {
       const { data, error } = await supabase
         .from("students")
         .select(
-          "id, full_name, matric_number, email, gender, date_of_birth, address, guardian_name, guardian_phone, status, admission_date, class_arm_id",
+          "id, full_name, matric_number, email, gender, date_of_birth, address, guardian_name, guardian_phone, status, admission_date, class_arm_id, passport_url",
         )
         .eq("id", studentId!)
         .maybeSingle();
@@ -183,14 +195,21 @@ function RecordsPage() {
       {student && (
         <Card className="tsu-shadow">
           <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base">{student.full_name}</CardTitle>
-                <Badge variant={STATUS_BADGE_VARIANT[student.status] ?? "outline"}>
-                  {STATUS_LABEL[student.status] ?? student.status}
-                </Badge>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20 rounded-md border border-border">
+                <AvatarImage src={student.passport_url ?? undefined} alt={student.full_name} className="object-cover" />
+                <AvatarFallback className="rounded-md bg-secondary"><UserRound className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base">{student.full_name}</CardTitle>
+                  <Badge variant={STATUS_BADGE_VARIANT[student.status] ?? "outline"}>
+                    {STATUS_LABEL[student.status] ?? student.status}
+                  </Badge>
+                </div>
+                <CardDescription>Admission No: {student.matric_number}</CardDescription>
+                {!student.passport_url && <p className="mt-1 text-xs text-muted-foreground">No photo on file</p>}
               </div>
-              <CardDescription>Admission No: {student.matric_number}</CardDescription>
             </div>
             <Button size="sm" onClick={downloadAdmissionLetter}>
               <Download className="mr-2 h-4 w-4" /> Download Admission Letter

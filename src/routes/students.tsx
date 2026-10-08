@@ -19,7 +19,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, UserRound } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { adminEnrollStudent, adminSetStudentStatus } from "@/lib/admin-students.functions";
 
 export const Route = createFileRoute("/students")({
@@ -71,10 +72,10 @@ export function StudentsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, full_name, class_arm_id, status, status_reason, status_date")
+        .select("id, full_name, class_arm_id, status, status_reason, status_date, passport_url")
         .order("full_name");
       if (error) throw error;
-      return data as { id: string; full_name: string; class_arm_id: string | null; status: string; status_reason: string | null; status_date: string | null }[];
+      return data as { id: string; full_name: string; class_arm_id: string | null; status: string; status_reason: string | null; status_date: string | null; passport_url: string | null }[];
     },
   });
 
@@ -201,7 +202,15 @@ export function StudentsPage() {
                   const status = (s.status as StudentStatus) || "active";
                   return (
                     <TableRow key={s.id}>
-                      <TableCell className="font-medium">{s.full_name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 rounded-md border border-border">
+                            <AvatarImage src={s.passport_url ?? undefined} alt={s.full_name} className="object-cover" />
+                            <AvatarFallback className="rounded-md bg-secondary"><UserRound className="h-4 w-4 text-muted-foreground" /></AvatarFallback>
+                          </Avatar>
+                          {s.full_name}
+                        </div>
+                      </TableCell>
                       <TableCell>{classLabel(s.class_arm_id)}</TableCell>
                       <TableCell>
                         <Badge variant={STATUS_BADGE_VARIANT[status]}>{STATUS_LABEL[status]}</Badge>
