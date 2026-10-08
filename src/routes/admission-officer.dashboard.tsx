@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { listAdmissionRecords, type AdmissionRecord } from "@/lib/admission-records.functions";
 import { Users, UserPlus, Search, UserRound } from "lucide-react";
 import { AdmissionsToggle } from "@/components/AdmissionsToggle";
 
@@ -16,50 +17,26 @@ export const Route = createFileRoute("/admission-officer/dashboard")({
   component: () => <ProtectedAdmissionOfficer><Page /></ProtectedAdmissionOfficer>,
 });
 
-type PupilRow = {
-  id: string;
-  full_name: string;
-  matric_number: string;
-  status: string;
-  passport_url: string | null;
-  admission_date: string;
-  class_arms: { name: string; departments: { name: string } | null } | null;
-};
-
 const PAGE_SIZE = 25;
 
 function Page() {
   const [search, setSearch] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
 
+  const fetchRecords = useServerFn(listAdmissionRecords);
   const pupils = useQuery({
-    queryKey: ["ao-pupils-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select("id, full_name, matric_number, status, passport_url, admission_date, class_arms:class_arm_id(name, departments:department_id(name))")
-        .order("admission_date", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as PupilRow[];
-    },
+    queryKey: ["admission-records"],
+    queryFn: () => fetchRecords(),
   });
 
-  // Counted separately (not from the list) so the total stays exact even
-  // when the list itself is capped by the API's row limit.
-  const totalStudents = useQuery({
-    queryKey: ["ao-students-count"],
-    queryFn: async () => (await supabase.from("students").select("*", { count: "exact", head: true })).count ?? 0,
-  });
-
-  const all = pupils.data ?? [];
+  const all: AdmissionRecord[] = pupils.data ?? [];
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return all;
     return all.filter((p) => p.full_name.toLowerCase().includes(q) || p.matric_number.toLowerCase().includes(q));
   }, [all, search]);
 
-  const classLabel = (p: PupilRow) =>
-    p.class_arms ? `${p.class_arms.departments?.name ?? ""} ${p.class_arms.name}`.trim() : "Not yet assigned";
+  const classLabel = (p: AdmissionRecord) => p.class_label ?? "Not yet assigned";
 
   return (
     <div className="space-y-6">
@@ -73,7 +50,7 @@ function Page() {
           <CardContent className="flex items-center justify-between p-4">
             <div>
               <Users className="h-5 w-5 text-primary" />
-              <p className="mt-2 text-2xl font-bold">{totalStudents.data ?? "—"}</p>
+              <p className="mt-2 text-2xl font-bold">{pupils.isLoading ? "—" : all.length}</p>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Enrolled pupils</p>
             </div>
           </CardContent>

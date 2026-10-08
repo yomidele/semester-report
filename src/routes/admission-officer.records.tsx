@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedAdmissionOfficer } from "@/components/ProtectedAdmissionOfficer";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { listAdmissionRecords, type AdmissionRecord } from "@/lib/admission-records.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,29 +28,6 @@ export const Route = createFileRoute("/admission-officer/records")({
   ),
 });
 
-type StudentListRow = {
-  id: string;
-  full_name: string;
-  matric_number: string;
-  status: string;
-};
-
-type StudentDetail = {
-  id: string;
-  full_name: string;
-  matric_number: string;
-  email: string | null;
-  gender: string | null;
-  date_of_birth: string | null;
-  address: string | null;
-  guardian_name: string | null;
-  guardian_phone: string | null;
-  status: string;
-  admission_date: string;
-  class_arm_id: string | null;
-  passport_url: string | null;
-};
-
 const STATUS_LABEL: Record<string, string> = {
   active: "Active",
   withdrawn: "Withdrawn",
@@ -70,11 +48,12 @@ function RecordsPage() {
   const { student: studentFromLink } = Route.useSearch();
   const [studentId, setStudentId] = useState<string | undefined>(studentFromLink);
 
-  const { data: students = [] } = useQuery({
-    queryKey: ["admission-records-students-list"],
-    queryFn: async () =>
-      ((await supabase.from("students").select("id, full_name, matric_number, status").order("full_name")).data ??
-        []) as StudentListRow[],
+  // Same records the Super Admin sees, loaded through the server so they
+  // always show up regardless of row-level-security on the browser side.
+  const fetchRecords = useServerFn(listAdmissionRecords);
+  const { data: students = [], isError, error } = useQuery({
+    queryKey: ["admission-records"],
+    queryFn: () => fetchRecords(),
   });
 
   const filteredStudents = useMemo(() => {
@@ -90,36 +69,8 @@ function RecordsPage() {
     return chosen && !matches.some((s) => s.id === chosen.id) ? [chosen, ...matches] : matches;
   }, [students, search, studentId]);
 
-  const { data: student } = useQuery({
-    queryKey: ["admission-records-student-detail", studentId],
-    enabled: !!studentId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("students")
-        .select(
-          "id, full_name, matric_number, email, gender, date_of_birth, address, guardian_name, guardian_phone, status, admission_date, class_arm_id, passport_url",
-        )
-        .eq("id", studentId!)
-        .maybeSingle();
-      if (error) throw error;
-      return data as StudentDetail | null;
-    },
-  });
-
-  const { data: classArm } = useQuery({
-    queryKey: ["admission-records-class-arm", student?.class_arm_id],
-    enabled: !!student?.class_arm_id,
-    queryFn: async () =>
-      (
-        await supabase
-          .from("class_arms")
-          .select("name, departments:department_id(name)")
-          .eq("id", student!.class_arm_id!)
-          .maybeSingle()
-      ).data,
-  });
-  const departmentName = (classArm?.departments as unknown as { name?: string } | null)?.name ?? "";
-  const classLabel = classArm ? `${departmentName} ${classArm.name}`.trim() : "Not yet assigned to a class";
+  const student: AdmissionRecord | undefined = studentId ? students.find((x) => x.id === studentId) : undefined;
+  const classLabel = student?.class_label ?? "Not yet assigned to a class";
 
   const admissionDateLabel = student
     ? new Date(student.admission_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
@@ -131,7 +82,7 @@ function RecordsPage() {
       admission_number: student.matric_number,
       full_name: student.full_name,
       admission_date: student.admission_date,
-      class_name: classArm ? classLabel : "the assigned class",
+      class_name: student.class_label ?? "the assigned class",
       school: {
         name: settings.college_name,
         short_name: settings.short_name,
@@ -182,6 +133,10 @@ function RecordsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isError && (
+        <p className="text-sm text-destructive">Couldn't load admission records: {(error as Error).message}</p>
+      )}
 
       {!student && (
         <Card className="tsu-shadow">
