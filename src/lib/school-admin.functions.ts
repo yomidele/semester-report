@@ -16,6 +16,46 @@ async function assertRole(userId: string, roles: string[]) {
 // ---------------------------------------------------------------------------
 // Exam officer accounts (super_admin only can create these)
 // ---------------------------------------------------------------------------
+// Allocates the next admission number for a class and guarantees it isn't
+// already taken. The per-class counter (next_matric_seq) can drift out of
+// step with the students table — e.g. two classes sharing the same code, a
+// counter that was reset, or pupils imported earlier with numbers it never
+// issued — which made the insert fail with "students_matric_number_key".
+// So each candidate is checked against existing pupils and skipped if used;
+// the counter simply moves on until it finds a free number.
+async function allocateUniqueAdmissionNumber(args: {
+  departmentId: string;
+  yearCode: string;
+  deptCode: string;
+  matricFormat: string;
+  padding: number;
+  label: string;
+}): Promise<string> {
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
+      _department_id: args.departmentId,
+      _year_code: args.yearCode,
+    });
+    if (seqErr || typeof seq !== "number") {
+      throw new Error(seqErr?.message ?? `Could not allocate an admission number for ${args.label}`);
+    }
+    const candidate = args.matricFormat
+      .replaceAll("{FAC}", "PRI")
+      .replaceAll("{DEPT}", args.deptCode)
+      .replaceAll("{CLASS}", args.deptCode)
+      .replaceAll("{YY}", args.yearCode)
+      .replaceAll("{SEQ}", String(seq).padStart(args.padding, "0"));
+    const { data: taken, error: takenErr } = await supabaseAdmin
+      .from("students")
+      .select("id")
+      .eq("matric_number", candidate)
+      .limit(1);
+    if (takenErr) throw new Error(takenErr.message);
+    if (!taken || taken.length === 0) return candidate;
+  }
+  throw new Error(`Could not find a free admission number for ${args.label}. Check the admission number format in Settings.`);
+}
+
 export const createExamOfficer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -267,25 +307,20 @@ export const enrollStudent = createServerFn({ method: "POST" })
     // so admission numbers and self-registered matric numbers never collide.
     const yearCode = String(new Date().getFullYear()).slice(-2);
     const deptCode = (dept.code ?? "PRI").toUpperCase();
-    const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
-      _department_id: data.department_id,
-      _year_code: yearCode,
-    });
-    if (seqErr || typeof seq !== "number") throw new Error(seqErr?.message ?? "Could not allocate an admission number");
-
     const { data: settings } = await supabaseAdmin
       .from("college_settings")
       .select("matric_format, matric_seq_padding, college_name, short_name, address, city, state, motto, logo_url")
       .limit(1)
       .maybeSingle();
     const matricFormat = settings?.matric_format ?? "{DEPT}/{YY}/{SEQ}";
-    const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
-    const admissionNumber = matricFormat
-      .replaceAll("{FAC}", "PRI")
-      .replaceAll("{DEPT}", deptCode)
-      .replaceAll("{CLASS}", deptCode)
-      .replaceAll("{YY}", yearCode)
-      .replaceAll("{SEQ}", sequence);
+    const admissionNumber = await allocateUniqueAdmissionNumber({
+      departmentId: data.department_id,
+      yearCode,
+      deptCode,
+      matricFormat,
+      padding: settings?.matric_seq_padding ?? 4,
+      label: data.full_name,
+    });
 
     const temporaryPassword = `Sch${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}!`;
     const { data: created, error: signUpErr } = await supabaseAdmin.auth.admin.createUser({
@@ -427,19 +462,14 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
       const full_name = rawName.trim();
       if (!full_name) continue;
 
-      const { data: seq, error: seqErr } = await supabaseAdmin.rpc("next_matric_seq", {
-        _department_id: data.department_id,
-        _year_code: yearCode,
+      const admissionNumber = await allocateUniqueAdmissionNumber({
+        departmentId: data.department_id,
+        yearCode,
+        deptCode,
+        matricFormat,
+        padding: settings?.matric_seq_padding ?? 4,
+        label: full_name,
       });
-      if (seqErr || typeof seq !== "number") throw new Error(seqErr?.message ?? `Could not allocate an admission number for ${full_name}`);
-
-      const sequence = String(seq).padStart(settings?.matric_seq_padding ?? 4, "0");
-      const admissionNumber = matricFormat
-        .replaceAll("{FAC}", "PRI")
-        .replaceAll("{DEPT}", deptCode)
-        .replaceAll("{CLASS}", deptCode)
-        .replaceAll("{YY}", yearCode)
-        .replaceAll("{SEQ}", sequence);
 
       const admissionDate = new Date().toISOString();
       const { error: insertErr } = await supabaseAdmin.from("students").insert({
