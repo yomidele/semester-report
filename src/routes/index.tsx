@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { GraduationCap, BookOpen, Users, HeartHandshake, ArrowRight, CheckCircle2, User } from "lucide-react";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
@@ -38,7 +40,20 @@ const FEATURES = [
 
 const ADMISSION_REQUIREMENTS = ["home.admissionReq.item1", "home.admissionReq.item2", "home.admissionReq.item3", "home.admissionReq.item4"] as const;
 
+// Module-level on purpose: it resets on every full page load (so the popup
+// greets each fresh visit), but survives in-app navigation, so clicking
+// "Home" in the menu doesn't pop it up again mid-session.
+let cdsPopupShownThisLoad = false;
+
 function Home() {
+  const [cdsPopupOpen, setCdsPopupOpen] = useState(false);
+  // Opened from an effect (not initial state) so server and client render the
+  // same HTML and hydration doesn't mismatch.
+  useEffect(() => {
+    if (cdsPopupShownThisLoad) return;
+    cdsPopupShownThisLoad = true;
+    setCdsPopupOpen(true);
+  }, []);
   const { settings } = useCollegeSettings();
   const { data: schools = [] } = useSchools();
   const { data: programmes = [] } = useProgrammes();
@@ -48,6 +63,38 @@ function Home() {
 
   return (
     <PublicLayout>
+      {/* CDS project popup — opens once per page load. Tapping outside (or the
+          X / Esc) closes it; tapping the card itself opens the CDS page. */}
+      <Dialog open={cdsPopupOpen} onOpenChange={setCdsPopupOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md overflow-hidden border-2 border-accent p-0 sm:rounded-xl">
+          <DialogTitle className="sr-only">{t("home.cds.heading")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("home.cds.body")}</DialogDescription>
+          <Link
+            to="/cds-project"
+            onClick={() => setCdsPopupOpen(false)}
+            aria-label={t("home.cds.ariaLabel")}
+            className="group block bg-gradient-to-b from-accent/15 via-card to-card p-5 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <div className="mx-auto h-28 w-28 overflow-hidden rounded-xl border-2 border-accent/60 bg-muted shadow-md">
+              <img src={developerPortrait} alt="" className="h-full w-full object-cover object-top" />
+            </div>
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              {t("home.cds.kicker")}
+            </p>
+            <h3 className="mt-3 font-serif text-xl font-bold leading-snug text-foreground">{t("home.cds.heading")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{t("home.cds.body")}</p>
+            <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90">
+              {t("home.cds.cta")}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </Link>
+        </DialogContent>
+      </Dialog>
+
       <section className="relative isolate overflow-hidden">
         <img src={heroImg} alt="Smiling pupils in uniform arriving at school with their backpacks" className="absolute inset-0 h-full w-full object-cover object-top" />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary/15" />
