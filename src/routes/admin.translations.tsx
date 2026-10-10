@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useCollegeSettings } from "@/lib/college-settings";
-import { useSchools, useProgrammes } from "@/lib/public-catalog";
-import { normalizeSource, useContentTranslations } from "@/lib/content-translations";
+import { useSchools, useDepartments, useProgrammes } from "@/lib/public-catalog";
+import { chunksOf, normalizeSource, useContentTranslations } from "@/lib/content-translations";
 
 export const Route = createFileRoute("/admin/translations")({
   head: () => ({ meta: [{ title: "Hausa Translations — Super Admin" }] }),
@@ -35,6 +35,7 @@ function TranslationsPage() {
   const qc = useQueryClient();
   const { settings } = useCollegeSettings();
   const { data: schools = [] } = useSchools();
+  const { data: classes = [] } = useDepartments();
   const { data: programmes = [] } = useProgrammes();
   const { data: saved = {} } = useContentTranslations();
   const staff = useQuery({
@@ -42,6 +43,14 @@ function TranslationsPage() {
     queryFn: async () => {
       const { data } = await supabase.from("staff_profiles").select("role_title").eq("is_published", true);
       return (data ?? []) as { role_title: string | null }[];
+    },
+  });
+
+  const posts = useQuery({
+    queryKey: ["translations-news"],
+    queryFn: async () => {
+      const { data } = await supabase.from("news_posts").select("title, excerpt, content").eq("is_published", true);
+      return (data ?? []) as { title: string | null; excerpt: string | null; content: string | null }[];
     },
   });
 
@@ -58,10 +67,22 @@ function TranslationsPage() {
     };
     add(settings.motto, "School motto");
     schools.forEach((s) => { add(s.name, "School section name"); add(s.description, "School section description"); });
-    programmes.forEach((p) => { add(p.name, "Programme name"); add(p.description, "Programme description"); });
+    classes.forEach((c) => { add(c.name, "Class name"); add(c.description, "Class description"); });
+    programmes.forEach((p) => {
+      add(p.name, "Programme name");
+      add(p.award, "Programme award");
+      add(p.description, "Programme description");
+      add(p.requirements, "Programme entry requirements");
+    });
     (staff.data ?? []).forEach((m) => add(m.role_title, "Staff role title"));
+    (posts.data ?? []).forEach((post) => {
+      add(post.title, "News title");
+      add(post.excerpt, "News summary");
+      // Articles are translated paragraph by paragraph (long ones sentence by sentence).
+      chunksOf(post.content).forEach((c) => add(c, "News article text"));
+    });
     return out;
-  }, [settings.motto, schools, programmes, staff.data]);
+  }, [settings.motto, schools, classes, programmes, staff.data, posts.data]);
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   useEffect(() => { setDrafts({}); }, [saved]);
@@ -93,8 +114,8 @@ function TranslationsPage() {
       <div>
         <h2 className="font-serif text-2xl font-bold">Hausa Translations</h2>
         <p className="text-sm text-muted-foreground">
-          The fixed wording of the public website is already in Hausa. Text you type yourself — the motto, school section and programme names and descriptions,
-          staff role titles — is listed here so you can add its Hausa version. Visitors who switch to Hausa see these; anything left blank stays in English.
+          The fixed wording of the public website is already in Hausa. Text you type yourself — the motto, school sections, classes, programmes,
+          staff role titles and news articles — is listed here so you can add its Hausa version. Visitors who switch to Hausa see these; anything left blank stays in English.
         </p>
       </div>
       <Card className="tsu-shadow">

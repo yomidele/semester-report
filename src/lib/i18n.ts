@@ -139,6 +139,25 @@ const DICT = {
   "staff.category.admission_officer": { en: "Admission Officer", ha: "Jami'in Shiga Makaranta" },
   "staff.category.teacher": { en: "Teacher", ha: "Malami" },
   "staff.category.staff": { en: "Staff", ha: "Ma'aikaci" },
+  "about.image1Alt": { en: "A teacher addressing pupils gathered under a tree on the school compound", ha: "Malami yana yi wa yara jawabi a ƙarƙashin itace a harabar makaranta" },
+  "about.image2Alt": { en: "A group of our pupils in school uniform standing together on the compound", ha: "Gungun ɗalibanmu cikin kayan makaranta suna tsaye tare a harabar makaranta" },
+  "cds.imageAlt": { en: "Garba Sadiq Suleman, NYSC Corps Member, in full NYSC uniform", ha: "Garba Sadiq Suleman, ɗan bautar ƙasa na NYSC, cikin cikakken kayan NYSC" },
+  "layout.switchLanguage": { en: "Switch language", ha: "Canza harshe" },
+  "layout.toggleMenu": { en: "Toggle menu", ha: "Buɗe ko rufe menu" },
+  "layout.account": { en: "Account", ha: "Asusu" },
+  "apply.photoRequired": { en: "Please add the pupil's passport photograph before submitting.", ha: "Da fatan za a saka hoton fasfo na yaron kafin a aika." },
+  "title.about": { en: "About Model Day Primary School Kazaure", ha: "Game da Model Day Primary School Kazaure" },
+  "title.schools": { en: "Schools — Academic Divisions of the College", ha: "Makarantu — Sassan Ilimi na Kwalejin" },
+  "title.programmes": { en: "Programmes — 2, 3 and 4 Year Health Subjects", ha: "Shirye-shirye — Darussan Lafiya na Shekara 2, 3 da 4" },
+  "title.departments": { en: "Classes — Model Day Primary School Kazaure", ha: "Azuzuwa — Model Day Primary School Kazaure" },
+  "title.admissions": { en: "Admissions — Apply to the College", ha: "Shiga Makaranta — Nemi Shiga Kwalejin" },
+  "title.apply": { en: "Apply for Admission — School Portal", ha: "Nemi Shiga Makaranta — Tashar Makaranta" },
+  "title.news": { en: "News & Events", ha: "Labarai da Abubuwan da ke Faruwa" },
+  "title.contact": { en: "Contact the College", ha: "Tuntuɓi Kwalejin" },
+  "title.cds": { en: "NYSC Personal CDS Project — Model Day Primary School Kazaure", ha: "Aikin CDS na Kashin Kai na NYSC — Model Day Primary School Kazaure" },
+  "title.checkResult": { en: "Check Result — School Portal", ha: "Duba Sakamako — Tashar Makaranta" },
+  "title.buyPin": { en: "Buy Result PIN — School Portal", ha: "Sayi PIN na Sakamako — Tashar Makaranta" },
+  "title.paymentConfirm": { en: "Payment Confirmation — School Portal", ha: "Tabbatar da Biyan Kuɗi — Tashar Makaranta" },
   "home.cds.cta": { en: "Click to view more", ha: "Danna don ganin ƙari" },
   "home.cds.ariaLabel": { en: "View more about the NYSC Personal CDS Project", ha: "Duba ƙarin bayani game da Aikin CDS na Kashin Kai na NYSC" },
 
@@ -489,6 +508,17 @@ const DICT = {
 } as const;
 
 export type DictKey = keyof typeof DICT;
+
+const HA_MONTHS = ["Janairu", "Fabrairu", "Maris", "Afrilu", "Mayu", "Yuni", "Yuli", "Agusta", "Satumba", "Oktoba", "Nuwamba", "Disamba"];
+
+/** A calendar date written the way the visitor's chosen language writes it (Hausa: "12 ga Oktoba, 2026"). */
+export function formatLocalizedDate(value: string | Date | null | undefined, lang: Lang): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  if (lang === "ha") return `${d.getDate()} ga ${HA_MONTHS[d.getMonth()]}, ${d.getFullYear()}`;
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
 
 export function useT() {
   const { lang } = useLanguage();

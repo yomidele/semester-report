@@ -3,6 +3,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { Target, Eye, ShieldCheck, BookOpen, Users, Home } from "lucide-react";
+import { useTr } from "@/lib/content-translations";
 import { useT } from "@/lib/i18n";
 import teacherWithPupils from "@/assets/about-pupils-teacher.jpg";
 import pupilsGroup from "@/assets/about-pupils-group.jpg";
@@ -25,12 +26,13 @@ export const Route = createFileRoute("/about")({
 function About() {
   const { settings } = useCollegeSettings();
   const t = useT();
+  const tr = useTr();
   return (
     <PublicLayout>
       <div className="tsu-header-grad py-12 text-sidebar-foreground">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <h1 className="font-serif text-3xl font-bold md:text-4xl">{t("about.hero.title")}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">{settings.motto}</p>
+          <p className="mt-2 max-w-2xl text-sm text-sidebar-foreground/80">{tr(settings.motto)}</p>
         </div>
       </div>
 
@@ -48,7 +50,7 @@ function About() {
             <div className="overflow-hidden rounded-lg tsu-shadow">
               <img
                 src={teacherWithPupils}
-                alt="A teacher addressing pupils gathered under a tree on the school compound"
+                alt={t("about.image1Alt")}
                 className="h-full w-full object-cover"
               />
             </div>
@@ -78,7 +80,7 @@ function About() {
             <div className="overflow-hidden rounded-lg tsu-shadow">
               <img
                 src={pupilsGroup}
-                alt="A group of our pupils in school uniform standing together on the compound"
+                alt={t("about.image2Alt")}
                 className="h-full w-full object-cover"
               />
             </div>

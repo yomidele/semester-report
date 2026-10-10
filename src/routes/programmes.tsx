@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/public-catalog";
+import { useTr } from "@/lib/content-translations";
 import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/programmes")({
@@ -30,6 +31,7 @@ function Programmes() {
   const [q, setQ] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
   const t = useT();
+  const tr = useTr();
 
   const durations = [...new Set(programmes.map((p) => p.duration_years))].sort((a, b) => a - b);
   const filtered = programmes.filter((p) => {
@@ -74,19 +76,19 @@ function Programmes() {
               <Card key={p.id} className="tsu-shadow flex flex-col border-border">
                 <CardContent className="flex flex-1 flex-col p-5">
                   <div className="flex items-start justify-between gap-2">
-                    <h2 className="font-serif text-base font-bold text-primary">{p.name}</h2>
+                    <h2 className="font-serif text-base font-bold text-primary">{tr(p.name)}</h2>
                     <Badge variant="secondary">{durationLabel(p.duration_years)}</Badge>
                   </div>
                   <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
-                    {p.award} · {p.code}
+                    {tr(p.award)} · {p.code}
                   </p>
-                  <p className="mt-2 flex-1 text-sm text-muted-foreground">{p.description ?? t("programmes.defaultDescription")}</p>
+                  <p className="mt-2 flex-1 text-sm text-muted-foreground">{p.description ? tr(p.description) : t("programmes.defaultDescription")}</p>
                   <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
                     <div>{t("programmes.school")} <span className="text-foreground">{school?.name ?? "—"}</span></div>
                     <div>{t("programmes.class")} <span className="text-foreground">{dept?.name ?? "—"}</span></div>
                     <div>{t("programmes.unitsPerSemester")} <span className="text-foreground">{p.min_units}–{p.max_units}</span></div>
                   </dl>
-                  {p.requirements && <p className="mt-3 text-xs text-muted-foreground"><strong className="text-foreground">{t("programmes.entry")}</strong> {p.requirements}</p>}
+                  {p.requirements && <p className="mt-3 text-xs text-muted-foreground"><strong className="text-foreground">{t("programmes.entry")}</strong> {tr(p.requirements)}</p>}
                   <Button asChild size="sm" className="mt-4 w-full">
                     <Link to="/admissions">{t("programmes.applyForThis")}</Link>
                   </Button>

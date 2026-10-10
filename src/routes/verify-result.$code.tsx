@@ -5,7 +5,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { verifyResultDocument } from "@/lib/result-pin.functions";
-import { useT } from "@/lib/i18n";
+import { useT, useLanguage, formatLocalizedDate } from "@/lib/i18n";
 
 export const Route = createFileRoute("/verify-result/$code")({
   head: () => ({ meta: [{ title: "Verify Result Document" }] }),
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/verify-result/$code")({
 function VerifyResultPage() {
   const { code } = Route.useParams();
   const t = useT();
+  const { lang } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["verify-result", code],
     queryFn: () => verifyResultDocument({ data: { code } }),
@@ -47,7 +48,7 @@ function VerifyResultPage() {
                   <Row label={t("verifyResult.programme")} value={data.programme_name} />
                   <Row label={t("verifyResult.session")} value={data.session_name} />
                   <Row label={t("verifyResult.term")} value={data.semester === "First" ? t("checkResult.firstTerm") : data.semester === "Second" ? t("checkResult.secondTerm") : data.semester === "Third" ? t("checkResult.thirdTerm") : `${data.semester} Term`} />
-                  <Row label={t("verifyResult.issued")} value={new Date(data.generated_at).toLocaleDateString()} />
+                  <Row label={t("verifyResult.issued")} value={formatLocalizedDate(data.generated_at, lang)} />
                 </dl>
                 <p className="flex items-center justify-center gap-1.5 pt-2 text-xs text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5" /> {t("verifyResult.privacyNote")}

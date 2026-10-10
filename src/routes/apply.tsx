@@ -13,6 +13,7 @@ import { useSchools, useDepartments } from "@/lib/public-catalog";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { submitApplication } from "@/lib/applicant.functions";
 import { PhotoCaptureInput } from "@/components/PhotoCaptureInput";
+import { useTr } from "@/lib/content-translations";
 import { useT } from "@/lib/i18n";
 import { toast } from "sonner";
 
@@ -43,6 +44,7 @@ function ApplyPage() {
   const navigate = useNavigate({ from: "/apply" });
   const { settings, isLoading: settingsLoading } = useCollegeSettings();
   const t = useT();
+  const tr = useTr();
 
   return (
     <PublicLayout>
@@ -88,6 +90,7 @@ function ClassChooser({ onSelect }: { onSelect: (departmentId: string) => void }
   const isLoading = sectionsLoading || classesLoading;
   const activeSections = sections.filter((s) => s.is_active);
   const t = useT();
+  const tr = useTr();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 md:px-6">
@@ -108,7 +111,7 @@ function ClassChooser({ onSelect }: { onSelect: (departmentId: string) => void }
               <div key={section.id}>
                 <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-foreground">
                   <GraduationCap className="h-5 w-5 text-primary" />
-                  {section.name}
+                  {tr(section.name)}
                 </h2>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {sectionClasses.map((cls, i) => (
@@ -117,7 +120,7 @@ function ClassChooser({ onSelect }: { onSelect: (departmentId: string) => void }
                       onClick={() => onSelect(cls.id)}
                       className={`flex items-center justify-between rounded-lg px-5 py-4 text-left text-sm font-semibold shadow-sm transition-colors ${CARD_ACCENTS[i % CARD_ACCENTS.length]}`}
                     >
-                      <span>{cls.name}</span>
+                      <span>{tr(cls.name)}</span>
                       <ArrowRight className="h-4 w-4 shrink-0" />
                     </button>
                   ))}
@@ -157,11 +160,12 @@ function ApplicationForm({
   const [submitting, setSubmitting] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const t = useT();
+  const tr = useTr();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!photo) {
-      toast.error("Please add the pupil's passport photograph before submitting.");
+      toast.error(t("apply.photoRequired"));
       return;
     }
     const form = new FormData(event.currentTarget);
@@ -225,7 +229,7 @@ function ApplicationForm({
               <CardTitle className="font-serif text-2xl">{t("apply.form.heading")}</CardTitle>
               {cls && (
                 <p className="text-sm text-muted-foreground">
-                  {t("apply.form.applyingFor")} <strong className="text-foreground">{cls.name}</strong>
+                  {t("apply.form.applyingFor")} <strong className="text-foreground">{tr(cls.name)}</strong>
                 </p>
               )}
             </CardHeader>

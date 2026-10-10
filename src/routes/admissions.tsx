@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { durationLabel, useProgrammes } from "@/lib/public-catalog";
+import { useTr } from "@/lib/content-translations";
 import { useT, type DictKey } from "@/lib/i18n";
 
 export const Route = createFileRoute("/admissions")({
@@ -34,6 +35,7 @@ function Admissions() {
   const { settings } = useCollegeSettings();
   const { data: programmes = [], isLoading } = useProgrammes();
   const t = useT();
+  const tr = useTr();
   const activeProgrammes = programmes.filter((programme) => programme.is_active);
   const durations = [...new Set(activeProgrammes.map((programme) => programme.duration_years))].sort((a, b) => a - b);
 
@@ -95,10 +97,10 @@ function Admissions() {
             {activeProgrammes.map((programme) => (
               <Card key={programme.id} className="border-border tsu-shadow">
                 <CardContent className="p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{programme.award} · {programme.code}</p>
-                  <h3 className="mt-2 font-serif text-lg font-bold text-primary">{programme.name}</h3>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{tr(programme.award)} · {programme.code}</p>
+                  <h3 className="mt-2 font-serif text-lg font-bold text-primary">{tr(programme.name)}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">{durationLabel(programme.duration_years)}</p>
-                  {programme.requirements && <p className="mt-3 text-sm text-muted-foreground">{programme.requirements}</p>}
+                  {programme.requirements && <p className="mt-3 text-sm text-muted-foreground">{tr(programme.requirements)}</p>}
                 </CardContent>
               </Card>
             ))}

@@ -3,6 +3,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSchools, useClasss } from "@/lib/public-catalog";
 import { Building2 } from "lucide-react";
+import { useTr } from "@/lib/content-translations";
 import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/schools")({
@@ -21,6 +22,7 @@ function Schools() {
   const { data: schools = [], isLoading } = useSchools();
   const { data: departments = [] } = useClasss();
   const t = useT();
+  const tr = useTr();
 
   return (
     <PublicLayout>
@@ -45,16 +47,16 @@ function Schools() {
                     <Building2 className="mt-1 h-6 w-6 shrink-0 text-primary" />
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{s.code}</p>
-                      <h2 className="font-serif text-xl font-bold text-primary">{s.name}</h2>
+                      <h2 className="font-serif text-xl font-bold text-primary">{tr(s.name)}</h2>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">{s.description ?? t("schools.defaultDescription")}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">{s.description ? tr(s.description) : t("schools.defaultDescription")}</p>
                   {depts.length > 0 && (
                     <>
                       <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent-foreground">{t("schools.classesHeading")}</h3>
                       <ul className="mt-2 space-y-1 text-sm text-foreground">
                         {depts.map((d) => (
-                          <li key={d.id}>• {d.name}</li>
+                          <li key={d.id}>• {tr(d.name)}</li>
                         ))}
                       </ul>
                     </>

@@ -3,6 +3,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSchools, useClasss, useProgrammes, durationLabel } from "@/lib/public-catalog";
+import { useTr } from "@/lib/content-translations";
 import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/departments")({
@@ -22,6 +23,7 @@ function Classes() {
   const { data: departments = [], isLoading } = useClasss();
   const { data: programmes = [] } = useProgrammes();
   const t = useT();
+  const tr = useTr();
 
   return (
     <PublicLayout>
@@ -44,8 +46,8 @@ function Classes() {
               <Card key={d.id} className="tsu-shadow border-border">
                 <CardContent className="p-5">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">{school?.name ?? t("departments.defaultSchool")}</p>
-                  <h2 className="mt-1 font-serif text-lg font-bold text-primary">{d.name}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">{d.description ?? t("departments.defaultDescription")}</p>
+                  <h2 className="mt-1 font-serif text-lg font-bold text-primary">{tr(d.name)}</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">{d.description ? tr(d.description) : t("departments.defaultDescription")}</p>
                   {progs.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {progs.map((p) => (

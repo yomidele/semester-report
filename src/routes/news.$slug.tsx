@@ -3,7 +3,8 @@ import { CalendarDays, ChevronLeft, Loader2 } from "lucide-react";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { usePostBySlug, formatPostDate } from "@/lib/news";
-import { useT } from "@/lib/i18n";
+import { useTr, useTrRich } from "@/lib/content-translations";
+import { useT, useLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/news/$slug")({
   head: () => ({ meta: [{ title: "News — College" }] }),
@@ -13,7 +14,10 @@ export const Route = createFileRoute("/news/$slug")({
 function NewsPostPage() {
   const { slug } = Route.useParams();
   const { data: post, isLoading } = usePostBySlug(slug);
+  const { lang } = useLanguage();
   const t = useT(); // must stay above the early returns below (rules of hooks)
+  const tr = useTr();
+  const trRich = useTrRich();
 
   if (isLoading) {
     return (
@@ -44,23 +48,23 @@ function NewsPostPage() {
       <article>
         {post.cover_image_url && (
           <div className="h-72 w-full overflow-hidden md:h-96">
-            <img src={post.cover_image_url} alt={post.title} className="h-full w-full object-cover" />
+            <img src={post.cover_image_url} alt={tr(post.title)} className="h-full w-full object-cover" />
           </div>
         )}
         <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
           <Link to="/news" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
             <ChevronLeft className="h-4 w-4" /> {t("news.post.backToNews")}
           </Link>
-          <h1 className="mt-4 font-serif text-3xl font-bold leading-tight text-foreground md:text-4xl">{post.title}</h1>
+          <h1 className="mt-4 font-serif text-3xl font-bold leading-tight text-foreground md:text-4xl">{tr(post.title)}</h1>
           <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <CalendarDays className="h-3.5 w-3.5" />
-              {formatPostDate(post.published_at)}
+              {formatPostDate(post.published_at, lang)}
             </span>
             {post.author_name && <span>{t("news.post.by")} {post.author_name}</span>}
           </div>
           <div className="prose prose-sm mt-8 max-w-none whitespace-pre-line leading-relaxed text-foreground/90">
-            {post.content}
+            {trRich(post.content)}
           </div>
         </div>
       </article>

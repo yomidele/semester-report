@@ -56,7 +56,7 @@ function CdsProject() {
               <div className="aspect-[2/3] w-full bg-muted">
                 <img
                   src={developerPortrait}
-                  alt="Garba Sadiq Suleman, NYSC Corps Member, in full NYSC uniform"
+                  alt={t("cds.imageAlt")}
                   className="h-full w-full object-contain"
                 />
               </div>

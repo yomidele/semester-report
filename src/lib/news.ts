@@ -1,3 +1,4 @@
+import { formatLocalizedDate, type Lang } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -70,9 +71,8 @@ export function usePostBySlug(slug: string) {
   });
 }
 
-export function formatPostDate(value: string | null): string {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+export function formatPostDate(value: string | null, lang: Lang = "en"): string {
+  return formatLocalizedDate(value, lang);
 }
 
 export function slugify(title: string): string {

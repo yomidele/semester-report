@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { HeartPulse, Menu, X, Phone, Mail, MapPin, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +8,23 @@ import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
 import { LanguageProvider, useLanguage, useT, type DictKey } from "@/lib/i18n";
 import { useTr } from "@/lib/content-translations";
+
+// Browser-tab titles per public page. Route titles are set in English by the
+// router, so the layout re-applies them in the visitor's language.
+const PAGE_TITLE_KEYS: Record<string, DictKey> = {
+  "/about": "title.about",
+  "/schools": "title.schools",
+  "/programmes": "title.programmes",
+  "/departments": "title.departments",
+  "/admissions": "title.admissions",
+  "/apply": "title.apply",
+  "/news": "title.news",
+  "/contact": "title.contact",
+  "/cds-project": "title.cds",
+  "/check-result": "title.checkResult",
+  "/result-pin/buy": "title.buyPin",
+  "/result-pin/callback": "title.paymentConfirm",
+};
 
 const NAV = [
   { to: "/", labelKey: "layout.nav.home" },
@@ -30,7 +47,7 @@ function LanguageToggle({ className = "" }: { className?: string }) {
       type="button"
       onClick={() => setLang(lang === "en" ? "ha" : "en")}
       className={`inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary ${className}`}
-      aria-label="Switch language"
+      aria-label={t("layout.switchLanguage")}
     >
       <Languages className="h-3.5 w-3.5" />
       {lang === "en" ? t("layout.lang.switchToHausa") : t("layout.lang.switchToEnglish")}
@@ -52,10 +69,19 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
   const { roles } = useRole();
   const t = useT();
   const tr = useTr();
+  const { pathname } = useLocation();
+  const { lang } = useLanguage();
+  useEffect(() => {
+    const key = PAGE_TITLE_KEYS[pathname.replace(/\/$/, "") || "/"];
+    if (!key) return;
+    // Run after the router has applied its own (English) title for this page.
+    const id = window.setTimeout(() => { document.title = t(key); }, 0);
+    return () => window.clearTimeout(id);
+  }, [pathname, lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [open, setOpen] = useState(false);
   const address = formatAddress(settings);
   const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
-  const accountName = (metadata?.["full_name"] as string | undefined) ?? (metadata?.["display_name"] as string | undefined) ?? session?.user.email?.split("@")[0] ?? "Account";
+  const accountName = (metadata?.["full_name"] as string | undefined) ?? (metadata?.["display_name"] as string | undefined) ?? session?.user.email?.split("@")[0] ?? t("layout.account");
   const accountImage = (metadata?.["avatar_url"] as string | undefined) ?? (metadata?.["picture"] as string | undefined);
   const accountTarget = roles.includes("super_admin")
       ? "/dashboard"
@@ -140,7 +166,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
             )}
             <button
               type="button"
-              aria-label="Toggle menu"
+              aria-label={t("layout.toggleMenu")}
               className="rounded-md p-2 text-foreground hover:bg-secondary lg:hidden"
               onClick={() => setOpen((v) => !v)}
             >

@@ -5,7 +5,8 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePublishedPosts, formatPostDate } from "@/lib/news";
-import { useT, type DictKey } from "@/lib/i18n";
+import { useTr } from "@/lib/content-translations";
+import { useT, useLanguage, type DictKey } from "@/lib/i18n";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -25,6 +26,8 @@ const CATEGORY_LABEL: Record<string, DictKey> = {
 
 function NewsPage() {
   const t = useT();
+  const tr = useTr();
+  const { lang } = useLanguage();
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePublishedPosts(page);
   const posts = data?.posts ?? [];
@@ -62,7 +65,7 @@ function NewsPage() {
               <Card key={post.id} className="overflow-hidden border-border tsu-shadow transition-shadow hover:shadow-md">
                 {post.cover_image_url && (
                   <Link to="/news/$slug" params={{ slug: post.slug }}>
-                    <img src={post.cover_image_url} alt={post.title} className="h-56 w-full object-cover" />
+                    <img src={post.cover_image_url} alt={tr(post.title)} className="h-56 w-full object-cover" />
                   </Link>
                 )}
                 <CardContent className="space-y-3 p-6">
@@ -71,14 +74,14 @@ function NewsPage() {
                   </span>
                   <Link to="/news/$slug" params={{ slug: post.slug }}>
                     <h2 className="font-serif text-2xl font-bold leading-tight text-foreground hover:text-primary">
-                      {post.title}
+                      {tr(post.title)}
                     </h2>
                   </Link>
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    {formatPostDate(post.published_at)}
+                    {formatPostDate(post.published_at, lang)}
                   </p>
-                  {post.excerpt && <p className="text-sm leading-relaxed text-muted-foreground">{post.excerpt}</p>}
+                  {post.excerpt && <p className="text-sm leading-relaxed text-muted-foreground">{tr(post.excerpt)}</p>}
                   <Button asChild size="sm" className="mt-2">
                     <Link to="/news/$slug" params={{ slug: post.slug }}>
                       {t("news.readMore")}
