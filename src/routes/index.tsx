@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCollegeSettings } from "@/lib/college-settings";
 import { useProgrammes, useSchools, durationLabel } from "@/lib/public-catalog";
-import { useManagementBoard, categoryLabel } from "@/lib/staff";
-import { useT } from "@/lib/i18n";
+import { useManagementBoard } from "@/lib/staff";
+import { useTr } from "@/lib/content-translations";
+import { useT, type DictKey } from "@/lib/i18n";
 import heroImg from "@/assets/pupils-hero.jpg";
 import developerPortrait from "@/assets/nysc-developer-portrait.png";
 
@@ -59,6 +60,7 @@ function Home() {
   const { data: programmes = [] } = useProgrammes();
   const { data: staff = [] } = useManagementBoard();
   const t = useT();
+  const tr = useTr();
   const activeProgrammes = programmes.filter((p) => p.is_active).slice(0, 6);
 
   return (
@@ -96,7 +98,7 @@ function Home() {
       </Dialog>
 
       <section className="relative isolate overflow-hidden">
-        <img src={heroImg} alt="Smiling pupils in uniform arriving at school with their backpacks" className="absolute inset-0 h-full w-full object-cover object-top" />
+        <img src={heroImg} alt={t("home.hero.imageAlt")} className="absolute inset-0 h-full w-full object-cover object-top" />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary/15" />
         <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
@@ -192,7 +194,7 @@ function Home() {
             <div className="relative overflow-hidden rounded-2xl border-4 border-accent/40 shadow-lg">
               <img
                 src={heroImg}
-                alt="Pupils in uniform walking together at school, smiling"
+                alt={t("home.lifeAtSchool.imageAlt")}
                 className="h-72 w-full object-cover object-top sm:h-80 md:h-96"
               />
             </div>
@@ -211,8 +213,8 @@ function Home() {
               <Card key={s.id} className="tsu-shadow border-border">
                 <CardContent className="p-5">
                   <p className="text-xs font-semibold uppercase tracking-wider text-accent-foreground">{s.code}</p>
-                  <h3 className="mt-1 font-serif text-lg font-bold text-primary">{s.name}</h3>
-                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{s.description ?? t("home.schoolDefaultDescription")}</p>
+                  <h3 className="mt-1 font-serif text-lg font-bold text-primary">{tr(s.name)}</h3>
+                  <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{s.description ? tr(s.description) : t("home.schoolDefaultDescription")}</p>
                 </CardContent>
               </Card>
             ))}
@@ -229,11 +231,11 @@ function Home() {
           {activeProgrammes.map((p) => (
             <Card key={p.id} className="tsu-shadow border-border">
               <CardContent className="p-5">
-                <h3 className="font-serif text-base font-bold text-primary">{p.name}</h3>
+                <h3 className="font-serif text-base font-bold text-primary">{tr(p.name)}</h3>
                 <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
                   {p.award} · {durationLabel(p.duration_years)}
                 </p>
-                <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{p.description ?? t("home.programmeDefaultDescription")}</p>
+                <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{p.description ? tr(p.description) : t("home.programmeDefaultDescription")}</p>
               </CardContent>
             </Card>
           ))}
@@ -259,7 +261,7 @@ function Home() {
                       <User className="h-10 w-10 text-primary/60" />
                     </AvatarFallback>
                   </Avatar>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{member.role_title || categoryLabel(member.category)}</p>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{member.role_title ? tr(member.role_title) : t(`staff.category.${member.category}` as DictKey)}</p>
                   <h3 className="mt-1 font-serif text-base font-bold text-foreground">{member.full_name}</h3>
                 </div>
               ))}

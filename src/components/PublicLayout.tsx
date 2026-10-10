@@ -7,6 +7,7 @@ import { useCollegeSettings, formatAddress } from "@/lib/college-settings";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
 import { LanguageProvider, useLanguage, useT, type DictKey } from "@/lib/i18n";
+import { useTr } from "@/lib/content-translations";
 
 const NAV = [
   { to: "/", labelKey: "layout.nav.home" },
@@ -50,6 +51,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
   const { session } = useAuthSession();
   const { roles } = useRole();
   const t = useT();
+  const tr = useTr();
   const [open, setOpen] = useState(false);
   const address = formatAddress(settings);
   const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
@@ -79,7 +81,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </span>
-          <span className="text-accent">{settings.motto}</span>
+          <span className="text-accent">{tr(settings.motto)}</span>
         </div>
       </div>
 
@@ -171,7 +173,7 @@ function PublicLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-3 md:px-6">
           <div>
             <h2 className="font-serif text-lg font-bold uppercase">{settings.college_name}</h2>
-            <p className="mt-2 text-sm text-sidebar-foreground/80">{settings.motto}</p>
+            <p className="mt-2 text-sm text-sidebar-foreground/80">{tr(settings.motto)}</p>
             {address && (
               <p className="mt-3 flex items-start gap-2 text-sm text-sidebar-foreground/80">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {address}

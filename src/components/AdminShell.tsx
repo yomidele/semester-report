@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog, Search, Printer, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog, Search, Printer, ClipboardCheck, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ const SUPER_ADMIN_NAV = [
   { to: "/admin/applications", label: "Applications", icon: UserRoundCheck, roles: ["super_admin"] },
   { to: "/admin/result-pins", label: "Result PINs", icon: KeyRound, roles: ["super_admin"] },
   { to: "/admin/news", label: "News", icon: Newspaper, roles: ["super_admin"] },
+  { to: "/admin/translations", label: "Hausa Translations", icon: Languages, roles: ["super_admin"] },
   { to: "/admin/staff-profiles", label: "School Administration", icon: Users, roles: ["super_admin"] },
   { to: "/admin/faculties", label: "School Sections", icon: Building2, roles: ["super_admin"] },
   { to: "/admin/teachers", label: "Teachers & Staff Accounts", icon: Shield, roles: ["super_admin"] },
