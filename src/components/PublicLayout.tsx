@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCollegeSettings, formatAddress } from "@/lib/college-settings";
 import { useAuthSession } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
-import { LanguageProvider, useLanguage, useT, type DictKey } from "@/lib/i18n";
+import { useLanguage, useT, type DictKey } from "@/lib/i18n";
 import { useTr } from "@/lib/content-translations";
 
 // Browser-tab titles per public page. Route titles are set in English by the
@@ -55,12 +55,12 @@ function LanguageToggle({ className = "" }: { className?: string }) {
   );
 }
 
+// The language provider lives at the app root (routes/__root.tsx), NOT here.
+// Every page calls useT() in its own component, which sits *above* this layout;
+// a provider created in here only reached the header and footer, so page
+// bodies never switched to Hausa.
 export function PublicLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <LanguageProvider>
-      <PublicLayoutInner>{children}</PublicLayoutInner>
-    </LanguageProvider>
-  );
+  return <PublicLayoutInner>{children}</PublicLayoutInner>;
 }
 
 function PublicLayoutInner({ children }: { children: React.ReactNode }) {
