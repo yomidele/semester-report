@@ -114,3 +114,66 @@ export const adminSetStudentStatus = createServerFn({ method: "POST" })
 
     return { ok: true as const };
   });
+
+// Permanently deletes a pupil who was added by mistake (wrong name, wrong
+// class, duplicate). Use the status options above for real pupils who left.
+// The work happens in public.admin_delete_student (migration
+// 20261117090000), which removes anything recorded against the pupil in the
+// same transaction and refuses if any of their results are approved or
+// published (locked).
+const DeleteInput = z.object({ student_id: z.string().uuid() });
+
+async function assertSuperAdmin(userId: string) {
+  const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  if (!(roles ?? []).some((r) => r.role === "super_admin")) throw new Error("Forbidden");
+}
+
+async function countFor(table: string, studentId: string, extra?: (q: any) => any) {
+  let q = (supabaseAdmin as any).from(table).select("id", { count: "exact", head: true }).eq("student_id", studentId);
+  if (extra) q = extra(q);
+  const { count, error } = await q;
+  return error ? 0 : count ?? 0;
+}
+
+// What would be lost if this pupil were deleted — shown in the confirm dialog.
+export const adminStudentDeletePreview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => DeleteInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+    const [results, lockedResults, attendance, comments] = await Promise.all([
+      countFor("results", data.student_id),
+      countFor("results", data.student_id, (q) => q.in("status", ["approved", "published"])),
+      countFor("attendance", data.student_id),
+      countFor("report_card_comments", data.student_id),
+    ]);
+    return { results, lockedResults, attendance, comments };
+  });
+
+export const adminDeleteStudent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => DeleteInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+
+    const { data: res, error } = await (supabaseAdmin as any).rpc("admin_delete_student", {
+      _student_id: data.student_id,
+      _allow_locked: false,
+    });
+    if (error) {
+      if (/function .*admin_delete_student.* does not exist|Could not find the function/i.test(error.message)) {
+        throw new Error("The delete feature isn't set up in the database yet. Run the admin_delete_student SQL in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "student_deleted",
+      entity_type: "students",
+      entity_id: data.student_id,
+      details: res ?? null,
+    } as never);
+
+    return { ok: true as const, full_name: (res as { full_name?: string } | null)?.full_name ?? "" };
+  });

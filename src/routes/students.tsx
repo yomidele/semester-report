@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -19,9 +19,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { MoreVertical, UserRound } from "lucide-react";
+import { MoreVertical, Trash2, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { adminEnrollStudent, adminSetStudentStatus } from "@/lib/admin-students.functions";
+import { adminDeleteStudent, adminEnrollStudent, adminSetStudentStatus, adminStudentDeletePreview } from "@/lib/admin-students.functions";
 
 export const Route = createFileRoute("/students")({
   head: () => ({ meta: [{ title: "Students — School Portal" }] }),
@@ -54,6 +54,10 @@ export function StudentsPage() {
   const [filterStatus, setFilterStatus] = useState<"active" | "all" | StudentStatus>("active");
   const [pendingChange, setPendingChange] = useState<{ id: string; name: string; status: StudentStatus } | null>(null);
   const [reason, setReason] = useState("");
+  const deleteStudent = useServerFn(adminDeleteStudent);
+  const deletePreview = useServerFn(adminStudentDeletePreview);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [confirmName, setConfirmName] = useState("");
 
   const { data: classArms = [] } = useQuery({
     queryKey: ["class-arms-for-students"],
@@ -113,6 +117,28 @@ export function StudentsPage() {
       qc.invalidateQueries({ queryKey: ["students"] });
       setPendingChange(null);
       setReason("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const { data: preview, isLoading: previewLoading } = useQuery({
+    queryKey: ["student-delete-preview", pendingDelete?.id],
+    enabled: !!pendingDelete,
+    queryFn: () => deletePreview({ data: { student_id: pendingDelete!.id } }),
+  });
+  const hasHistory = !!preview && preview.results + preview.attendance + preview.comments > 0;
+  const isLocked = !!preview && preview.lockedResults > 0;
+  const nameMatches = !!pendingDelete && confirmName.trim().toLowerCase() === pendingDelete.name.trim().toLowerCase();
+
+  const closeDelete = () => { setPendingDelete(null); setConfirmName(""); };
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => deleteStudent({ data: { student_id: id } }),
+    onSuccess: (res) => {
+      toast.success(`${res.full_name || "Pupil"} was deleted.`);
+      qc.invalidateQueries({ queryKey: ["students"] });
+      qc.invalidateQueries({ queryKey: ["count", "students"] });
+      closeDelete();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -242,6 +268,14 @@ export function StudentsPage() {
                                 Mark as graduated
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setPendingDelete({ id: s.id, name: s.full_name })}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete (added by mistake)
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -281,6 +315,52 @@ export function StudentsPage() {
             >
               {statusMut.isPending ? "Saving…" : "Confirm"}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) closeDelete(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingDelete && `Permanently delete ${pendingDelete.name}?`}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Use this only for a pupil added by mistake, such as a wrong name, the wrong class, or a duplicate.
+                  For a real pupil who has left, use <strong>Mark as withdrawn</strong> instead so their records are kept.
+                </p>
+                {previewLoading && <p>Checking their records…</p>}
+                {preview && !hasHistory && <p>This pupil has no results, attendance or report comments yet.</p>}
+                {preview && hasHistory && !isLocked && (
+                  <p className="text-destructive">
+                    This will also delete {preview.results} result(s), {preview.attendance} attendance mark(s) and{" "}
+                    {preview.comments} report comment(s) recorded for them. This cannot be undone.
+                  </p>
+                )}
+                {isLocked && (
+                  <p className="text-destructive">
+                    This pupil has {preview!.lockedResults} approved or published result(s), so they can't be deleted.
+                    Return those results for correction first, or mark the pupil as withdrawn.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {hasHistory && !isLocked && (
+            <div className="space-y-1.5 py-1">
+              <Label>Type the pupil's name to confirm</Label>
+              <Input value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={pendingDelete?.name} />
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={!preview || isLocked || deleteMut.isPending || (hasHistory && !nameMatches)}
+              onClick={() => pendingDelete && deleteMut.mutate(pendingDelete.id)}
+            >
+              {deleteMut.isPending ? "Deleting…" : "Delete permanently"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
