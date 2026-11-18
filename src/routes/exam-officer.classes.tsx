@@ -10,13 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { resultsClassLabel } from "@/lib/class-display";
-import { createClassLevel, createClassArm, setNextClassLevel, deleteClassArm } from "@/lib/school-admin.functions";
+import { createClassLevel, createClassArm, setNextClassLevel, deleteClassArm, updateClassArm } from "@/lib/school-admin.functions";
 
 export const Route = createFileRoute("/exam-officer/classes")({
   head: () => ({ meta: [{ title: "Classes & Arms — Exam Officer" }] }),
@@ -33,6 +33,8 @@ function Page() {
   const removeArm = useServerFn(deleteClassArm);
   const [armToDelete, setArmToDelete] = useState<{ id: string; label: string; department_id: string } | null>(null);
   const [moveTo, setMoveTo] = useState("");
+  const editArm = useServerFn(updateClassArm);
+  const [armToEdit, setArmToEdit] = useState<{ id: string; className: string; name: string; code: string } | null>(null);
 
   const [levelForm, setLevelForm] = useState({ faculty_id: "", name: "", code: "" });
   const [armForm, setArmForm] = useState({ department_id: "", name: "", code: "" });
@@ -77,6 +79,19 @@ function Page() {
       (data ?? []).forEach((r: { class_arm_id: string | null }) => { if (r.class_arm_id) m[r.class_arm_id] = (m[r.class_arm_id] ?? 0) + 1; });
       return m;
     },
+  });
+
+  const editArmMut = useMutation({
+    mutationFn: () => editArm({ data: { arm_id: armToEdit!.id, name: armToEdit!.name.trim(), code: armToEdit!.code.trim() } }),
+    onSuccess: () => {
+      toast.success("Arm updated");
+      setArmToEdit(null);
+      qc.invalidateQueries({ queryKey: ["class-arms-full"] });
+      qc.invalidateQueries({ queryKey: ["class-arms-all"] });
+      qc.invalidateQueries({ queryKey: ["class-arms-for-students"] });
+      qc.invalidateQueries({ queryKey: ["class-arms-for-entry"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteArmMut = useMutation({
@@ -257,10 +272,24 @@ function Page() {
                 <p className="text-sm font-medium">{resultsClassLabel((arm.departments as { name?: string } | null)?.name ?? "", arm)} <span className="font-normal text-muted-foreground">({arm.name})</span></p>
                 <p className="text-xs text-muted-foreground">{pupilCountsQ.data?.[arm.id] ?? 0} pupil(s)</p>
               </div>
+              <div className="flex flex-wrap gap-2 self-start md:self-center">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 self-start text-destructive hover:text-destructive md:self-center"
+                className="h-9"
+                onClick={() => setArmToEdit({
+                  id: arm.id,
+                  className: (arm.departments as { name?: string } | null)?.name ?? "",
+                  name: arm.name ?? "",
+                  code: arm.code ?? "",
+                })}
+              >
+                <Pencil className="mr-1.5 h-4 w-4" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-destructive hover:text-destructive"
                 onClick={() => {
                   setMoveTo("");
                   setArmToDelete({ id: arm.id, label: resultsClassLabel((arm.departments as { name?: string } | null)?.name ?? "", arm), department_id: arm.department_id });
@@ -268,11 +297,49 @@ function Page() {
               >
                 <Trash2 className="mr-1.5 h-4 w-4" /> Delete arm
               </Button>
+              </div>
             </div>
           ))}
           {armsQ.data?.length === 0 && <p className="text-sm text-muted-foreground">No class arms yet — add one above.</p>}
         </CardContent>
       </Card>
+      <AlertDialog open={!!armToEdit} onOpenChange={(o) => { if (!o) setArmToEdit(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit arm{armToEdit?.className ? ` — ${armToEdit.className}` : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pupils, results and teacher assignments stay with this arm; only how it is named changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {armToEdit && (
+            <form
+              id="edit-arm-form"
+              className="space-y-3"
+              onSubmit={(e) => { e.preventDefault(); if (armToEdit.name.trim() && armToEdit.code.trim()) editArmMut.mutate(); }}
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="arm-name">Arm name</Label>
+                <Input id="arm-name" value={armToEdit.name} onChange={(e) => setArmToEdit({ ...armToEdit, name: e.target.value })} placeholder="e.g. PRI 5A" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="arm-code">Short code</Label>
+                <Input id="arm-code" value={armToEdit.code} onChange={(e) => setArmToEdit({ ...armToEdit, code: e.target.value.toUpperCase() })} placeholder="e.g. A" required />
+                <p className="text-xs text-muted-foreground">
+                  The letter used on results pages. Shows as{" "}
+                  <span className="font-semibold text-foreground">{resultsClassLabel(armToEdit.className, { name: armToEdit.name, code: armToEdit.code })}</span>.
+                </p>
+              </div>
+            </form>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button type="submit" form="edit-arm-form" disabled={editArmMut.isPending || !armToEdit?.name.trim() || !armToEdit?.code.trim()}>
+              {editArmMut.isPending ? "Saving…" : "Save"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={!!armToDelete} onOpenChange={(o) => { if (!o) { setArmToDelete(null); setMoveTo(""); } }}>
         <AlertDialogContent>
           {(() => {

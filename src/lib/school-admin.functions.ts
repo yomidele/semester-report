@@ -537,3 +537,56 @@ export const deleteClassArm = createServerFn({ method: "POST" })
     } as never);
     return res as { arm: string; class: string; pupils_moved: number; teacher_assignments_removed: number; moved_to: string | null };
   });
+
+// Rename a class arm and/or change its short code. Pupils, results and
+// assignments are linked by id, so nothing else changes.
+export const updateClassArm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        arm_id: z.string().uuid(),
+        name: z.string().trim().min(1).max(60),
+        code: z.string().trim().min(1).max(20),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertRole(context.userId, ["super_admin"]);
+    const code = data.code.toUpperCase();
+
+    const { data: arm, error: findErr } = await supabaseAdmin
+      .from("class_arms")
+      .select("id, department_id, name, code")
+      .eq("id", data.arm_id)
+      .maybeSingle();
+    if (findErr) throw new Error(findErr.message);
+    if (!arm) throw new Error("Class arm not found");
+
+    const { data: siblings, error: sibErr } = await supabaseAdmin
+      .from("class_arms")
+      .select("id, name, code")
+      .eq("department_id", arm.department_id)
+      .neq("id", arm.id);
+    if (sibErr) throw new Error(sibErr.message);
+    const clash = (siblings ?? []).find((s) => (s.code ?? "").trim().toUpperCase() === code);
+    if (clash) throw new Error(`Another arm of this class ("${clash.name}") already uses the code ${code}. Choose a different code.`);
+
+    const { error } = await supabaseAdmin
+      .from("class_arms")
+      .update({ name: data.name, code } as never)
+      .eq("id", data.arm_id);
+    if (error) {
+      if (/duplicate key|unique/i.test(error.message)) throw new Error(`The code ${code} is already used by another arm of this class.`);
+      throw new Error(error.message);
+    }
+
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "class_arm_updated",
+      entity_type: "class_arms",
+      entity_id: data.arm_id,
+      details: { from: { name: arm.name, code: arm.code }, to: { name: data.name, code } },
+    } as never);
+    return { ok: true as const };
+  });
