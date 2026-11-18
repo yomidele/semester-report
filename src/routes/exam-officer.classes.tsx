@@ -10,8 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
-import { createClassLevel, createClassArm, setNextClassLevel } from "@/lib/school-admin.functions";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { resultsClassLabel } from "@/lib/class-display";
+import { createClassLevel, createClassArm, setNextClassLevel, deleteClassArm } from "@/lib/school-admin.functions";
 
 export const Route = createFileRoute("/exam-officer/classes")({
   head: () => ({ meta: [{ title: "Classes & Arms — Exam Officer" }] }),
@@ -25,6 +30,9 @@ function Page() {
   const createLevel = useServerFn(createClassLevel);
   const createArm = useServerFn(createClassArm);
   const setNextClass = useServerFn(setNextClassLevel);
+  const removeArm = useServerFn(deleteClassArm);
+  const [armToDelete, setArmToDelete] = useState<{ id: string; label: string; department_id: string } | null>(null);
+  const [moveTo, setMoveTo] = useState("");
 
   const [levelForm, setLevelForm] = useState({ faculty_id: "", name: "", code: "" });
   const [armForm, setArmForm] = useState({ department_id: "", name: "", code: "" });
@@ -57,6 +65,35 @@ function Page() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Pupils per arm, so the delete dialog can say how many will be moved.
+  const pupilCountsQ = useQuery({
+    queryKey: ["class-arm-pupil-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("students").select("class_arm_id").not("class_arm_id", "is", null);
+      if (error) throw error;
+      const m: Record<string, number> = {};
+      (data ?? []).forEach((r: { class_arm_id: string | null }) => { if (r.class_arm_id) m[r.class_arm_id] = (m[r.class_arm_id] ?? 0) + 1; });
+      return m;
+    },
+  });
+
+  const deleteArmMut = useMutation({
+    mutationFn: () => removeArm({ data: { arm_id: armToDelete!.id, move_to_arm_id: moveTo || null } }),
+    onSuccess: (r) => {
+      toast.success(
+        `${armToDelete?.label} deleted` +
+          (r.pupils_moved ? ` — ${r.pupils_moved} pupil(s) moved to ${r.moved_to}` : "") +
+          (r.teacher_assignments_removed ? `, ${r.teacher_assignments_removed} teacher assignment(s) removed` : ""),
+      );
+      setArmToDelete(null);
+      setMoveTo("");
+      qc.invalidateQueries({ queryKey: ["class-arms-full"] });
+      qc.invalidateQueries({ queryKey: ["class-arm-pupil-counts"] });
+      qc.invalidateQueries({ queryKey: ["students"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const createLevelMut = useMutation({
@@ -216,15 +253,73 @@ function Page() {
         <CardContent className="space-y-2">
           {(armsQ.data ?? []).map((arm) => (
             <div key={arm.id} className="flex flex-col gap-2 rounded-md border border-border p-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-medium">{(arm.departments as { name?: string } | null)?.name} — {arm.name}</p>
-                <p className="text-xs text-muted-foreground">Class arm</p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{resultsClassLabel((arm.departments as { name?: string } | null)?.name ?? "", arm)} <span className="font-normal text-muted-foreground">({arm.name})</span></p>
+                <p className="text-xs text-muted-foreground">{pupilCountsQ.data?.[arm.id] ?? 0} pupil(s)</p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 self-start text-destructive hover:text-destructive md:self-center"
+                onClick={() => {
+                  setMoveTo("");
+                  setArmToDelete({ id: arm.id, label: resultsClassLabel((arm.departments as { name?: string } | null)?.name ?? "", arm), department_id: arm.department_id });
+                }}
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" /> Delete arm
+              </Button>
             </div>
           ))}
           {armsQ.data?.length === 0 && <p className="text-sm text-muted-foreground">No class arms yet — add one above.</p>}
         </CardContent>
       </Card>
+      <AlertDialog open={!!armToDelete} onOpenChange={(o) => { if (!o) { setArmToDelete(null); setMoveTo(""); } }}>
+        <AlertDialogContent>
+          {(() => {
+            const pupils = armToDelete ? pupilCountsQ.data?.[armToDelete.id] ?? 0 : 0;
+            const otherArms = (armsQ.data ?? []).filter((a) => armToDelete && a.department_id === armToDelete.department_id && a.id !== armToDelete.id);
+            const needsMove = pupils > 0;
+            return (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {armToDelete?.label}?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>
+                        {needsMove
+                          ? `${pupils} pupil(s) are in this arm. They and their attendance records will be moved to the arm you choose below.`
+                          : "This arm has no pupils."}
+                      </p>
+                      <p>Teacher subject assignments for this arm only are removed. Results, report cards and pupil records are not affected.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                {needsMove && (
+                  <div className="space-y-1.5">
+                    <Label>Move pupils to</Label>
+                    {otherArms.length > 0 ? (
+                      <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
+                        <option value="">Choose an arm</option>
+                        {otherArms.map((a) => (
+                          <option key={a.id} value={a.id}>{resultsClassLabel((a.departments as { name?: string } | null)?.name ?? "", a)} ({a.name})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="rounded-md bg-warning/15 p-2 text-xs">This class has no other arm. Add one above first, then delete this arm.</p>
+                    )}
+                  </div>
+                )}
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <Button variant="destructive" disabled={deleteArmMut.isPending || (needsMove && !moveTo)} onClick={() => deleteArmMut.mutate()}>
+                    {deleteArmMut.isPending ? "Deleting…" : "Delete arm"}
+                  </Button>
+                </AlertDialogFooter>
+              </>
+            );
+          })()}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -227,17 +227,27 @@ function Page() {
   const saveMut = useMutation({
     mutationFn: async () => {
       const a = assignmentQ.data!;
+      // Pupils with no scores (e.g. absent) are simply skipped. Pupils with
+      // only one score, or an out-of-range score, are also skipped and listed
+      // afterwards, so one unfinished row never stops the rest of the class
+      // from being saved. Blank is never saved as 0.
+      const skipped: string[] = [];
+      const skippedIds: string[] = [];
       const rows = Object.entries(draft)
         .filter(([_, v]) => v.ca !== "" || v.exam !== "")
-        .map(([student_id, v]) => {
+        .filter(([student_id, v]) => {
           const ca = v.ca !== "" ? Number(v.ca) : null;
           const exam = v.exam !== "" ? Number(v.exam) : null;
-          // Blank is not zero: a missing score must never be silently saved as 0.
-          const problem = validateScores(ca, exam);
-          if (problem) {
-            const name = students.find((s) => s.id === student_id)?.full_name ?? "a pupil";
-            throw new Error(`${name}: ${problem}`);
+          if (validateScores(ca, exam)) {
+            skipped.push(students.find((s) => s.id === student_id)?.full_name ?? "a pupil");
+            skippedIds.push(student_id);
+            return false;
           }
+          return true;
+        })
+        .map(([student_id, v]) => {
+          const ca = Number(v.ca);
+          const exam = Number(v.exam);
           return {
             student_id,
             course_id: a.course_id,
@@ -250,16 +260,30 @@ function Page() {
             department_id: a.department_id,
           };
         });
-      if (!rows.length) throw new Error("Enter at least one score");
+      if (!rows.length) {
+        throw new Error(skipped.length
+          ? `Nothing saved: ${skipped.length} pupil(s) need both a CA and an Exam score (${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? "…" : ""}).`
+          : "Enter at least one score");
+      }
       const { error } = await supabase.from("results").upsert(rows as never, { onConflict: "student_id,course_id,session_id,semester" });
       if (error) throw error;
+      return { saved: rows.length, skipped, skippedIds };
     },
-    onSuccess: () => {
-      toast.success("Saved as draft");
-      setDraft({});
-      const key = localDraftKey(assignment_id);
-      if (key) {
-        try { localStorage.removeItem(key); } catch { /* ignore */ }
+    onSuccess: ({ saved, skipped, skippedIds }) => {
+      toast.success(`Saved ${saved} pupil${saved !== 1 ? "s" : ""} as draft`);
+      if (skipped.length) {
+        toast.warning(
+          `Not saved — needs both CA and Exam: ${skipped.slice(0, 5).join(", ")}${skipped.length > 5 ? ` and ${skipped.length - 5} more` : ""}. Their typed scores are kept so you can finish them later.`,
+          { duration: 10000 },
+        );
+      }
+      // Keep only the unfinished rows on screen; everything saved is cleared.
+      setDraft((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => skippedIds.includes(id))));
+      if (!skipped.length) {
+        const key = localDraftKey(assignment_id);
+        if (key) {
+          try { localStorage.removeItem(key); } catch { /* ignore */ }
+        }
       }
       qc.invalidateQueries({ queryKey: ["assignment-results"] });
     },

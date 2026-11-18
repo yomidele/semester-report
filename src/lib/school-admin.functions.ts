@@ -507,3 +507,33 @@ export const bulkEnrollStudents = createServerFn({ method: "POST" })
       },
     };
   });
+
+// Delete a class arm. Pupils (and their attendance) are moved to another arm
+// of the same class first; teacher assignments for this arm only are
+// removed. See public.admin_delete_class_arm (migration 20261118090000).
+export const deleteClassArm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ arm_id: z.string().uuid(), move_to_arm_id: z.string().uuid().nullable() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertRole(context.userId, ["super_admin"]);
+    const { data: res, error } = await (supabaseAdmin as any).rpc("admin_delete_class_arm", {
+      _arm_id: data.arm_id,
+      _move_to_arm_id: data.move_to_arm_id,
+    });
+    if (error) {
+      if (/function .*admin_delete_class_arm.* does not exist|Could not find the function/i.test(error.message)) {
+        throw new Error("Deleting arms isn't set up in the database yet. Run the delete-arm SQL in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "class_arm_deleted",
+      entity_type: "class_arms",
+      entity_id: data.arm_id,
+      details: res ?? null,
+    } as never);
+    return res as { arm: string; class: string; pupils_moved: number; teacher_assignments_removed: number; moved_to: string | null };
+  });
