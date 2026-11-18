@@ -303,7 +303,7 @@ function Page() {
             <CardTitle className="text-base">Class register</CardTitle>
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-muted-foreground">Date</label>
-              <Input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="h-8 w-40" />
+              <Input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="w-44" />
             </div>
           </CardHeader>
           <CardContent className="p-0">

@@ -149,7 +149,7 @@ function RecordsPage() {
 
       {student && (
         <Card className="tsu-shadow">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20 rounded-md border border-border">
                 <AvatarImage src={student.passport_url ?? undefined} alt={student.full_name} className="object-cover" />

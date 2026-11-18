@@ -85,20 +85,26 @@ function Page() {
         <CardHeader><CardTitle className="text-base">All teachers</CardTitle></CardHeader>
         <CardContent>
           {teachersQ.isLoading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2 pr-3">Name</th><th className="py-2 pr-3">Email</th><th className="py-2 pr-3">Phone</th><th></th></tr></thead>
+              <thead><tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"><th className="py-2 pr-3">Name</th><th className="hidden py-2 pr-3 sm:table-cell">Email</th><th className="hidden py-2 pr-3 md:table-cell">Phone</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {(teachersQ.data ?? []).map((l) => (
                   <tr key={l.id} className="border-b">
-                    <td className="py-2 pr-3 font-medium">{l.full_name}</td>
-                    <td className="py-2 pr-3">{l.email}</td>
-                    <td className="py-2 pr-3">{l.phone ?? "—"}</td>
-                    <td className="py-2 text-right"><Button size="sm" variant="ghost" onClick={() => { if (confirm(`Remove ${l.full_name}?`)) removeMut.mutate(l.user_id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
+                    <td className="py-2 pr-3">
+                      <span className="font-medium">{l.full_name}</span>
+                      <span className="block break-all text-xs text-muted-foreground sm:hidden">{l.email}</span>
+                      <span className="block text-xs text-muted-foreground md:hidden">{l.phone ?? ""}</span>
+                    </td>
+                    <td className="hidden break-all py-2 pr-3 sm:table-cell">{l.email}</td>
+                    <td className="hidden whitespace-nowrap py-2 pr-3 md:table-cell">{l.phone ?? "—"}</td>
+                    <td className="py-2 text-right"><Button size="sm" variant="ghost" className="h-9 w-9 p-0" aria-label={`Remove ${l.full_name}`} onClick={() => { if (confirm(`Remove ${l.full_name}?`)) removeMut.mutate(l.user_id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
                   </tr>
                 ))}
                 {(teachersQ.data ?? []).length === 0 && <tr><td colSpan={4} className="py-4 text-center text-muted-foreground">No teachers yet.</td></tr>}
               </tbody>
             </table>
+            </div>
           )}
         </CardContent>
       </Card>

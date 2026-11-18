@@ -1,9 +1,5 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { TSUHeader } from "./TSUHeader";
-import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, LogOut, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog, Search, Printer, ClipboardCheck, Languages } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { PortalShell } from "./PortalShell";
+import { LayoutDashboard, CalendarDays, BookOpen, Users, ClipboardEdit, FileSpreadsheet, FileText, Building2, Shield, BarChart3, LinkIcon, Settings, GraduationCap, UserRoundCheck, KeyRound, Newspaper, ScrollText, ShieldCheck, LinkIcon as AssignIcon, UserRoundCog, Search, Printer, ClipboardCheck, Languages, TrendingUp } from "lucide-react";
 import { useRole } from "@/hooks/use-role";
 
 // Full nav is defined once; each item declares which roles can see it.
@@ -27,6 +23,7 @@ const NAV = [
 
 const SUPER_ADMIN_NAV = [
   { to: "/admin/records", label: "Student Records", icon: Search, roles: ["super_admin"] },
+  { to: "/admin/promotions", label: "Student Promotion", icon: TrendingUp, roles: ["super_admin"] },
   { to: "/admin/settings", label: "Settings", icon: Settings, roles: ["super_admin"] },
   { to: "/exam-officer/classes", label: "Classes & Arms", icon: GraduationCap, roles: ["super_admin"] },
   { to: "/admin/assignments", label: "Teacher Assignments", icon: AssignIcon, roles: ["super_admin"] },
@@ -43,10 +40,8 @@ const SUPER_ADMIN_NAV = [
 ] as const;
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  const navigate = useNavigate();
   const { isSuperAdmin, isExamOfficer, isAdmissionOfficer } = useRole();
-  const myRoles = [
+  const myRoles: string[] = [
     ...(isSuperAdmin ? ["super_admin"] : []),
     ...(isExamOfficer ? ["exam_officer"] : []),
     ...(isAdmissionOfficer ? ["admission_officer"] : []),
@@ -54,71 +49,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const visibleNav = NAV.filter((item) => item.roles.some((r) => myRoles.includes(r)));
   const visibleSuperNav = SUPER_ADMIN_NAV.filter((item) => item.roles.some((r) => myRoles.includes(r)));
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Signed out");
-    navigate({ to: "/login" });
-  };
-
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <TSUHeader subtitle="Admin Console" />
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-2 py-4 md:flex-row md:px-6">
-        <aside className="md:w-60 md:shrink-0">
-          <nav className="tsu-shadow flex flex-row gap-1 overflow-x-auto rounded-md border border-border bg-card p-2 md:flex-col md:overflow-visible">
-            {visibleNav.map(({ to, label, icon: Icon }) => {
-              const active = location.pathname === to;
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-secondary"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="whitespace-nowrap">{label}</span>
-                </Link>
-              );
-            })}
-            {visibleSuperNav.length > 0 && (
-              <>
-                <div className="hidden md:block md:px-2 md:pt-3 md:pb-1 md:text-[10px] md:font-semibold md:uppercase md:tracking-wider md:text-muted-foreground">
-                  {isSuperAdmin ? "Super Admin" : "More"}
-                </div>
-                {visibleSuperNav.map(({ to, label, icon: Icon }) => {
-                  const active = location.pathname === to;
-                  return (
-                    <Link
-                      key={to}
-                      to={to}
-                      className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        active
-                          ? "bg-primary text-primary-foreground"
-                          : "text-foreground hover:bg-secondary"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="whitespace-nowrap">{label}</span>
-                    </Link>
-                  );
-                })}
-              </>
-            )}
-            <div className="md:mt-auto md:pt-2">
-              <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" /> Sign out
-              </Button>
-            </div>
-          </nav>
-        </aside>
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-      <footer className="border-t border-border py-3 text-center text-xs text-muted-foreground">
-         © {new Date().getFullYear()} Model Day Primary School Kazaure — Admin Portal
-      </footer>
-    </div>
+    <PortalShell
+      subtitle="Admin Console"
+      loginPath="/login"
+      footer="Model Day Primary School Kazaure — Admin Portal"
+      sections={[
+        { items: visibleNav },
+        { title: isSuperAdmin ? "Super Admin" : "More", items: visibleSuperNav },
+      ]}
+    >
+      {children}
+    </PortalShell>
   );
 }

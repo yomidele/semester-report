@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { reportClassLabel, resultsClassLabel } from "@/lib/class-display";
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedAdmin } from "@/components/ProtectedAdmin";
 import { useQuery } from "@tanstack/react-query";
@@ -111,6 +112,8 @@ const OUTCOME_LABEL: Record<string, string> = {
   promoted: "Promoted",
   repeated: "Repeated",
   completed_final_class: "Completed final class",
+  completed_programme: "Completed school programme",
+  special_promotion: "Special promotion",
 };
 
 function RecordsPage() {
@@ -164,7 +167,10 @@ function RecordsPage() {
   const departmentInfo = classArm?.departments as unknown as { name?: string; faculties?: { name?: string } | null } | null;
   const departmentName = departmentInfo?.name ?? "";
   const facultyName = departmentInfo?.faculties?.name ?? "";
-  const classLabel = classArm ? `${departmentName} ${classArm.name}`.trim() : "—";
+  // On screen: "Primary 4A". On exported documents (report card, admission
+  // letter): "Primary 4".
+  const classLabel = classArm ? resultsClassLabel(departmentName, classArm) : "—";
+  const exportClassLabel = classArm ? reportClassLabel(departmentName || classLabel) : "—";
 
   const { data: allResults = [] } = useQuery<ResultRow[]>({
     queryKey: ["records-results", studentId],
@@ -286,7 +292,7 @@ function RecordsPage() {
       doc = generateReportSheetPdf(
         {
           student: { full_name: student.full_name, admission_number: student.matric_number },
-          className: classLabel,
+          className: exportClassLabel,
           sessionName: g.sessionName,
           term: g.semester,
           subjects: g.rows.map((r) => ({
@@ -318,7 +324,7 @@ function RecordsPage() {
       admission_number: student.matric_number,
       full_name: student.full_name,
       admission_date: student.admission_date,
-      class_name: classLabel !== "—" ? classLabel : "the assigned class",
+      class_name: exportClassLabel !== "—" ? exportClassLabel : "the assigned class",
       school: {
         name: settings.college_name,
         short_name: settings.short_name,
@@ -465,7 +471,7 @@ function RecordsPage() {
                 const avg = averageOf(g.rows);
                 return (
                   <Card key={i} className="tsu-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <CardTitle className="text-base">
                           {g.sessionName} · {g.semester} Term

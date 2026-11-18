@@ -54,9 +54,9 @@ function Page() {
       <div>
         <h2 className="font-serif text-2xl font-bold">Promotions &amp; Repeats</h2>
         <p className="text-sm text-muted-foreground">
-          Promotion to the next class happens automatically the moment a new academic session is created (see the Sessions page).
-          Flag any pupil who should repeat their current class here <b>before</b> that new session is created — everyone left
-          unflagged will be promoted automatically.
+          Flag any pupil who has been approved to repeat their current class. Promotion itself is run by the Super Admin from
+          Student Promotion, only after all three terms of the session are complete and the session is closed — creating a
+          new session no longer promotes anyone. Pupils flagged here stay in their class when promotion runs.
         </p>
       </div>
 
@@ -79,20 +79,20 @@ function Page() {
             <CardTitle className="text-base">
               {selectedDept?.next_department_id
                 ? <>Pupils promoted from here will move into: <span className="text-primary">{departmentsQ.data?.find((d) => d.id === selectedDept.next_department_id)?.name}</span></>
-                : <span className="text-amber-600">No next class configured for {selectedDept?.name} — promoted pupils will be recorded as having completed their final class. Set this under Classes &amp; Arms if that's not intended.</span>}
+                : <span className="text-amber-600">No next class configured for {selectedDept?.name} — pupils here will be recorded as having completed the school programme. Set this under Classes &amp; Arms if that's not intended.</span>}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {studentsQ.data?.map((s) => (
-              <label key={s.id} className="flex items-center justify-between rounded-md border border-border p-3 text-sm">
-                <span>{s.full_name} <span className="text-xs text-muted-foreground">({s.matric_number})</span></span>
-                <span className="flex items-center gap-2">
+              <label key={s.id} className="flex items-center justify-between gap-3 rounded-md border border-border p-3 text-sm">
+                <span className="min-w-0 break-words">{s.full_name} <span className="text-xs text-muted-foreground">({s.matric_number})</span></span>
+                <span className="flex shrink-0 items-center gap-2">
                   <span className="text-xs text-muted-foreground">Repeat this class</span>
                   <input
                     type="checkbox"
                     checked={s.repeat_flag}
                     onChange={(e) => toggleMut.mutate({ student_id: s.id, repeat_flag: e.target.checked })}
-                    className="h-4 w-4"
+                    className="h-5 w-5"
                   />
                 </span>
               </label>

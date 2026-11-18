@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { reportClassLabel } from "@/lib/class-display";
 import autoTable from "jspdf-autotable";
 import { gradeForScore, ordinal } from "./grading";
 import type { GradeBand } from "./college-settings";
@@ -40,7 +41,8 @@ export interface ReportSheetSubjectRow {
 
 export interface ReportSheetData {
   student: { full_name: string; admission_number: string };
-  className: string; // e.g. "Primary 4 — Arm A"
+  /** Class only, e.g. "Primary 4" — any arm passed in is stripped. */
+  className: string;
   sessionName: string;
   term: string; // "First" | "Second" | "Third"
   subjects: ReportSheetSubjectRow[];
@@ -210,8 +212,11 @@ export function generateReportSheetPdf(data: ReportSheetData, opts: GenerateRepo
   doc.setFontSize(11);
   doc.text("CLASS", L, y);
   fillLine(L + 36, 215, y);
-  fit(data.className, 215 - (L + 40), 10);
-  doc.text(data.className, L + 40, y);
+  // Report cards show the class without the arm ("Primary 4", never
+  // "Primary 4A" / "Primary 4 — Arm A"), whatever the caller passes in.
+  const reportClass = reportClassLabel(data.className);
+  fit(reportClass, 215 - (L + 40), 10);
+  doc.text(reportClass, L + 40, y);
 
   doc.setFontSize(11);
   doc.text("NO. IN CLASS", 222, y);

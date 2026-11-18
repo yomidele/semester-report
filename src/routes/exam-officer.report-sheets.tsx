@@ -64,7 +64,10 @@ function Page() {
   const armsForClass = useMemo(() => (armsQ.data ?? []).filter((a) => a.department_id === departmentId), [armsQ.data, departmentId]);
   const selectedDept = departmentsQ.data?.find((d) => d.id === departmentId);
   const selectedArm = armsQ.data?.find((a) => a.id === classArmId);
-  const className = selectedDept ? (selectedArm ? `${selectedDept.name} — ${selectedArm.name}` : selectedDept.name) : "";
+  // Report cards print the class only ("Primary 4"); the arm is used just to
+  // pick which pupils to include.
+  const className = selectedDept ? selectedDept.name : "";
+  const fileClassName = selectedDept ? (selectedArm ? `${selectedDept.name} ${selectedArm.name}` : selectedDept.name) : "";
   const selectedSession = sessionsQ.data?.find((s) => s.id === sessionId);
 
   const studentsQ = useQuery({
@@ -250,7 +253,7 @@ function Page() {
         doc = generateReportSheetPdf(sheets[i], doc ? { doc, save: false } : { save: false });
       }
       const safe = (v: string) => v.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
-      doc!.save(`report_sheets_${safe(className) || "class"}_${safe(selectedSession?.name ?? "")}_${term}.pdf`);
+      doc!.save(`report_sheets_${safe(fileClassName) || "class"}_${safe(selectedSession?.name ?? "")}_${term}.pdf`);
       toast.success(`${sheets.length} report sheet${sheets.length === 1 ? "" : "s"} downloaded as one PDF`);
       if (skipped.length > 0) {
         toast.warning(`${skipped.length} pupil${skipped.length === 1 ? "" : "s"} skipped — no published results: ${skipped.join(", ")}`, { duration: 12000 });
@@ -270,7 +273,7 @@ function Page() {
         <p className="text-sm text-muted-foreground">Pick a class, session and term, then download a pupil's terminal report sheet — or tick several pupils (or the whole class) and download all their sheets at once as a single PDF, one page per pupil.</p>
       </div>
       <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-5">
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
           <div><Label>Class</Label>
             <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setClassArmId(""); setSelectedIds(new Set()); }}>
               <option value="">Select</option>{departmentsQ.data?.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}

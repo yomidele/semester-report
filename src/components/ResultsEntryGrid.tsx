@@ -10,6 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Loader2, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { computeGrade, computeTotal, validateScores, RESULT_LIMITS } from "@/lib/grading";
+import { resultsClassLabel } from "@/lib/class-display";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useCollegeSettings } from "@/lib/college-settings";
+import { ResultStatusBadge, ScoreInput } from "@/components/ResultEntryParts";
 
 const TERMS = ["First", "Second", "Third"] as const;
 
@@ -26,6 +30,7 @@ interface Department {
 interface ClassArm {
   id: string;
   name: string;
+  code: string | null;
   department_id: string;
   departments: { name: string } | null;
 }
@@ -58,6 +63,7 @@ interface GridEntry {
   exam_score: string;
   existing_status?: string;
   existing_result_id?: string;
+  returned?: boolean;
 }
 
 // Auto-save-to-draft: while a teacher is typing scores, the in-progress grid
@@ -96,6 +102,8 @@ function readDraft(key: string): DraftPayload | null {
 
 export function ResultsEntryGrid() {
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
+  const { settings } = useCollegeSettings();
   const [filters, setFilters] = useState({
     sessionId: "",
     semester: "First",
@@ -138,7 +146,7 @@ export function ResultsEntryGrid() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("class_arms")
-        .select("id, name, department_id, departments:department_id(name)")
+        .select("id, name, code, department_id, departments:department_id(name)")
         .order("name");
       if (error) throw error;
       return (data ?? []) as unknown as ClassArm[];
@@ -161,7 +169,7 @@ export function ResultsEntryGrid() {
   const armNameById = useMemo(() => {
     const m: Record<string, string> = {};
     classArms.forEach((a) => {
-      m[a.id] = a.departments?.name ? `${a.departments.name} ${a.name}` : a.name;
+      m[a.id] = resultsClassLabel(a.departments?.name ?? "", a);
     });
     return m;
   }, [classArms]);
@@ -209,7 +217,7 @@ export function ResultsEntryGrid() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("results")
-        .select("id, student_id, ca_score, exam_score, status")
+        .select("id, student_id, ca_score, exam_score, status, returned_reason")
         .eq("session_id", filters.sessionId)
         .eq("course_id", filters.subjectId)
         .eq("semester", filters.semester);
@@ -264,6 +272,7 @@ export function ResultsEntryGrid() {
         exam_score: existingResult?.exam_score != null ? String(existingResult.exam_score) : "",
         existing_result_id: existingResult?.id,
         existing_status: existingResult?.status,
+        returned: !!(existingResult as { returned_reason?: string | null } | undefined)?.returned_reason,
       };
     });
 
@@ -506,11 +515,17 @@ export function ResultsEntryGrid() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-2xl font-bold">Bulk Results Entry</h2>
-        <p className="text-sm text-muted-foreground">
-          Efficiently enter scores for a whole class at once.
-        </p>
+      <div className="overflow-hidden rounded-lg border border-border bg-card tsu-shadow">
+        <div className="tsu-header-grad px-4 py-3 text-sidebar-foreground md:px-6">
+          <p className="truncate text-xs font-semibold uppercase tracking-wider text-accent">{settings.college_name}</p>
+          <p className="text-xs text-sidebar-foreground/80">
+            Academic Session {sessions.find((x) => x.id === filters.sessionId)?.name ?? "— not selected"} · {filters.semester} Term
+          </p>
+        </div>
+        <div className="p-4 md:px-6">
+          <h2 className="font-serif text-2xl font-bold">Enter Results</h2>
+          <p className="text-sm text-muted-foreground">Enter scores for a whole class at once.</p>
+        </div>
       </div>
 
       {/* Filter Card */}
@@ -518,12 +533,12 @@ export function ResultsEntryGrid() {
         <CardHeader>
           <CardTitle className="text-base">Select Scope</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-6">
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {/* Session Filter */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Session</Label>
             <Select value={filters.sessionId} onValueChange={(value) => handleFilterChange("sessionId", value)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue placeholder="Session" />
               </SelectTrigger>
               <SelectContent>
@@ -546,7 +561,7 @@ export function ResultsEntryGrid() {
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Term</Label>
             <Select value={filters.semester} onValueChange={(value) => handleFilterChange("semester", value)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -563,7 +578,7 @@ export function ResultsEntryGrid() {
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Class</Label>
             <Select value={filters.departmentId} onValueChange={(value) => handleFilterChange("departmentId", value)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue placeholder="Class" />
               </SelectTrigger>
               <SelectContent>
@@ -588,7 +603,7 @@ export function ResultsEntryGrid() {
               onValueChange={(value) => handleFilterChange("classArmId", value === ALL_ARMS ? "" : value)}
               disabled={!filters.departmentId}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue placeholder="Class Arm" />
               </SelectTrigger>
               <SelectContent>
@@ -597,7 +612,7 @@ export function ResultsEntryGrid() {
                 </SelectItem>
                 {armsInDepartment.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.name}
+                    {armNameById[a.id]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -608,7 +623,7 @@ export function ResultsEntryGrid() {
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Subject</Label>
             <Select value={filters.subjectId} onValueChange={(value) => handleFilterChange("subjectId", value)} disabled={!filters.departmentId}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger>
                 <SelectValue placeholder="Subject" />
               </SelectTrigger>
               <SelectContent>
@@ -632,8 +647,7 @@ export function ResultsEntryGrid() {
             <Button
               onClick={handleLoadStudents}
               disabled={!filters.sessionId || !filters.subjectId || bulkSaveMut.isPending}
-              className="w-full h-9"
-              size="sm"
+              className="h-10 w-full"
             >
               {bulkSaveMut.isPending ? (
                 <>
@@ -686,14 +700,14 @@ export function ResultsEntryGrid() {
               <div className="flex flex-col gap-2 sm:flex-row">
                 {isWholeClassView && (
                   <Select value={gridArmFilter} onValueChange={setGridArmFilter}>
-                    <SelectTrigger className="h-9 sm:w-44">
+                    <SelectTrigger className="sm:w-44">
                       <SelectValue placeholder="Class arm" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All arms</SelectItem>
                       {armsInDepartment.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.name}
+                          {armNameById[a.id]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -705,92 +719,140 @@ export function ResultsEntryGrid() {
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
                     placeholder="Search by name or reg. number..."
-                    className="h-9 pl-8"
+                    type="search"
+                    className="pl-8"
                   />
                 </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
+            {filteredEntries.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">No pupils match your filters</p>
+            )}
+            {filteredEntries.length > 0 && isMobile && (
+              <ul className="space-y-3 p-3">
+                {filteredEntries.map((entry, index) => {
+                  const rowLocked = isLockedStatus(entry.existing_status);
+                  const total = entry.ca_score !== "" && entry.exam_score !== "" ? computeTotal(entry.ca_score, entry.exam_score) : null;
+                  const entryErrors = validationStatus.errors[entry.student_id];
+                  return (
+                    <li key={entry.student_id} className={`rounded-lg border bg-card p-4 ${entryErrors ? "border-destructive" : "border-border"}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words font-semibold leading-snug">
+                            <span className="mr-1.5 text-xs font-normal text-muted-foreground">{index + 1}.</span>{entry.full_name}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {entry.class_arm_name || "—"} · <span className="font-mono">{entry.matric_number || "—"}</span>
+                          </p>
+                        </div>
+                        <ResultStatusBadge status={entry.existing_status} returned={entry.returned} />
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
+                        <label className="space-y-1">
+                          <span className="text-xs font-semibold text-muted-foreground">CA (out of {RESULT_LIMITS.ca})</span>
+                          <ScoreInput
+                            ref={registerInputRef(entry.student_id, "ca_score")}
+                            max={RESULT_LIMITS.ca}
+                            disabled={rowLocked}
+                            invalid={!!entryErrors}
+                            value={entry.ca_score}
+                            placeholder="—"
+                            onChange={(e) => handleScoreChange(entry.student_id, "ca_score", e.target.value)}
+                            onKeyDown={handleScoreKeyDown(entry.student_id, "ca_score")}
+                          />
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-xs font-semibold text-muted-foreground">Exam (out of {RESULT_LIMITS.exam})</span>
+                          <ScoreInput
+                            ref={registerInputRef(entry.student_id, "exam_score")}
+                            max={RESULT_LIMITS.exam}
+                            disabled={rowLocked}
+                            invalid={!!entryErrors}
+                            value={entry.exam_score}
+                            placeholder="—"
+                            onChange={(e) => handleScoreChange(entry.student_id, "exam_score", e.target.value)}
+                            onKeyDown={handleScoreKeyDown(entry.student_id, "exam_score")}
+                          />
+                        </label>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between rounded-md bg-secondary/40 px-3 py-2">
+                        <span className="text-sm font-medium">Total</span>
+                        <span className="text-lg font-bold tabular-nums">{total ?? "—"}</span>
+                      </div>
+                      {entryErrors && <p className="mt-2 text-xs text-destructive">{entryErrors[0]}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {filteredEntries.length > 0 && !isMobile && (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+              <Table className="min-w-[820px]">
+                <TableHeader className="bg-secondary/50">
                   <TableRow>
-                    <TableHead className="text-xs">Name</TableHead>
-                    {isWholeClassView && <TableHead className="text-xs">Arm</TableHead>}
-                    <TableHead className="text-xs">Reg. No.</TableHead>
-                    <TableHead className="text-center text-xs">CA (0-{RESULT_LIMITS.ca})</TableHead>
-                    <TableHead className="text-center text-xs">Exam (0-{RESULT_LIMITS.exam})</TableHead>
-                    <TableHead className="text-center text-xs">Total</TableHead>
-                    <TableHead className="text-center text-xs">Grade</TableHead>
+                    <TableHead className="w-12 text-center">S/N</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Reg. No.</TableHead>
+                    <TableHead className="w-28 text-center">CA /{RESULT_LIMITS.ca}</TableHead>
+                    <TableHead className="w-28 text-center">Exam /{RESULT_LIMITS.exam}</TableHead>
+                    <TableHead className="w-20 text-center">Total</TableHead>
+                    <TableHead className="w-16 text-center">Grade</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEntries.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={isWholeClassView ? 7 : 6} className="text-center text-sm text-muted-foreground py-8">
-                        No pupils match your filters
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {filteredEntries.map((entry) => {
+                  {filteredEntries.map((entry, index) => {
                     const rowLocked = isLockedStatus(entry.existing_status);
                     const total = entry.ca_score !== "" && entry.exam_score !== "" ? computeTotal(entry.ca_score, entry.exam_score) : null;
                     const grade = total !== null ? computeGrade(total) : null;
                     const entryErrors = validationStatus.errors[entry.student_id];
 
                     return (
-                      <TableRow
-                        key={entry.student_id}
-                        className={entryErrors ? "bg-destructive/10" : ""}
-                      >
-                        <TableCell className="text-sm py-3">{entry.full_name}</TableCell>
-                        {isWholeClassView && (
-                          <TableCell className="text-xs text-muted-foreground py-3">{entry.class_arm_name}</TableCell>
-                        )}
-                        <TableCell className="font-mono text-xs text-muted-foreground py-3">{entry.matric_number || "—"}</TableCell>
-                        <TableCell className="text-center py-3">
-                          <Input
+                      <TableRow key={entry.student_id} className={entryErrors ? "bg-destructive/5" : "even:bg-muted/40"}>
+                        <TableCell className="text-center text-muted-foreground tabular-nums">{index + 1}</TableCell>
+                        <TableCell className="font-medium">
+                          {entry.full_name}
+                          {entryErrors && <p className="text-xs font-normal text-destructive">{entryErrors[0]}</p>}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{entry.class_arm_name || "—"}</TableCell>
+                        <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">{entry.matric_number || "—"}</TableCell>
+                        <TableCell className="py-2">
+                          <ScoreInput
                             ref={registerInputRef(entry.student_id, "ca_score")}
-                            type="number"
-                            min="0"
                             max={RESULT_LIMITS.ca}
                             disabled={rowLocked}
+                            invalid={!!entryErrors}
+                            aria-label={`CA score for ${entry.full_name}`}
                             title={rowLocked ? "Locked — return the result for correction to edit it" : undefined}
-                            step="0.5"
                             value={entry.ca_score}
+                            placeholder="—"
                             onChange={(e) => handleScoreChange(entry.student_id, "ca_score", e.target.value)}
                             onKeyDown={handleScoreKeyDown(entry.student_id, "ca_score")}
-                            placeholder="—"
-                            className={`h-8 text-center text-xs ${entryErrors ? "border-destructive" : ""}`}
                           />
                         </TableCell>
-                        <TableCell className="text-center py-3">
-                          <Input
+                        <TableCell className="py-2">
+                          <ScoreInput
                             ref={registerInputRef(entry.student_id, "exam_score")}
-                            type="number"
-                            min="0"
                             max={RESULT_LIMITS.exam}
                             disabled={rowLocked}
+                            invalid={!!entryErrors}
+                            aria-label={`Exam score for ${entry.full_name}`}
                             title={rowLocked ? "Locked — return the result for correction to edit it" : undefined}
-                            step="0.5"
                             value={entry.exam_score}
+                            placeholder="—"
                             onChange={(e) => handleScoreChange(entry.student_id, "exam_score", e.target.value)}
                             onKeyDown={handleScoreKeyDown(entry.student_id, "exam_score")}
-                            placeholder="—"
-                            className={`h-8 text-center text-xs ${entryErrors ? "border-destructive" : ""}`}
                           />
                         </TableCell>
-                        <TableCell className="text-center text-sm font-medium py-3">
-                          {total !== null ? total : "—"}
-                        </TableCell>
-                        <TableCell className="text-center py-3">
+                        <TableCell className="text-center text-base font-bold tabular-nums">{total ?? "—"}</TableCell>
+                        <TableCell className="text-center">
                           {grade ? (
                             <span
-                              className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                                grade.grade === "F"
-                                  ? "bg-destructive text-destructive-foreground"
-                                  : "bg-primary text-primary-foreground"
+                              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                                grade.grade === "F" ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                               }`}
                             >
                               {grade.grade}
@@ -799,12 +861,14 @@ export function ResultsEntryGrid() {
                             "—"
                           )}
                         </TableCell>
+                        <TableCell><ResultStatusBadge status={entry.existing_status} returned={entry.returned} /></TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </div>
+            )}
 
             {/* Validation Summary */}
             {validationStatus.validCount > 0 || Object.keys(validationStatus.errors).length > 0 ? (
@@ -851,11 +915,11 @@ export function ResultsEntryGrid() {
             ) : null}
 
             {/* Save Button */}
-            <div className="px-4 py-4 border-t flex gap-2">
+            <div className="flex flex-col gap-2 border-t px-4 py-4 sm:flex-row">
               <Button
+                className="h-11 sm:h-10"
                 onClick={() => bulkSaveMut.mutate()}
                 disabled={!validationStatus.hasAny || bulkSaveMut.isPending}
-                size="sm"
               >
                 {bulkSaveMut.isPending ? (
                   <>
@@ -863,10 +927,10 @@ export function ResultsEntryGrid() {
                     Saving...
                   </>
                 ) : (
-                  `Save All Scores (${validationStatus.validCount})`
+                  `Submit for Approval (${validationStatus.validCount})`
                 )}
               </Button>
-              <Button onClick={handleClearGrid} variant="outline" size="sm">
+              <Button className="h-11 sm:h-10" onClick={handleClearGrid} variant="outline">
                 Clear
               </Button>
             </div>

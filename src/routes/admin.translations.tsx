@@ -119,7 +119,7 @@ function TranslationsPage() {
         </p>
       </div>
       <Card className="tsu-shadow">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">{items.length} text{items.length !== 1 ? "s" : ""} to translate</CardTitle>
           <Button size="sm" onClick={() => save.mutate()} disabled={changed.length === 0 || save.isPending}>
             {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

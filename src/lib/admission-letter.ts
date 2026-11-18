@@ -1,11 +1,12 @@
 import jsPDF from "jspdf";
+import { reportClassLabel } from "@/lib/class-display";
 import { drawFrame, drawLetterheadHeader } from "./report-sheet";
 
 export type AdmissionLetterData = {
   admission_number: string;
   full_name: string;
   admission_date: string; // ISO
-  class_name: string; // e.g. "Primary 4 — Arm A"
+  class_name: string; // printed as the class only, e.g. "Primary 4"
   school: {
     name: string;
     short_name?: string;
@@ -41,7 +42,7 @@ function drawAdmissionLetter(doc: jsPDF, data: AdmissionLetterData) {
   doc.setFontSize(11);
   const bodyLines = doc.splitTextToSize(
     `Dear Parent/Guardian,\n\n` +
-      `We are pleased to inform you that ${data.full_name} has been offered admission into ${data.class_name} of ${data.school.name} for the current academic session.\n\n` +
+      `We are pleased to inform you that ${data.full_name} has been offered admission into ${data.class_name.startsWith("the ") ? data.class_name : reportClassLabel(data.class_name)} of ${data.school.name} for the current academic session.\n\n` +
       `The pupil's admission number is ${data.admission_number}. Kindly quote this number in all future correspondence with the school, and ensure the pupil resumes on the official first day of term with the required uniform and materials.\n\n` +
       `We look forward to a fruitful partnership with you in the pupil's education.`,
     R - L,

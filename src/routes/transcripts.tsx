@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { reportClassLabel } from "@/lib/class-display";
 import { ProtectedAdmin } from "@/components/ProtectedAdmin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,8 @@ export function ReportCardsPage() {
     enabled: !!student?.class_arm_id,
     queryFn: async () => (await supabase.from("class_arms").select("name, departments:department_id(name)").eq("id", student!.class_arm_id!).maybeSingle()).data,
   });
-  const classLabel = classArm ? `${(classArm.departments as { name?: string } | null)?.name ?? ""} ${classArm.name}`.trim() : "—";
+  // Exported documents show the class only ("Primary 4"), never the arm.
+  const classLabel = classArm ? reportClassLabel((classArm.departments as { name?: string } | null)?.name ?? classArm.name) : "—";
 
   const { data: allResults = [] } = useQuery<ResultRow[]>({
     queryKey: ["transcript-results", studentId],
@@ -247,7 +249,7 @@ export function ReportCardsPage() {
       </Card>
 
       <Card className="tsu-shadow">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">3. Preview &amp; Generate</CardTitle>
             <CardDescription>{groups.length} term(s) &middot; Overall Average {overallAverage.toFixed(1)}%</CardDescription>

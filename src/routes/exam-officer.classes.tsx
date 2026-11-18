@@ -153,7 +153,7 @@ function Page() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>promotes to</span>
                 <select
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-10 min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm"
                   defaultValue={(d as { next_department_id?: string | null }).next_department_id ?? ""}
                   onChange={(e) => nextClassMut.mutate({ department_id: d.id, next_department_id: e.target.value || null })}
                 >

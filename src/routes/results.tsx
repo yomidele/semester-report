@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { resultsClassLabel } from "@/lib/class-display";
 import { ProtectedAdmin } from "@/components/ProtectedAdmin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export function ResultsViewPage() {
     queryKey: ["class-arms-for-results", departmentId],
     enabled: !!departmentId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("class_arms").select("id, name").eq("department_id", departmentId).order("name");
+      const { data, error } = await supabase.from("class_arms").select("id, name, code").eq("department_id", departmentId).order("name");
       if (error) throw error;
       return data as { id: string; name: string }[];
     },
@@ -113,8 +114,8 @@ export function ResultsViewPage() {
     if (grouped.length === 0) { toast.error("Nothing to export"); return; }
     const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? "session";
     const deptName = departments.find((d) => d.id === departmentId)?.name ?? "Class";
-    const armName = classArmId !== ALL_ARMS ? classArms.find((a) => a.id === classArmId)?.name : undefined;
-    const classLabel = armName ? `${deptName} ${armName}` : deptName;
+    const arm = classArmId !== ALL_ARMS ? classArms.find((a) => a.id === classArmId) : undefined;
+    const classLabel = arm ? resultsClassLabel(deptName, arm) : deptName;
 
     const detailRows = results.map((r) => {
       const total = effectiveTotal(r);
@@ -151,7 +152,7 @@ export function ResultsViewPage() {
     const dept = departments.find((d) => d.id === departmentId);
     if (!dept) return "";
     const arm = classArmId !== ALL_ARMS ? classArms.find((a) => a.id === classArmId) : undefined;
-    return arm ? `${dept.name} ${arm.name}` : `${dept.name} (all arms)`;
+    return arm ? resultsClassLabel(dept.name, arm) : `${dept.name} (all arms)`;
   }, [departments, departmentId, classArms, classArmId]);
 
   return (
@@ -192,7 +193,7 @@ export function ResultsViewPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL_ARMS}>All arms</SelectItem>
-                  {classArms.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  {classArms.map((a) => <SelectItem key={a.id} value={a.id}>{resultsClassLabel(departments.find((d) => d.id === departmentId)?.name ?? "", a)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

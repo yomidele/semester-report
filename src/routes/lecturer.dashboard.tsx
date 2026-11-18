@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { resultsClassLabel } from "@/lib/class-display";
 import { ProtectedTeacher } from "@/components/ProtectedTeacher";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,14 +21,14 @@ function Page() {
     queryKey: ["teacher-assignments", teacher.data?.id], enabled: !!teacher.data,
     queryFn: async () => {
       const { data } = await supabase.from("course_assignments")
-               .select("id, semester, course_id, session_id, department_id, class_arm_id, courses(code, title, level, unit), academic_sessions(name), departments:department_id(name), class_arms:class_arm_id(name)")
+               .select("id, semester, course_id, session_id, department_id, class_arm_id, courses(code, title, level, unit), academic_sessions(name), departments:department_id(name), class_arms:class_arm_id(name, code)")
         .eq("lecturer_id", teacher.data!.id);
       return data ?? [];
     },
   });
   const formClasses = useQuery({
     queryKey: ["form-master-classes", teacher.data?.id], enabled: !!teacher.data,
-    queryFn: async () => (await supabase.from("class_arms").select("id, name, department_id, departments(name)").eq("form_teacher_id", teacher.data!.id)).data ?? [],
+    queryFn: async () => (await supabase.from("class_arms").select("id, name, code, department_id, departments(name)").eq("form_teacher_id", teacher.data!.id)).data ?? [],
   });
   const formMasterResults = useQuery({
     queryKey: ["form-master-results", teacher.data?.id, formClasses.data?.map((item) => item.id)],
@@ -51,10 +52,10 @@ function Page() {
         <p className="text-sm text-muted-foreground">Subjects assigned to you. Click one to enter scores.</p>
       </div>
       {(formClasses.data ?? []).length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {(formClasses.data ?? []).map((classArm: any) => (
             <Card key={classArm.id} className="tsu-shadow border-primary/40">
-              <CardHeader><CardTitle className="text-base">Form Master — {classArm.departments?.name} {classArm.name}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Form Master — {resultsClassLabel(classArm.departments?.name ?? "", classArm)}</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>Monitor this assigned class, its pupils, attendance, and academic performance.</p>
                 <div className="flex flex-wrap gap-2">
@@ -67,14 +68,14 @@ function Page() {
           ))}
         </div>
       )}
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {(assignments.data ?? []).map((a: any) => {
           // A null class_arm_id means the assignment covers every arm of the
           // class (see lecturer.entry.tsx), so label it as such rather than
           // implying a single arm.
           const className = a.departments?.name
             ? a.class_arms?.name
-              ? `${a.departments.name} ${a.class_arms.name}`
+              ? resultsClassLabel(a.departments.name, a.class_arms)
               : `${a.departments.name} — All arms`
             : null;
           return (

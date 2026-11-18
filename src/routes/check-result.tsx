@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { reportClassLabel } from "@/lib/class-display";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -89,7 +90,7 @@ function CheckResultPage() {
     generateReportSheetPdf(
       {
         student: { full_name: result.student.full_name, admission_number: result.student.matric_number },
-        className: result.student.department_name ?? "\u2014",
+        className: reportClassLabel(result.student.department_name),
         sessionName: result.session_name,
         term: result.semester,
         subjects: result.results.map((r) => ({

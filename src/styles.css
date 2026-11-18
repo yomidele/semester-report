@@ -119,6 +119,16 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  img, svg, video, canvas { max-width: 100%; }
+  /* Score boxes: hide the browser's spinner arrows so the digits get the
+     whole width of the field instead of sharing it with two tiny buttons. */
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  /* Native <select> elements used on a few pages: same 16px rule as inputs
+     so iOS doesn't zoom the page when one is tapped. */
+  @media (max-width: 767px) { select { font-size: 16px; } }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
